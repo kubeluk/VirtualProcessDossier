@@ -55,7 +55,7 @@ vpd:dataset-machine-temperature
     dcat:landingPage     <https://example.org/vpd/pages/machine-temperature> ;
     dcat:distribution    vpd:dist-machine-temp-csv , vpd:dist-machine-temp-json ;
     prov:wasGeneratedBy  vpd:obs-machine-temperature ;
-    dcterms:isPartOf     vpd:step-cnc-machining .
+    dcterms:isPartOf     vpd:wfact-cnc-temperature .
 
 vpd:dataset-hydraulic-pressure
     a dcat:Dataset ;
@@ -100,7 +100,7 @@ vpd:dataset-machine-vibration
     dcat:landingPage     <https://example.org/vpd/pages/machine-vibration> ;
     dcat:distribution    vpd:dist-vibration-csv , vpd:dist-vibration-hdf5 ;
     prov:wasGeneratedBy  vpd:obs-machine-vibration ;
-    dcterms:isPartOf     vpd:step-cnc-machining .
+    dcterms:isPartOf     vpd:wfact-cnc-vibration .
 
 # ---------------------------------------------------------------------------
 # Distributions

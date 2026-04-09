@@ -96,6 +96,10 @@ function formatMediaType(uri: string): string {
           <p v-if="workflowContext.stepDescription" class="wc-step-desc">
             {{ workflowContext.stepDescription }}
           </p>
+          <p v-if="workflowContext.parentStepUri" class="wc-parent-step">
+            <span class="wc-workflow-label">Part of step</span>
+            {{ workflowContext.parentStepTitle ?? workflowContext.parentStepUri }}
+          </p>
         </template>
 
         <div v-if="workflowContext.workflowUri" class="wc-workflow-row">
@@ -375,6 +379,15 @@ section h2 {
   color: #4b5563;
   line-height: 1.55;
   margin: 0 0 0.75rem;
+}
+
+.wc-parent-step {
+  font-size: 0.875rem;
+  color: #4b5563;
+  margin: 0 0 0.5rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
 }
 
 .wc-workflow-row {

@@ -82,7 +82,14 @@ export const useWorkflowStore = defineStore('workflow', () => {
             FILTER(STRSTARTS(STR(?stepType), 'http://purl.org/wild/vocab#'))
           }
           OPTIONAL {
-            ?dataset dcterms:isPartOf ?step .
+            {
+              ?dataset dcterms:isPartOf ?step .
+            }
+            UNION
+            {
+              ?step wild:hasChildActivities/rdf:rest*/rdf:first ?leaf .
+              ?dataset dcterms:isPartOf ?leaf .
+            }
             OPTIONAL { ?dataset dcterms:title ?datasetTitle }
             OPTIONAL { ?dataset dcterms:description ?datasetDesc }
           }

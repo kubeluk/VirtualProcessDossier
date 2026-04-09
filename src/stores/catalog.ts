@@ -38,6 +38,9 @@ export interface WorkflowContext {
   stepUri: string | null
   stepTitle: string | null
   stepDescription: string | null
+  // Set when stepUri is a leaf activity nested inside a composite (e.g. parallel) step
+  parentStepUri: string | null
+  parentStepTitle: string | null
   isDirectWorkflowLink: boolean
   workflowUri: string | null
   workflowTitle: string | null
@@ -206,7 +209,7 @@ export const useCatalogStore = defineStore('catalog', () => {
   }
 
   async function fetchDatasetWorkflowContext(uri: string): Promise<WorkflowContext | null> {
-    // Step 1: find the resource the dataset is isPartOf (a step or the workflow directly)
+    // Step 1: find the resource the dataset is isPartOf (leaf activity, step, or workflow)
     const contextQuery = `
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX wild:    <http://purl.org/wild/vocab#>
@@ -235,36 +238,55 @@ export const useCatalogStore = defineStore('catalog', () => {
         stepUri: null,
         stepTitle: null,
         stepDescription: null,
+        parentStepUri: null,
+        parentStepTitle: null,
         isDirectWorkflowLink: true,
         workflowUri: contextUri,
         workflowTitle: cb.title?.value ?? null,
       }
     }
 
-    // Step 2: find which workflow model contains this step via list traversal
-    const workflowQuery = `
+    // Step 2: find parent step (if context is a leaf within a composite) and parent workflow.
+    // The context is either a direct child of the root (top-level step) or a grandchild
+    // (leaf activity inside a composite/parallel step).
+    const parentQuery = `
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
-      SELECT ?workflow ?workflowTitle WHERE {
-        ?workflow a wild:WorkflowModel ;
-                 wild:hasBehaviour ?root .
-        ?root wild:hasChildActivities/rdf:rest*/rdf:first <${contextUri}> .
-        OPTIONAL { ?workflow dcterms:title ?workflowTitle }
+      SELECT ?parentStep ?parentStepTitle ?workflow ?workflowTitle WHERE {
+        OPTIONAL {
+          ?parentStep wild:hasChildActivities/rdf:rest*/rdf:first <${contextUri}> .
+          OPTIONAL { ?parentStep dcterms:title ?parentStepTitle }
+        }
+        OPTIONAL {
+          ?workflow a wild:WorkflowModel ;
+                   wild:hasBehaviour ?root .
+          {
+            ?root wild:hasChildActivities/rdf:rest*/rdf:first <${contextUri}> .
+          }
+          UNION
+          {
+            ?root wild:hasChildActivities/rdf:rest*/rdf:first ?anyStep .
+            ?anyStep wild:hasChildActivities/rdf:rest*/rdf:first <${contextUri}> .
+          }
+          OPTIONAL { ?workflow dcterms:title ?workflowTitle }
+        }
       }
       LIMIT 1
     `
-    const workflowResults = await querySparql(graphStore.endpoint, workflowQuery)
-    const wb = workflowResults.results.bindings[0]
+    const parentResults = await querySparql(graphStore.endpoint, parentQuery)
+    const pb = parentResults.results.bindings[0]
 
     return {
       stepUri: contextUri,
       stepTitle: cb.title?.value ?? null,
       stepDescription: cb.description?.value ?? null,
+      parentStepUri: pb?.parentStep?.value ?? null,
+      parentStepTitle: pb?.parentStepTitle?.value ?? null,
       isDirectWorkflowLink: false,
-      workflowUri: wb?.workflow?.value ?? null,
-      workflowTitle: wb?.workflowTitle?.value ?? null,
+      workflowUri: pb?.workflow?.value ?? null,
+      workflowTitle: pb?.workflowTitle?.value ?? null,
     }
   }
 
