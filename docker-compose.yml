@@ -1,0 +1,22 @@
+services:
+  ui:
+    build: .
+    ports:
+      - "8080:80"
+    depends_on:
+      - jena
+    restart: unless-stopped
+
+  jena:
+    image: stain/jena-fuseki:5.1.0
+    ports:
+      - "3030:3030"
+    environment:
+      - ADMIN_PASSWORD=admin
+      - JVM_ARGS=-Xmx2g
+    volumes:
+      - jena-data:/fuseki
+    restart: unless-stopped
+
+volumes:
+  jena-data:
