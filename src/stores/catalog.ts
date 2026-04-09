@@ -34,6 +34,15 @@ export interface DatasetProvenance {
   observedProperty: { uri: string; title: string | null; description: string | null } | null
 }
 
+export interface WorkflowContext {
+  stepUri: string | null
+  stepTitle: string | null
+  stepDescription: string | null
+  isDirectWorkflowLink: boolean
+  workflowUri: string | null
+  workflowTitle: string | null
+}
+
 export const useCatalogStore = defineStore('catalog', () => {
   const graphStore = useGraphStore()
 
@@ -196,5 +205,76 @@ export const useCatalogStore = defineStore('catalog', () => {
     }
   }
 
-  return { datasets, loading, error, fetchDatasets, fetchDataset, fetchDatasetProvenance }
+  async function fetchDatasetWorkflowContext(uri: string): Promise<WorkflowContext | null> {
+    // Step 1: find the resource the dataset is isPartOf (a step or the workflow directly)
+    const contextQuery = `
+      PREFIX dcterms: <http://purl.org/dc/terms/>
+      PREFIX wild:    <http://purl.org/wild/vocab#>
+
+      SELECT ?context ?title ?description ?isWorkflow WHERE {
+        BIND(<${uri}> AS ?dataset)
+        ?dataset dcterms:isPartOf ?context .
+        OPTIONAL { ?context dcterms:title ?title }
+        OPTIONAL { ?context dcterms:description ?description }
+        OPTIONAL {
+          ?context a wild:WorkflowModel .
+          BIND(true AS ?isWorkflow)
+        }
+      }
+      LIMIT 1
+    `
+    const contextResults = await querySparql(graphStore.endpoint, contextQuery)
+    if (contextResults.results.bindings.length === 0) return null
+
+    const cb = contextResults.results.bindings[0]
+    const contextUri = cb.context.value
+    const isWorkflow = cb.isWorkflow?.value === 'true'
+
+    if (isWorkflow) {
+      return {
+        stepUri: null,
+        stepTitle: null,
+        stepDescription: null,
+        isDirectWorkflowLink: true,
+        workflowUri: contextUri,
+        workflowTitle: cb.title?.value ?? null,
+      }
+    }
+
+    // Step 2: find which workflow model contains this step via list traversal
+    const workflowQuery = `
+      PREFIX wild:    <http://purl.org/wild/vocab#>
+      PREFIX dcterms: <http://purl.org/dc/terms/>
+      PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+      SELECT ?workflow ?workflowTitle WHERE {
+        ?workflow a wild:WorkflowModel ;
+                 wild:hasBehaviour ?root .
+        ?root wild:hasChildActivities/rdf:rest*/rdf:first <${contextUri}> .
+        OPTIONAL { ?workflow dcterms:title ?workflowTitle }
+      }
+      LIMIT 1
+    `
+    const workflowResults = await querySparql(graphStore.endpoint, workflowQuery)
+    const wb = workflowResults.results.bindings[0]
+
+    return {
+      stepUri: contextUri,
+      stepTitle: cb.title?.value ?? null,
+      stepDescription: cb.description?.value ?? null,
+      isDirectWorkflowLink: false,
+      workflowUri: wb?.workflow?.value ?? null,
+      workflowTitle: wb?.workflowTitle?.value ?? null,
+    }
+  }
+
+  return {
+    datasets,
+    loading,
+    error,
+    fetchDatasets,
+    fetchDataset,
+    fetchDatasetProvenance,
+    fetchDatasetWorkflowContext,
+  }
 })

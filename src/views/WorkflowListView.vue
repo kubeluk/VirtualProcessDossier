@@ -1,61 +1,68 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useCatalogStore } from '@/stores/catalog'
+import { useWorkflowStore, type WorkflowSummary } from '@/stores/workflow'
 
 const router = useRouter()
-const catalog = useCatalogStore()
+const workflowStore = useWorkflowStore()
 
-onMounted(() => catalog.fetchDatasets())
+const workflows = ref<WorkflowSummary[]>([])
+const loading = ref(true)
+const error = ref<string | null>(null)
+
+onMounted(async () => {
+  try {
+    workflows.value = await workflowStore.fetchWorkflows()
+  } catch {
+    error.value = 'Failed to load workflows. Make sure the triple store is running.'
+  } finally {
+    loading.value = false
+  }
+})
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
-function openDataset(uri: string) {
-  router.push({ name: 'dataset', query: { uri } })
+function openWorkflow(uri: string) {
+  router.push({ name: 'workflow', query: { uri } })
 }
 </script>
 
 <template>
-  <main class="catalog">
-    <header class="catalog-header">
-      <h1>Data Catalog</h1>
-      <p class="subtitle">Browse datasets available in the VPD knowledge graph.</p>
+  <main class="workflow-list">
+    <header class="page-header">
+      <h1>Workflows</h1>
+      <p class="subtitle">Browse manufacturing workflows and their associated datasets.</p>
     </header>
 
     <nav class="page-nav">
-      <RouterLink to="/catalog" class="nav-tab nav-tab--active">Datasets</RouterLink>
-      <RouterLink to="/workflows" class="nav-tab">Workflows</RouterLink>
+      <RouterLink to="/catalog" class="nav-tab">Datasets</RouterLink>
+      <RouterLink to="/workflows" class="nav-tab nav-tab--active">Workflows</RouterLink>
     </nav>
 
-    <div v-if="catalog.loading" class="state-message">Loading datasets…</div>
+    <div v-if="loading" class="state-message">Loading workflows…</div>
 
-    <div v-else-if="catalog.error" class="state-message error">{{ catalog.error }}</div>
+    <div v-else-if="error" class="state-message error">{{ error }}</div>
 
-    <div v-else-if="catalog.datasets.length === 0" class="state-message">
-      No datasets found in the catalog.
+    <div v-else-if="workflows.length === 0" class="state-message">
+      No workflows found in the knowledge graph.
     </div>
 
-    <ul v-else class="dataset-list">
+    <ul v-else class="workflow-card-list">
       <li
-        v-for="ds in catalog.datasets"
-        :key="ds.uri"
-        class="dataset-card"
-        @click="openDataset(ds.uri)"
+        v-for="wf in workflows"
+        :key="wf.uri"
+        class="workflow-card"
+        @click="openWorkflow(wf.uri)"
       >
         <div class="card-body">
-          <h2 class="card-title">{{ ds.title }}</h2>
-          <p v-if="ds.description" class="card-description">{{ ds.description }}</p>
+          <h2 class="card-title">{{ wf.title }}</h2>
+          <p v-if="wf.description" class="card-description">{{ wf.description }}</p>
         </div>
         <div class="card-meta">
-          <span v-if="ds.modified" class="meta-item">
-            Updated {{ formatDate(ds.modified) }}
-          </span>
-          <span class="meta-item">
-            {{ ds.distributionCount }}
-            {{ ds.distributionCount === 1 ? 'distribution' : 'distributions' }}
-          </span>
+          <span v-if="wf.issued" class="meta-item">Created {{ formatDate(wf.issued) }}</span>
+          <span class="meta-item meta-link">View workflow →</span>
         </div>
       </li>
     </ul>
@@ -63,14 +70,26 @@ function openDataset(uri: string) {
 </template>
 
 <style scoped>
-.catalog {
+.workflow-list {
   max-width: 800px;
   margin: 0 auto;
   padding: 2rem 1.5rem;
 }
 
-.catalog-header {
+.page-header {
   margin-bottom: 1.25rem;
+}
+
+.page-header h1 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 0.4rem;
+}
+
+.subtitle {
+  color: #6b7280;
+  margin: 0;
 }
 
 .page-nav {
@@ -100,18 +119,6 @@ function openDataset(uri: string) {
   border-bottom-color: var(--color-primary);
 }
 
-.catalog-header h1 {
-  font-size: 1.75rem;
-  font-weight: 600;
-  color: var(--color-text);
-  margin: 0 0 0.4rem;
-}
-
-.subtitle {
-  color: #6b7280;
-  margin: 0;
-}
-
 .state-message {
   padding: 2rem;
   text-align: center;
@@ -122,7 +129,7 @@ function openDataset(uri: string) {
   color: #dc2626;
 }
 
-.dataset-list {
+.workflow-card-list {
   list-style: none;
   padding: 0;
   margin: 0;
@@ -131,7 +138,7 @@ function openDataset(uri: string) {
   gap: 0.75rem;
 }
 
-.dataset-card {
+.workflow-card {
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 1.25rem 1.5rem;
@@ -140,7 +147,7 @@ function openDataset(uri: string) {
   background: var(--color-background);
 }
 
-.dataset-card:hover {
+.workflow-card:hover {
   border-color: var(--color-primary);
   box-shadow: 0 2px 8px rgba(66, 184, 131, 0.15);
 }
@@ -167,10 +174,17 @@ function openDataset(uri: string) {
   display: flex;
   gap: 1rem;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .meta-item {
   font-size: 0.8rem;
   color: #6b7280;
+}
+
+.meta-link {
+  color: var(--color-primary);
+  font-weight: 500;
 }
 </style>

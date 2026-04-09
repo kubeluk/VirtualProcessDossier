@@ -31,14 +31,6 @@ data/
   seed.sh        # Init script run by the 'seed' Docker service
 ```
 
-## Routes
-
-| Path | Name | View | Description |
-|------|------|------|-------------|
-| `/` | `home` | HomeView | Landing page |
-| `/catalog` | `catalog` | CatalogView | Browse all datasets |
-| `/dataset?uri=` | `dataset` | DatasetView | Dataset detail (uri = full encoded dataset URI) |
-
 ## Commands
 
 ```bash
@@ -72,7 +64,7 @@ docker compose down -v           # Tear down including data volume (resets seed)
 - **Resource URIs**: Hash URIs under a single base — `https://example.org/vpd#<resource>`
   - e.g. `vpd:catalog`, `vpd:dataset-air-quality`, `vpd:dist-air-quality-csv`
   - Rationale: all catalog resources belong to one document; hash URIs are appropriate per the [Cool URIs](https://www.w3.org/TR/cooluris/#hashuri) recommendation
-- **Supporting vocabularies**: `dcterms`, `foaf`, `xsd`, `prov`, `sosa`, `ssn`, `geo`
+- **Supporting vocabularies**: `dcterms`, `foaf`, `xsd`, `prov`, `sosa`, `ssn`, `geo`, `wild`
 - Ontologies for new features are provided incrementally and documented here as they are added
 
 ### Provenance (seeded)
@@ -86,13 +78,59 @@ docker compose down -v           # Tear down including data volume (resets seed)
 - Confirmed valid terms — SOSA: `Observation`, `Sensor`, `FeatureOfInterest`, `ObservableProperty`, `madeBySensor`, `hasFeatureOfInterest`, `observedProperty`, `hasResult`, `hasSimpleResult`, `resultTime`, `phenomenonTime`, `observes` — SSN: `hasProperty`, `Property` — PROV: `Activity`, `wasGeneratedBy`, `startedAtTime`, `endedAtTime`
 - `sosa:ObservationCollection` and `ssn:observes` do **not** exist in the standards — do not use them
 
+### Workflow (seeded)
+- **Ontology**: [WiLD](http://purl.org/wild/vocab) — Workflows in Linked Data; `wild: <http://purl.org/wild/vocab#>`
+- The manufacturing workflow is described at two levels:
+  - **`wild:WorkflowModel`** (`vpd:workflow-manufacturing-line`) — static structure; defines the expected activities and their order/composition
+  - **`wild:WorkflowInstance`** (`vpd:wfinst-manufacturing-line`) — runtime execution; groups the completed activity instances
+- **Workflow model tree** — root behaviour is a `wild:SequentialActivity` whose `wild:hasChildActivities` (RDF list) encodes step order:
+  - Step 1: `vpd:step-material-preparation` — `wild:AtomicActivity`
+  - Step 2: `vpd:step-cnc-machining` — `wild:ParallelActivity` with two child `wild:AtomicActivity` nodes (`vpd:wfact-cnc-temperature`, `vpd:wfact-cnc-vibration`)
+  - Step 3: `vpd:step-hydraulic-forming` — `wild:AtomicActivity`
+  - Step 4: `vpd:step-quality-dispatch` — `wild:AtomicActivity` (no observation dataset)
+- Each `sosa:Observation` is also typed `wild:ActivityInstance` and carries:
+  - `wild:activityInstanceOf` → the corresponding leaf `wild:Activity` in the model
+  - `wild:inWorkflowInstance` → `vpd:wfinst-manufacturing-line`
+  - `wild:hasState wild:done` — semantically equivalent to `prov:Activity` (completed)
+- `wild:WorkflowInstance` state is `wild:active` while any step lacks a completed activity instance
+- Dataset-to-step context is also expressed directly via `dcterms:isPartOf` on each `dcat:Dataset` (pointing to the relevant step or the workflow model for cross-cutting datasets)
+- Confirmed valid WiLD terms: `WorkflowModel`, `WorkflowInstance`, `ActivityInstance`, `SequentialActivity`, `ParallelActivity`, `AtomicActivity`, `hasBehaviour`, `hasChildActivities`, `workflowInstanceOf`, `activityInstanceOf`, `inWorkflowInstance`, `hasState`, `done`, `active`
+
 ## Domain Context
 
 This UI abstracts RDF/SPARQL complexity from end users. Features are built around specific ontologies provided incrementally. All SPARQL is generated in the service layer — never exposed raw to users.
+
+## Routes
+
+| Path | Name | View | Description |
+|------|------|------|-------------|
+| `/` | `home` | HomeView | Landing page |
+| `/catalog` | `catalog` | CatalogView | Browse all datasets |
+| `/dataset?uri=` | `dataset` | DatasetView | Dataset detail (uri = full encoded dataset URI) |
+| `/workflows` | `workflows` | WorkflowListView | Browse all workflow models |
+| `/workflow?uri=` | `workflow` | WorkflowView | Workflow detail with step timeline (uri = full encoded workflow URI) |
 
 ## Features
 
 ### Data Catalog Browse (implemented)
 - Dataset list at `/catalog`: queries all `dcat:Dataset` resources linked via `dcat:Catalog`, shows title, description, modified date, distribution count
 - Dataset detail at `/dataset?uri=<encoded-uri>`: shows full metadata (keywords, modified) and all distributions with format, file size, and download link
+- Both views share a Datasets / Workflows tab nav
 - SPARQL queries live in `src/stores/catalog.ts`; views are purely presentational
+
+### Workflow & Provenance Browsing (implemented)
+- Workflow list at `/workflows`: queries all `wild:WorkflowModel` resources, shows title and description
+- Workflow detail at `/workflow?uri=<encoded-uri>`: renders a vertical step timeline
+  - Steps are retrieved by traversing `wild:hasBehaviour / wild:hasChildActivities / rdf:rest* / rdf:first` (SPARQL 1.1 property path over the RDF list)
+  - Steps sorted on the frontend by the "Step N:" prefix in `dcterms:title`
+  - `wild:ParallelActivity` steps show a "⟷ parallel" badge
+  - Each step shows its associated datasets as clickable chips (navigate to dataset detail)
+  - Cross-cutting datasets (linked via `dcterms:isPartOf` to the workflow model directly, not a step) are shown in a separate "Full-workflow Datasets" section
+  - Steps with no associated dataset show a "no datasets" note
+- Dataset detail at `/dataset?uri=` gains a **Workflow Context** section:
+  - Shows the step the dataset was collected during (title + description from `dcterms:isPartOf`)
+  - For cross-cutting datasets, shows "spans the full workflow"
+  - "Part of workflow: [name] →" button navigates to the workflow detail page
+  - Context is fetched in two queries: one to resolve `dcterms:isPartOf`, one to find the parent `wild:WorkflowModel` via list traversal
+- Workflow store: `src/stores/workflow.ts` — `fetchWorkflows()`, `fetchWorkflow(uri)`
+- Workflow context on datasets: `fetchDatasetWorkflowContext(uri)` added to `src/stores/catalog.ts`

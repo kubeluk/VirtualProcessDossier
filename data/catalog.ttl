@@ -8,6 +8,7 @@
 @prefix sosa:    <http://www.w3.org/ns/sosa/> .
 @prefix ssn:     <http://www.w3.org/ns/ssn/> .
 @prefix geo:     <http://www.w3.org/2003/01/geo/wgs84_pos#> .
+@prefix wild:    <http://purl.org/wild/vocab#> .
 
 # ---------------------------------------------------------------------------
 # Catalog
@@ -22,12 +23,12 @@ vpd:catalog
     dcterms:modified     "2026-04-09"^^xsd:date ;
     dcterms:language     <http://id.loc.gov/vocabulary/iso639-1/en> ;
     dcat:dataset
-        vpd:dataset-air-quality ,
-        vpd:dataset-traffic-flow ,
-        vpd:dataset-weather-stations ,
-        vpd:dataset-land-use-map ;
+        vpd:dataset-machine-temperature ,
+        vpd:dataset-hydraulic-pressure ,
+        vpd:dataset-power-consumption ,
+        vpd:dataset-machine-vibration ;
     dcat:service
-        vpd:service-sensor-api .
+        vpd:service-machine-monitoring-api .
 
 # ---------------------------------------------------------------------------
 # Publisher
@@ -41,122 +42,131 @@ vpd:org-kit
 # Datasets
 # ---------------------------------------------------------------------------
 
-vpd:dataset-air-quality
+vpd:dataset-machine-temperature
     a dcat:Dataset ;
-    dcterms:title        "Air Quality Measurements"@en ;
-    dcterms:description  "Hourly PM2.5, PM10, NO2 and O3 measurements from sensor stations across the city."@en ;
+    dcterms:title        "CNC Machine Temperature Monitoring"@en ;
+    dcterms:description  "High-frequency spindle, coolant, and ambient temperature readings from CNC machining centres on production line A, collected during active cutting operations to detect thermal drift and prevent dimensional inaccuracy."@en ;
     dcterms:publisher    vpd:org-kit ;
-    dcterms:issued       "2024-01-15"^^xsd:date ;
-    dcterms:modified     "2026-03-01"^^xsd:date ;
+    dcterms:issued       "2024-03-01"^^xsd:date ;
+    dcterms:modified     "2026-04-08"^^xsd:date ;
     dcterms:temporal     vpd:period-2024-onwards ;
-    dcterms:spatial      vpd:location-karlsruhe ;
-    dcat:keyword         "air quality" , "PM2.5" , "pollution" , "sensors" ;
-    dcat:theme           <http://eurovoc.europa.eu/2527> ;
-    dcat:landingPage     <https://example.org/vpd/pages/air-quality> ;
-    dcat:distribution    vpd:dist-air-quality-csv , vpd:dist-air-quality-json ;
-    prov:wasGeneratedBy  vpd:obs-air-quality .
+    dcterms:spatial      vpd:location-plant-hall-a ;
+    dcat:keyword         "temperature" , "CNC" , "machining" , "thermal monitoring" , "manufacturing" ;
+    dcat:landingPage     <https://example.org/vpd/pages/machine-temperature> ;
+    dcat:distribution    vpd:dist-machine-temp-csv , vpd:dist-machine-temp-json ;
+    prov:wasGeneratedBy  vpd:obs-machine-temperature ;
+    dcterms:isPartOf     vpd:step-cnc-machining .
 
-vpd:dataset-traffic-flow
+vpd:dataset-hydraulic-pressure
     a dcat:Dataset ;
-    dcterms:title        "Traffic Flow Counts"@en ;
-    dcterms:description  "Daily vehicle counts at road sensor loops, broken down by vehicle class."@en ;
+    dcterms:title        "Hydraulic Press Pressure Readings"@en ;
+    dcterms:description  "Continuous pressure readings (bar) from hydraulic circuits of stamping and forming presses on production line B, recorded throughout each press cycle to verify forming force and detect circuit faults."@en ;
     dcterms:publisher    vpd:org-kit ;
-    dcterms:issued       "2023-06-01"^^xsd:date ;
+    dcterms:issued       "2023-09-01"^^xsd:date ;
     dcterms:modified     "2026-04-01"^^xsd:date ;
     dcterms:temporal     vpd:period-2023-onwards ;
-    dcterms:spatial      vpd:location-karlsruhe ;
-    dcat:keyword         "traffic" , "mobility" , "road sensors" ;
-    dcat:theme           <http://eurovoc.europa.eu/4512> ;
-    dcat:landingPage     <https://example.org/vpd/pages/traffic-flow> ;
-    dcat:distribution    vpd:dist-traffic-flow-csv ;
-    prov:wasGeneratedBy  vpd:obs-traffic-flow .
+    dcterms:spatial      vpd:location-plant-hall-b ;
+    dcat:keyword         "pressure" , "hydraulics" , "press" , "stamping" , "manufacturing" ;
+    dcat:landingPage     <https://example.org/vpd/pages/hydraulic-pressure> ;
+    dcat:distribution    vpd:dist-hydraulic-pressure-csv ;
+    prov:wasGeneratedBy  vpd:obs-hydraulic-pressure ;
+    dcterms:isPartOf     vpd:step-hydraulic-forming .
 
-vpd:dataset-weather-stations
+vpd:dataset-power-consumption
     a dcat:Dataset ;
-    dcterms:title        "Weather Station Observations"@en ;
-    dcterms:description  "Temperature, humidity, precipitation and wind speed readings from weather stations."@en ;
-    dcterms:publisher    vpd:org-kit ;
-    dcterms:issued       "2022-09-01"^^xsd:date ;
-    dcterms:modified     "2026-04-08"^^xsd:date ;
-    dcterms:temporal     vpd:period-2022-onwards ;
-    dcterms:spatial      vpd:location-karlsruhe-region ;
-    dcat:keyword         "weather" , "temperature" , "humidity" , "climate" ;
-    dcat:theme           <http://eurovoc.europa.eu/3355> ;
-    dcat:landingPage     <https://example.org/vpd/pages/weather-stations> ;
-    dcat:distribution    vpd:dist-weather-csv , vpd:dist-weather-netcdf ;
-    prov:wasGeneratedBy  vpd:obs-weather-stations .
-
-vpd:dataset-land-use-map
-    a dcat:Dataset ;
-    dcterms:title        "Land Use Classification Map"@en ;
-    dcterms:description  "Geospatial raster dataset classifying land cover categories (urban, forest, agriculture, water)."@en ;
+    dcterms:title        "Production Line Power Consumption"@en ;
+    dcterms:description  "Active power (kW), reactive power (kVAr) and energy consumption (kWh) sampled at 1-minute intervals across all production cells, spanning the full workflow from line startup through dispatch to support energy management and operational efficiency analysis."@en ;
     dcterms:publisher    vpd:org-kit ;
     dcterms:issued       "2023-01-01"^^xsd:date ;
-    dcterms:modified     "2025-11-20"^^xsd:date ;
-    dcterms:spatial      vpd:location-karlsruhe-region ;
-    dcat:keyword         "land use" , "GIS" , "remote sensing" , "geospatial" ;
-    dcat:theme           <http://eurovoc.europa.eu/2825> ;
-    dcat:landingPage     <https://example.org/vpd/pages/land-use> ;
-    dcat:distribution    vpd:dist-land-use-geotiff ;
-    prov:wasGeneratedBy  vpd:obs-land-use .
+    dcterms:modified     "2026-04-09"^^xsd:date ;
+    dcterms:temporal     vpd:period-2023-onwards ;
+    dcterms:spatial      vpd:location-plant-floor ;
+    dcat:keyword         "power" , "energy" , "electricity" , "production" , "manufacturing" ;
+    dcat:landingPage     <https://example.org/vpd/pages/power-consumption> ;
+    dcat:distribution    vpd:dist-power-csv , vpd:dist-power-parquet ;
+    prov:wasGeneratedBy  vpd:obs-power-consumption ;
+    dcterms:isPartOf     vpd:workflow-manufacturing-line .
+
+vpd:dataset-machine-vibration
+    a dcat:Dataset ;
+    dcterms:title        "Spindle Vibration and Condition Monitoring"@en ;
+    dcterms:description  "Tri-axial vibration acceleration (m/s²) and RMS envelope data from spindle bearings, captured during CNC machining operations to detect early-stage bearing wear and schedule predictive maintenance before failures occur."@en ;
+    dcterms:publisher    vpd:org-kit ;
+    dcterms:issued       "2024-06-01"^^xsd:date ;
+    dcterms:modified     "2026-03-15"^^xsd:date ;
+    dcterms:temporal     vpd:period-2024-onwards ;
+    dcterms:spatial      vpd:location-plant-hall-a ;
+    dcat:keyword         "vibration" , "condition monitoring" , "predictive maintenance" , "bearings" , "manufacturing" ;
+    dcat:landingPage     <https://example.org/vpd/pages/machine-vibration> ;
+    dcat:distribution    vpd:dist-vibration-csv , vpd:dist-vibration-hdf5 ;
+    prov:wasGeneratedBy  vpd:obs-machine-vibration ;
+    dcterms:isPartOf     vpd:step-cnc-machining .
 
 # ---------------------------------------------------------------------------
 # Distributions
 # ---------------------------------------------------------------------------
 
-vpd:dist-air-quality-csv
+vpd:dist-machine-temp-csv
     a dcat:Distribution ;
-    dcterms:title     "Air Quality — CSV"@en ;
+    dcterms:title     "CNC Machine Temperature — CSV"@en ;
     dcat:mediaType    <https://www.iana.org/assignments/media-types/text/csv> ;
-    dcat:downloadURL  <https://example.org/vpd/files/air-quality.csv> ;
-    dcat:byteSize     "52428800"^^xsd:nonNegativeInteger .
+    dcat:downloadURL  <https://example.org/vpd/files/machine-temperature.csv> ;
+    dcat:byteSize     "41943040"^^xsd:nonNegativeInteger .
 
-vpd:dist-air-quality-json
+vpd:dist-machine-temp-json
     a dcat:Distribution ;
-    dcterms:title     "Air Quality — JSON"@en ;
+    dcterms:title     "CNC Machine Temperature — JSON"@en ;
     dcat:mediaType    <https://www.iana.org/assignments/media-types/application/json> ;
-    dcat:downloadURL  <https://example.org/vpd/files/air-quality.json> ;
-    dcat:byteSize     "78643200"^^xsd:nonNegativeInteger .
+    dcat:downloadURL  <https://example.org/vpd/files/machine-temperature.json> ;
+    dcat:byteSize     "62914560"^^xsd:nonNegativeInteger .
 
-vpd:dist-traffic-flow-csv
+vpd:dist-hydraulic-pressure-csv
     a dcat:Distribution ;
-    dcterms:title     "Traffic Flow — CSV"@en ;
+    dcterms:title     "Hydraulic Pressure — CSV"@en ;
     dcat:mediaType    <https://www.iana.org/assignments/media-types/text/csv> ;
-    dcat:downloadURL  <https://example.org/vpd/files/traffic-flow.csv> ;
-    dcat:byteSize     "10485760"^^xsd:nonNegativeInteger .
+    dcat:downloadURL  <https://example.org/vpd/files/hydraulic-pressure.csv> ;
+    dcat:byteSize     "20971520"^^xsd:nonNegativeInteger .
 
-vpd:dist-weather-csv
+vpd:dist-power-csv
     a dcat:Distribution ;
-    dcterms:title     "Weather Observations — CSV"@en ;
+    dcterms:title     "Power Consumption — CSV"@en ;
     dcat:mediaType    <https://www.iana.org/assignments/media-types/text/csv> ;
-    dcat:downloadURL  <https://example.org/vpd/files/weather-stations.csv> ;
-    dcat:byteSize     "26214400"^^xsd:nonNegativeInteger .
+    dcat:downloadURL  <https://example.org/vpd/files/power-consumption.csv> ;
+    dcat:byteSize     "31457280"^^xsd:nonNegativeInteger .
 
-vpd:dist-weather-netcdf
+vpd:dist-power-parquet
     a dcat:Distribution ;
-    dcterms:title     "Weather Observations — NetCDF"@en ;
-    dcat:mediaType    <https://www.iana.org/assignments/media-types/application/x-netcdf> ;
-    dcat:downloadURL  <https://example.org/vpd/files/weather-stations.nc> ;
-    dcat:byteSize     "15728640"^^xsd:nonNegativeInteger .
+    dcterms:title     "Power Consumption — Parquet"@en ;
+    dcat:mediaType    <https://www.iana.org/assignments/media-types/application/octet-stream> ;
+    dcat:downloadURL  <https://example.org/vpd/files/power-consumption.parquet> ;
+    dcat:byteSize     "8388608"^^xsd:nonNegativeInteger .
 
-vpd:dist-land-use-geotiff
+vpd:dist-vibration-csv
     a dcat:Distribution ;
-    dcterms:title     "Land Use Map — GeoTIFF"@en ;
-    dcat:mediaType    <https://www.iana.org/assignments/media-types/image/tiff> ;
-    dcat:downloadURL  <https://example.org/vpd/files/land-use.tif> ;
-    dcat:byteSize     "209715200"^^xsd:nonNegativeInteger .
+    dcterms:title     "Spindle Vibration — CSV"@en ;
+    dcat:mediaType    <https://www.iana.org/assignments/media-types/text/csv> ;
+    dcat:downloadURL  <https://example.org/vpd/files/machine-vibration.csv> ;
+    dcat:byteSize     "104857600"^^xsd:nonNegativeInteger .
+
+vpd:dist-vibration-hdf5
+    a dcat:Distribution ;
+    dcterms:title     "Spindle Vibration — HDF5"@en ;
+    dcat:mediaType    <https://www.iana.org/assignments/media-types/application/x-hdf> ;
+    dcat:downloadURL  <https://example.org/vpd/files/machine-vibration.h5> ;
+    dcat:byteSize     "52428800"^^xsd:nonNegativeInteger .
 
 # ---------------------------------------------------------------------------
 # Data Service
 # ---------------------------------------------------------------------------
 
-vpd:service-sensor-api
+vpd:service-machine-monitoring-api
     a dcat:DataService ;
-    dcterms:title        "VPD Sensor REST API"@en ;
-    dcterms:description  "REST API providing real-time and historical sensor readings for air quality and weather stations."@en ;
-    dcat:endpointURL     <https://example.org/vpd/api/v1/sensors> ;
+    dcterms:title        "VPD Machine Monitoring REST API"@en ;
+    dcterms:description  "REST API providing real-time and historical sensor readings for machine temperature, pressure, power, and vibration."@en ;
+    dcat:endpointURL     <https://example.org/vpd/api/v1/machines> ;
     dcat:endpointDescription <https://example.org/vpd/api/v1/openapi.json> ;
-    dcat:servesDataset   vpd:dataset-air-quality , vpd:dataset-weather-stations .
+    dcat:servesDataset   vpd:dataset-machine-temperature , vpd:dataset-hydraulic-pressure ,
+                         vpd:dataset-power-consumption , vpd:dataset-machine-vibration .
 
 # ---------------------------------------------------------------------------
 # Supporting resources
@@ -170,145 +180,256 @@ vpd:period-2023-onwards
     a dcterms:PeriodOfTime ;
     dcat:startDate "2023-01-01"^^xsd:date .
 
-vpd:period-2022-onwards
-    a dcterms:PeriodOfTime ;
-    dcat:startDate "2022-01-01"^^xsd:date .
-
-vpd:location-karlsruhe
+vpd:location-plant-hall-a
     a dcterms:Location ;
-    foaf:name "Karlsruhe, Germany" .
+    foaf:name "Manufacturing Plant — Hall A (CNC & Machining)"@en .
 
-vpd:location-karlsruhe-region
+vpd:location-plant-hall-b
     a dcterms:Location ;
-    foaf:name "Karlsruhe Region, Germany" .
+    foaf:name "Manufacturing Plant — Hall B (Pressing & Forming)"@en .
+
+vpd:location-plant-floor
+    a dcterms:Location ;
+    foaf:name "Manufacturing Plant — Production Floor"@en .
 
 # ---------------------------------------------------------------------------
 # Observable Properties (one per dataset)
 # ---------------------------------------------------------------------------
 
-vpd:prop-air-quality-params
+vpd:prop-machine-temperature
     a sosa:ObservableProperty ;
-    dcterms:title "Air Quality Parameters"@en ;
-    dcterms:description "Multicomponent air quality measurement: PM2.5, PM10, NO2 and O3 concentrations in µg/m³."@en .
+    dcterms:title "Machine Temperature"@en ;
+    dcterms:description "Multi-point temperature measurements on CNC machines: spindle motor (°C), coolant circuit (°C), and ambient enclosure temperature (°C)."@en .
 
-vpd:prop-vehicle-count
+vpd:prop-hydraulic-pressure
     a sosa:ObservableProperty ;
-    dcterms:title "Daily Vehicle Count"@en ;
-    dcterms:description "Number of vehicles crossing a road cross-section per day, disaggregated by vehicle class."@en .
+    dcterms:title "Hydraulic Circuit Pressure"@en ;
+    dcterms:description "Gauge pressure (bar) at inlet and outlet ports of hydraulic circuits powering stamping and forming presses."@en .
 
-vpd:prop-meteorological-params
+vpd:prop-active-power
     a sosa:ObservableProperty ;
-    dcterms:title "Meteorological Parameters"@en ;
-    dcterms:description "Standard atmospheric measurements: air temperature (°C), relative humidity (%), precipitation (mm) and wind speed (m/s)."@en .
+    dcterms:title "Electrical Power Draw"@en ;
+    dcterms:description "Active power (kW), reactive power (kVAr) and cumulative energy (kWh) consumed by individual production cells and the overall line."@en .
 
-vpd:prop-land-cover-class
+vpd:prop-spindle-vibration
     a sosa:ObservableProperty ;
-    dcterms:title "Land Cover Classification"@en ;
-    dcterms:description "Discrete land cover class assigned per pixel (urban, forest, agriculture, water), derived from multispectral satellite imagery."@en .
+    dcterms:title "Spindle Bearing Vibration"@en ;
+    dcterms:description "Tri-axial vibration acceleration (m/s²) and RMS envelope values measured at spindle bearing housings for condition monitoring."@en .
 
 # ---------------------------------------------------------------------------
 # Features of Interest (one per dataset)
 # ---------------------------------------------------------------------------
 
-vpd:foi-air-karlsruhe
+vpd:foi-cnc-machines-hall-a
     a sosa:FeatureOfInterest ;
-    dcterms:title "Ambient Air — Karlsruhe"@en ;
-    dcterms:description "Ambient air across the Karlsruhe urban area, characterised by its particulate and gaseous pollutant load."@en ;
-    ssn:hasProperty vpd:prop-air-quality-params .
+    dcterms:title "CNC Machining Centres — Hall A"@en ;
+    dcterms:description "Fleet of 12 CNC machining centres in Hall A, characterised by their thermal state during cutting operations."@en ;
+    ssn:hasProperty vpd:prop-machine-temperature .
 
-vpd:foi-road-network-karlsruhe
+vpd:foi-hydraulic-presses-hall-b
     a sosa:FeatureOfInterest ;
-    dcterms:title "Road Network — Karlsruhe"@en ;
-    dcterms:description "The motorised road network within Karlsruhe city limits, characterised by vehicular traffic flow."@en ;
-    ssn:hasProperty vpd:prop-vehicle-count .
+    dcterms:title "Hydraulic Presses — Hall B"@en ;
+    dcterms:description "Six hydraulic stamping and forming presses in Hall B, characterised by the pressure state of their hydraulic circuits."@en ;
+    ssn:hasProperty vpd:prop-hydraulic-pressure .
 
-vpd:foi-atmosphere-karlsruhe-region
+vpd:foi-production-line
     a sosa:FeatureOfInterest ;
-    dcterms:title "Lower Atmosphere — Karlsruhe Region"@en ;
-    dcterms:description "The atmospheric boundary layer above the Karlsruhe administrative region."@en ;
-    ssn:hasProperty vpd:prop-meteorological-params .
+    dcterms:title "Production Line — Full Floor"@en ;
+    dcterms:description "Complete production floor comprising all machining, pressing, assembly, and auxiliary cells, characterised by electrical power demand."@en ;
+    ssn:hasProperty vpd:prop-active-power .
 
-vpd:foi-land-surface-karlsruhe-region
+vpd:foi-spindle-bearings
     a sosa:FeatureOfInterest ;
-    dcterms:title "Land Surface — Karlsruhe Region"@en ;
-    dcterms:description "Land surface of the Karlsruhe administrative region as observed by satellite remote sensing."@en ;
-    ssn:hasProperty vpd:prop-land-cover-class .
+    dcterms:title "CNC Spindle Bearings — Hall A"@en ;
+    dcterms:description "Spindle bearing assemblies of CNC machining centres in Hall A, characterised by vibration signatures relevant to wear and fault detection."@en ;
+    ssn:hasProperty vpd:prop-spindle-vibration .
 
 # ---------------------------------------------------------------------------
 # Sensors (one per dataset)
 # ---------------------------------------------------------------------------
 
-vpd:sensor-aq-network
+vpd:sensor-thermocouple-network
     a sosa:Sensor ;
-    dcterms:title "Karlsruhe Air Quality Sensor Network"@en ;
-    dcterms:description "Network of optical particle counters and electrochemical gas sensors deployed across Karlsruhe, operated by KIT."@en ;
-    sosa:observes vpd:prop-air-quality-params .
+    dcterms:title "CNC Thermocouple Network"@en ;
+    dcterms:description "Type-K thermocouples and NTC thermistors embedded in spindle motors, coolant circuits, and enclosures of all CNC machines in Hall A."@en ;
+    sosa:observes vpd:prop-machine-temperature .
 
-vpd:sensor-traffic-loop-network
+vpd:sensor-pressure-transducers
     a sosa:Sensor ;
-    dcterms:title "Karlsruhe Traffic Inductive Loop Network"@en ;
-    dcterms:description "Embedded inductive loop detectors at key road cross-sections in Karlsruhe, measuring daily vehicle counts and speed profiles."@en ;
-    sosa:observes vpd:prop-vehicle-count .
+    dcterms:title "Hydraulic Pressure Transducers"@en ;
+    dcterms:description "Piezoelectric pressure transducers installed at inlet and outlet ports of each hydraulic circuit across the presses in Hall B."@en ;
+    sosa:observes vpd:prop-hydraulic-pressure .
 
-vpd:sensor-weather-network
+vpd:sensor-power-meters
     a sosa:Sensor ;
-    dcterms:title "Karlsruhe Weather Station Network"@en ;
-    dcterms:description "Automatic weather stations operated jointly by KIT (Campus South, WMO 10731) and DWD (Rheinstetten, station 4177)."@en ;
-    sosa:observes vpd:prop-meteorological-params .
+    dcterms:title "Production Line Power Meters"@en ;
+    dcterms:description "Three-phase digital power meters (class 0.5S) installed at each production cell's distribution board and at the main plant incomer."@en ;
+    sosa:observes vpd:prop-active-power .
 
-vpd:sensor-sentinel2-2a
+vpd:sensor-accelerometers
     a sosa:Sensor ;
-    dcterms:title "Sentinel-2A Multispectral Instrument (MSI)"@en ;
-    dcterms:description "ESA Copernicus Sentinel-2A satellite carrying the 13-band multispectral instrument at 10–60 m spatial resolution."@en ;
-    sosa:observes vpd:prop-land-cover-class .
+    dcterms:title "Spindle Bearing Accelerometers"@en ;
+    dcterms:description "MEMS tri-axial accelerometers mounted on spindle bearing housings, sampling at 25.6 kHz for vibration signature analysis."@en ;
+    sosa:observes vpd:prop-spindle-vibration .
 
 # ---------------------------------------------------------------------------
-# Observations — one per dataset, typed as both sosa:Observation and
-# prov:Activity. Each dataset is the result of its observation:
+# Observations — each is a sosa:Observation, a prov:Activity, and a
+# wild:ActivityInstance (wild:hasState wild:done ≡ prov:Activity).
 #   dataset  prov:wasGeneratedBy  observation
 #   observation  sosa:hasResult   dataset
+#   observation  wild:activityInstanceOf  <workflow model activity>
+#   observation  wild:inWorkflowInstance  vpd:wfinst-manufacturing-line
 # ---------------------------------------------------------------------------
 
-vpd:obs-air-quality
-    a sosa:Observation , prov:Activity ;
-    dcterms:title "Air Quality Monitoring — Karlsruhe"@en ;
-    sosa:madeBySensor         vpd:sensor-aq-network ;
-    sosa:hasFeatureOfInterest vpd:foi-air-karlsruhe ;
-    sosa:observedProperty     vpd:prop-air-quality-params ;
-    sosa:hasResult            vpd:dataset-air-quality ;
-    sosa:resultTime           "2026-03-01T23:00:00Z"^^xsd:dateTime ;
-    prov:startedAtTime        "2024-01-15T00:00:00Z"^^xsd:dateTime ;
-    prov:endedAtTime          "2026-03-01T23:00:00Z"^^xsd:dateTime .
+vpd:obs-machine-temperature
+    a sosa:Observation , prov:Activity , wild:ActivityInstance ;
+    dcterms:title             "CNC Machine Temperature Monitoring — Hall A"@en ;
+    sosa:madeBySensor         vpd:sensor-thermocouple-network ;
+    sosa:hasFeatureOfInterest vpd:foi-cnc-machines-hall-a ;
+    sosa:observedProperty     vpd:prop-machine-temperature ;
+    sosa:hasResult            vpd:dataset-machine-temperature ;
+    sosa:resultTime           "2026-04-08T22:00:00Z"^^xsd:dateTime ;
+    prov:startedAtTime        "2024-03-01T06:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime          "2026-04-08T22:00:00Z"^^xsd:dateTime ;
+    wild:activityInstanceOf   vpd:wfact-cnc-temperature ;
+    wild:inWorkflowInstance   vpd:wfinst-manufacturing-line ;
+    wild:hasState             wild:done .
 
-vpd:obs-traffic-flow
-    a sosa:Observation , prov:Activity ;
-    dcterms:title "Traffic Flow Monitoring — Karlsruhe"@en ;
-    sosa:madeBySensor         vpd:sensor-traffic-loop-network ;
-    sosa:hasFeatureOfInterest vpd:foi-road-network-karlsruhe ;
-    sosa:observedProperty     vpd:prop-vehicle-count ;
-    sosa:hasResult            vpd:dataset-traffic-flow ;
-    sosa:resultTime           "2026-04-01T23:59:59Z"^^xsd:dateTime ;
-    prov:startedAtTime        "2023-06-01T00:00:00Z"^^xsd:dateTime ;
-    prov:endedAtTime          "2026-04-01T23:59:59Z"^^xsd:dateTime .
+vpd:obs-hydraulic-pressure
+    a sosa:Observation , prov:Activity , wild:ActivityInstance ;
+    dcterms:title             "Hydraulic Press Pressure Monitoring — Hall B"@en ;
+    sosa:madeBySensor         vpd:sensor-pressure-transducers ;
+    sosa:hasFeatureOfInterest vpd:foi-hydraulic-presses-hall-b ;
+    sosa:observedProperty     vpd:prop-hydraulic-pressure ;
+    sosa:hasResult            vpd:dataset-hydraulic-pressure ;
+    sosa:resultTime           "2026-04-01T21:59:59Z"^^xsd:dateTime ;
+    prov:startedAtTime        "2023-09-01T06:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime          "2026-04-01T21:59:59Z"^^xsd:dateTime ;
+    wild:activityInstanceOf   vpd:step-hydraulic-forming ;
+    wild:inWorkflowInstance   vpd:wfinst-manufacturing-line ;
+    wild:hasState             wild:done .
 
-vpd:obs-weather-stations
-    a sosa:Observation , prov:Activity ;
-    dcterms:title "Meteorological Observations — Karlsruhe Region"@en ;
-    sosa:madeBySensor         vpd:sensor-weather-network ;
-    sosa:hasFeatureOfInterest vpd:foi-atmosphere-karlsruhe-region ;
-    sosa:observedProperty     vpd:prop-meteorological-params ;
-    sosa:hasResult            vpd:dataset-weather-stations ;
-    sosa:resultTime           "2026-04-08T23:00:00Z"^^xsd:dateTime ;
-    prov:startedAtTime        "2022-09-01T00:00:00Z"^^xsd:dateTime ;
-    prov:endedAtTime          "2026-04-08T23:00:00Z"^^xsd:dateTime .
-
-vpd:obs-land-use
-    a sosa:Observation , prov:Activity ;
-    dcterms:title "Land Cover Classification — Karlsruhe Region (Sentinel-2)"@en ;
-    sosa:madeBySensor         vpd:sensor-sentinel2-2a ;
-    sosa:hasFeatureOfInterest vpd:foi-land-surface-karlsruhe-region ;
-    sosa:observedProperty     vpd:prop-land-cover-class ;
-    sosa:hasResult            vpd:dataset-land-use-map ;
-    sosa:resultTime           "2025-11-20T00:00:00Z"^^xsd:dateTime ;
+vpd:obs-power-consumption
+    a sosa:Observation , prov:Activity , wild:ActivityInstance ;
+    dcterms:title             "Production Line Power Consumption Monitoring"@en ;
+    sosa:madeBySensor         vpd:sensor-power-meters ;
+    sosa:hasFeatureOfInterest vpd:foi-production-line ;
+    sosa:observedProperty     vpd:prop-active-power ;
+    sosa:hasResult            vpd:dataset-power-consumption ;
+    sosa:resultTime           "2026-04-09T06:00:00Z"^^xsd:dateTime ;
     prov:startedAtTime        "2023-01-01T00:00:00Z"^^xsd:dateTime ;
-    prov:endedAtTime          "2025-11-20T00:00:00Z"^^xsd:dateTime .
+    prov:endedAtTime          "2026-04-09T06:00:00Z"^^xsd:dateTime ;
+    wild:activityInstanceOf   vpd:step-material-preparation ;
+    wild:inWorkflowInstance   vpd:wfinst-manufacturing-line ;
+    wild:hasState             wild:done .
+
+vpd:obs-machine-vibration
+    a sosa:Observation , prov:Activity , wild:ActivityInstance ;
+    dcterms:title             "Spindle Vibration Condition Monitoring — Hall A"@en ;
+    sosa:madeBySensor         vpd:sensor-accelerometers ;
+    sosa:hasFeatureOfInterest vpd:foi-spindle-bearings ;
+    sosa:observedProperty     vpd:prop-spindle-vibration ;
+    sosa:hasResult            vpd:dataset-machine-vibration ;
+    sosa:resultTime           "2026-03-15T18:00:00Z"^^xsd:dateTime ;
+    prov:startedAtTime        "2024-06-01T06:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime          "2026-03-15T18:00:00Z"^^xsd:dateTime ;
+    wild:activityInstanceOf   vpd:wfact-cnc-vibration ;
+    wild:inWorkflowInstance   vpd:wfinst-manufacturing-line ;
+    wild:hasState             wild:done .
+
+# ---------------------------------------------------------------------------
+# Manufacturing Workflow Model (WiLD)
+#
+# Static structure — describes what activities are expected and in what order.
+# The model uses a tree-shaped representation as required by WiLD:
+#
+#   vpd:wfact-root  (wild:SequentialActivity)
+#   ├── vpd:step-material-preparation  (wild:AtomicActivity)
+#   ├── vpd:step-cnc-machining         (wild:ParallelActivity)
+#   │   ├── vpd:wfact-cnc-temperature  (wild:AtomicActivity)
+#   │   └── vpd:wfact-cnc-vibration    (wild:AtomicActivity)
+#   ├── vpd:step-hydraulic-forming     (wild:AtomicActivity)
+#   └── vpd:step-quality-dispatch      (wild:AtomicActivity)
+#
+# Step sequencing is encoded by list order in wild:hasChildActivities.
+# ---------------------------------------------------------------------------
+
+vpd:workflow-manufacturing-line
+    a wild:WorkflowModel ;
+    dcterms:title       "Manufacturing Line Process"@en ;
+    dcterms:description "Four-step production workflow covering raw material intake through quality inspection and dispatch. Sensor observations performed within each step are linked to this model as activity instances to provide full process context for the collected datasets."@en ;
+    dcterms:issued      "2023-01-01"^^xsd:date ;
+    wild:hasBehaviour   vpd:wfact-root .
+
+# Root sequential activity — the four steps execute one after another.
+vpd:wfact-root
+    a wild:SequentialActivity ;
+    dcterms:title            "Manufacturing Line — Sequential Root"@en ;
+    wild:hasChildActivities  (
+        vpd:step-material-preparation
+        vpd:step-cnc-machining
+        vpd:step-hydraulic-forming
+        vpd:step-quality-dispatch
+    ) .
+
+# Step 1 — atomic: the single monitoring activity during this step is
+# the power consumption observation.
+vpd:step-material-preparation
+    a wild:AtomicActivity ;
+    dcterms:title       "Step 1: Raw Material Intake & Preparation"@en ;
+    dcterms:description "Incoming raw stock is received, inspected against material certificates, and cut to near-net-shape blanks. Transfer pallets are loaded and the production line is brought online. Power consumption monitoring begins at this point to establish the energy baseline for the full shift."@en .
+
+# Step 2 — parallel: temperature monitoring and vibration monitoring
+# run concurrently on the CNC machines throughout the machining phase.
+vpd:step-cnc-machining
+    a wild:ParallelActivity ;
+    dcterms:title            "Step 2: CNC Precision Machining"@en ;
+    dcterms:description      "Blanks are clamped on CNC turning and milling centres for precision material removal to final dimensions. Spindle temperature is monitored to prevent thermal drift, and bearing vibration is tracked to detect developing faults before they cause scrap or unplanned downtime."@en ;
+    wild:hasChildActivities  (
+        vpd:wfact-cnc-temperature
+        vpd:wfact-cnc-vibration
+    ) .
+
+vpd:wfact-cnc-temperature
+    a wild:AtomicActivity ;
+    dcterms:title       "CNC Temperature Monitoring"@en ;
+    dcterms:description "Continuous acquisition of spindle motor, coolant, and enclosure temperatures to detect thermal drift during cutting operations."@en .
+
+vpd:wfact-cnc-vibration
+    a wild:AtomicActivity ;
+    dcterms:title       "CNC Vibration Condition Monitoring"@en ;
+    dcterms:description "Continuous tri-axial vibration monitoring of spindle bearing housings to identify wear signatures and trigger predictive maintenance actions."@en .
+
+# Step 3 — atomic: the single monitoring activity is the hydraulic
+# pressure observation.
+vpd:step-hydraulic-forming
+    a wild:AtomicActivity ;
+    dcterms:title       "Step 3: Hydraulic Forming & Stamping"@en ;
+    dcterms:description "Machined parts are transferred to Hall B where hydraulic presses perform stamping, deep drawing, and bending to achieve final geometry. Hydraulic circuit pressure is recorded for every press cycle to verify forming force and detect seal or accumulator faults in real time."@en .
+
+# Step 4 — atomic: final inspection and dispatch. No sensor observation
+# dataset is currently associated with this step; process records from
+# Steps 1–3 are used for traceability.
+vpd:step-quality-dispatch
+    a wild:AtomicActivity ;
+    dcterms:title       "Step 4: Quality Inspection & Dispatch"@en ;
+    dcterms:description "Finished parts undergo dimensional verification on a coordinate measuring machine (CMM) and visual surface inspection. Each accepted part receives a traceability label linking it to the process records from Steps 1–3. Approved batches are packaged and transferred to the dispatch area."@en .
+
+# ---------------------------------------------------------------------------
+# Manufacturing Workflow Instance (WiLD)
+#
+# Runtime execution of the workflow model above. The four sensor observations
+# are the activity instances of this workflow instance. Each observation is
+# typed as wild:ActivityInstance with wild:hasState wild:done, which is
+# semantically equivalent to prov:Activity (completed activity).
+# The instance itself remains wild:active because Step 4 has no completed
+# activity instance yet.
+# ---------------------------------------------------------------------------
+
+vpd:wfinst-manufacturing-line
+    a wild:WorkflowInstance ;
+    dcterms:title          "Manufacturing Line Process — Active Instance"@en ;
+    dcterms:description    "Running execution of the manufacturing line workflow. Sensor observations from Steps 1–3 are recorded as completed activity instances. Step 4 (quality inspection) has no associated observation dataset in this instance."@en ;
+    wild:workflowInstanceOf vpd:workflow-manufacturing-line ;
+    wild:hasState           wild:active ;
+    prov:startedAtTime      "2023-01-01T00:00:00Z"^^xsd:dateTime .

@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useCatalogStore, type DatasetDetail, type DatasetProvenance } from '@/stores/catalog'
+import {
+  useCatalogStore,
+  type DatasetDetail,
+  type DatasetProvenance,
+  type WorkflowContext,
+} from '@/stores/catalog'
 
 const route = useRoute()
 const router = useRouter()
@@ -9,6 +14,7 @@ const catalog = useCatalogStore()
 
 const dataset = ref<DatasetDetail | null>(null)
 const provenance = ref<DatasetProvenance | null>(null)
+const workflowContext = ref<WorkflowContext | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
 
@@ -19,9 +25,10 @@ onMounted(async () => {
     return
   }
   try {
-    ;[dataset.value, provenance.value] = await Promise.all([
+    ;[dataset.value, provenance.value, workflowContext.value] = await Promise.all([
       catalog.fetchDataset(uri),
       catalog.fetchDatasetProvenance(uri),
+      catalog.fetchDatasetWorkflowContext(uri),
     ])
     if (!dataset.value) error.value = 'Dataset not found.'
   } catch {
@@ -74,6 +81,32 @@ function formatMediaType(uri: string): string {
             </dd>
           </template>
         </dl>
+      </section>
+
+      <section v-if="workflowContext" class="workflow-context-section">
+        <h2>Workflow Context</h2>
+
+        <template v-if="workflowContext.isDirectWorkflowLink">
+          <p class="wc-note">This dataset spans the full workflow and is not tied to a single step.</p>
+        </template>
+
+        <template v-else-if="workflowContext.stepUri">
+          <p class="wc-label">Collected during</p>
+          <p class="wc-step-title">{{ workflowContext.stepTitle ?? workflowContext.stepUri }}</p>
+          <p v-if="workflowContext.stepDescription" class="wc-step-desc">
+            {{ workflowContext.stepDescription }}
+          </p>
+        </template>
+
+        <div v-if="workflowContext.workflowUri" class="wc-workflow-row">
+          <span class="wc-workflow-label">Part of workflow</span>
+          <button
+            class="wc-workflow-link"
+            @click="router.push({ name: 'workflow', query: { uri: workflowContext.workflowUri! } })"
+          >
+            {{ workflowContext.workflowTitle ?? workflowContext.workflowUri }} →
+          </button>
+        </div>
       </section>
 
       <section v-if="dataset.distributions.length > 0" class="distributions-section">
@@ -312,6 +345,66 @@ section h2 {
 
 .download-btn:hover {
   background: var(--color-primary-dark);
+}
+
+/* Workflow context section */
+.wc-note {
+  font-size: 0.875rem;
+  color: #4b5563;
+  margin: 0 0 0.75rem;
+}
+
+.wc-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 0.25rem;
+}
+
+.wc-step-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 0.35rem;
+}
+
+.wc-step-desc {
+  font-size: 0.875rem;
+  color: #4b5563;
+  line-height: 1.55;
+  margin: 0 0 0.75rem;
+}
+
+.wc-workflow-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.wc-workflow-label {
+  font-size: 0.8rem;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.wc-workflow-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-primary);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.wc-workflow-link:hover {
+  color: var(--color-primary-dark);
 }
 
 /* Provenance section */
