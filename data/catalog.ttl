@@ -1,0 +1,180 @@
+@prefix dcat:    <https://www.w3.org/ns/dcat#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix foaf:    <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex:      <https://example.org/vpd/> .
+@prefix exds:    <https://example.org/vpd/dataset/> .
+@prefix exdist:  <https://example.org/vpd/distribution/> .
+@prefix exsvc:   <https://example.org/vpd/service/> .
+@prefix exorg:   <https://example.org/vpd/organization/> .
+@prefix exloc:   <https://example.org/vpd/location/> .
+@prefix exper:   <https://example.org/vpd/period/> .
+
+# ---------------------------------------------------------------------------
+# Catalog
+# ---------------------------------------------------------------------------
+
+ex:catalog
+    a dcat:Catalog ;
+    dcterms:title        "VPD Data Catalog"@en ;
+    dcterms:description  "A catalog of datasets managed within the VPD knowledge graph."@en ;
+    dcterms:publisher    exorg:kit ;
+    dcterms:issued       "2026-04-09"^^xsd:date ;
+    dcterms:modified     "2026-04-09"^^xsd:date ;
+    dcterms:language     <http://id.loc.gov/vocabulary/iso639-1/en> ;
+    dcat:dataset
+        exds:air-quality ,
+        exds:traffic-flow ,
+        exds:weather-stations ,
+        exds:land-use-map ;
+    dcat:service
+        exsvc:sensor-api .
+
+# ---------------------------------------------------------------------------
+# Publisher
+# ---------------------------------------------------------------------------
+
+exorg:kit
+    a foaf:Organization ;
+    foaf:name "Karlsruhe Institute of Technology"@en .
+
+# ---------------------------------------------------------------------------
+# Datasets
+# ---------------------------------------------------------------------------
+
+exds:air-quality
+    a dcat:Dataset ;
+    dcterms:title        "Air Quality Measurements"@en ;
+    dcterms:description  "Hourly PM2.5, PM10, NO2 and O3 measurements from sensor stations across the city."@en ;
+    dcterms:publisher    exorg:kit ;
+    dcterms:issued       "2024-01-15"^^xsd:date ;
+    dcterms:modified     "2026-03-01"^^xsd:date ;
+    dcterms:temporal     exper:2024-onwards ;
+    dcterms:spatial      exloc:karlsruhe ;
+    dcat:keyword         "air quality" , "PM2.5" , "pollution" , "sensors" ;
+    dcat:theme           <http://eurovoc.europa.eu/2527> ;
+    dcat:landingPage     <https://example.org/vpd/pages/air-quality> ;
+    dcat:distribution    exdist:air-quality-csv , exdist:air-quality-json .
+
+exds:traffic-flow
+    a dcat:Dataset ;
+    dcterms:title        "Traffic Flow Counts"@en ;
+    dcterms:description  "Daily vehicle counts at road sensor loops, broken down by vehicle class."@en ;
+    dcterms:publisher    exorg:kit ;
+    dcterms:issued       "2023-06-01"^^xsd:date ;
+    dcterms:modified     "2026-04-01"^^xsd:date ;
+    dcterms:temporal     exper:2023-onwards ;
+    dcterms:spatial      exloc:karlsruhe ;
+    dcat:keyword         "traffic" , "mobility" , "road sensors" ;
+    dcat:theme           <http://eurovoc.europa.eu/4512> ;
+    dcat:landingPage     <https://example.org/vpd/pages/traffic-flow> ;
+    dcat:distribution    exdist:traffic-flow-csv .
+
+exds:weather-stations
+    a dcat:Dataset ;
+    dcterms:title        "Weather Station Observations"@en ;
+    dcterms:description  "Temperature, humidity, precipitation and wind speed readings from weather stations."@en ;
+    dcterms:publisher    exorg:kit ;
+    dcterms:issued       "2022-09-01"^^xsd:date ;
+    dcterms:modified     "2026-04-08"^^xsd:date ;
+    dcterms:temporal     exper:2022-onwards ;
+    dcterms:spatial      exloc:karlsruhe-region ;
+    dcat:keyword         "weather" , "temperature" , "humidity" , "climate" ;
+    dcat:theme           <http://eurovoc.europa.eu/3355> ;
+    dcat:landingPage     <https://example.org/vpd/pages/weather-stations> ;
+    dcat:distribution    exdist:weather-csv , exdist:weather-netcdf .
+
+exds:land-use-map
+    a dcat:Dataset ;
+    dcterms:title        "Land Use Classification Map"@en ;
+    dcterms:description  "Geospatial raster dataset classifying land cover categories (urban, forest, agriculture, water)."@en ;
+    dcterms:publisher    exorg:kit ;
+    dcterms:issued       "2023-01-01"^^xsd:date ;
+    dcterms:modified     "2025-11-20"^^xsd:date ;
+    dcterms:spatial      exloc:karlsruhe-region ;
+    dcat:keyword         "land use" , "GIS" , "remote sensing" , "geospatial" ;
+    dcat:theme           <http://eurovoc.europa.eu/2825> ;
+    dcat:landingPage     <https://example.org/vpd/pages/land-use> ;
+    dcat:distribution    exdist:land-use-geotiff .
+
+# ---------------------------------------------------------------------------
+# Distributions
+# ---------------------------------------------------------------------------
+
+exdist:air-quality-csv
+    a dcat:Distribution ;
+    dcterms:title     "Air Quality — CSV"@en ;
+    dcat:mediaType    <https://www.iana.org/assignments/media-types/text/csv> ;
+    dcat:downloadURL  <https://example.org/vpd/files/air-quality.csv> ;
+    dcat:byteSize     "52428800"^^xsd:nonNegativeInteger .
+
+exdist:air-quality-json
+    a dcat:Distribution ;
+    dcterms:title     "Air Quality — JSON"@en ;
+    dcat:mediaType    <https://www.iana.org/assignments/media-types/application/json> ;
+    dcat:downloadURL  <https://example.org/vpd/files/air-quality.json> ;
+    dcat:byteSize     "78643200"^^xsd:nonNegativeInteger .
+
+exdist:traffic-flow-csv
+    a dcat:Distribution ;
+    dcterms:title     "Traffic Flow — CSV"@en ;
+    dcat:mediaType    <https://www.iana.org/assignments/media-types/text/csv> ;
+    dcat:downloadURL  <https://example.org/vpd/files/traffic-flow.csv> ;
+    dcat:byteSize     "10485760"^^xsd:nonNegativeInteger .
+
+exdist:weather-csv
+    a dcat:Distribution ;
+    dcterms:title     "Weather Observations — CSV"@en ;
+    dcat:mediaType    <https://www.iana.org/assignments/media-types/text/csv> ;
+    dcat:downloadURL  <https://example.org/vpd/files/weather-stations.csv> ;
+    dcat:byteSize     "26214400"^^xsd:nonNegativeInteger .
+
+exdist:weather-netcdf
+    a dcat:Distribution ;
+    dcterms:title     "Weather Observations — NetCDF"@en ;
+    dcat:mediaType    <https://www.iana.org/assignments/media-types/application/x-netcdf> ;
+    dcat:downloadURL  <https://example.org/vpd/files/weather-stations.nc> ;
+    dcat:byteSize     "15728640"^^xsd:nonNegativeInteger .
+
+exdist:land-use-geotiff
+    a dcat:Distribution ;
+    dcterms:title     "Land Use Map — GeoTIFF"@en ;
+    dcat:mediaType    <https://www.iana.org/assignments/media-types/image/tiff> ;
+    dcat:downloadURL  <https://example.org/vpd/files/land-use.tif> ;
+    dcat:byteSize     "209715200"^^xsd:nonNegativeInteger .
+
+# ---------------------------------------------------------------------------
+# Data Service
+# ---------------------------------------------------------------------------
+
+exsvc:sensor-api
+    a dcat:DataService ;
+    dcterms:title        "VPD Sensor REST API"@en ;
+    dcterms:description  "REST API providing real-time and historical sensor readings for air quality and weather stations."@en ;
+    dcat:endpointURL     <https://example.org/vpd/api/v1/sensors> ;
+    dcat:endpointDescription <https://example.org/vpd/api/v1/openapi.json> ;
+    dcat:servesDataset   exds:air-quality , exds:weather-stations .
+
+# ---------------------------------------------------------------------------
+# Supporting resources
+# ---------------------------------------------------------------------------
+
+exper:2024-onwards
+    a dcterms:PeriodOfTime ;
+    dcat:startDate "2024-01-01"^^xsd:date .
+
+exper:2023-onwards
+    a dcterms:PeriodOfTime ;
+    dcat:startDate "2023-01-01"^^xsd:date .
+
+exper:2022-onwards
+    a dcterms:PeriodOfTime ;
+    dcat:startDate "2022-01-01"^^xsd:date .
+
+exloc:karlsruhe
+    a dcterms:Location ;
+    foaf:name "Karlsruhe, Germany" .
+
+exloc:karlsruhe-region
+    a dcterms:Location ;
+    foaf:name "Karlsruhe Region, Germany" .
