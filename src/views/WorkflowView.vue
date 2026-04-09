@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useWorkflowStore, type WorkflowDetail } from '@/stores/workflow'
+import AddDatasetModal from '@/components/AddDatasetModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -10,6 +11,9 @@ const workflowStore = useWorkflowStore()
 const workflow = ref<WorkflowDetail | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
+
+const showAddModal = ref(false)
+const addToStepUri = ref<string | undefined>(undefined)
 
 onMounted(async () => {
   const uri = route.query.uri as string
@@ -41,6 +45,18 @@ function parseStepTitle(title: string | null): { number: string; name: string } 
 function openDataset(uri: string) {
   router.push({ name: 'dataset', query: { uri } })
 }
+
+function openAddModal(stepUri: string) {
+  addToStepUri.value = stepUri
+  showAddModal.value = true
+}
+
+async function onDatasetCreated(uri: string) {
+  // Reload the workflow so the new dataset chip appears
+  const wfUri = route.query.uri as string
+  workflow.value = await workflowStore.fetchWorkflow(wfUri)
+  router.push({ name: 'dataset', query: { uri } })
+}
 </script>
 
 <template>
@@ -60,7 +76,7 @@ function openDataset(uri: string) {
       </div>
 
       <!-- Cross-cutting datasets (linked to the workflow as a whole) -->
-      <section v-if="workflow.crossCuttingDatasets.length > 0" class="cross-cutting-section">
+      <section class="cross-cutting-section">
         <h2>Full-workflow Datasets</h2>
         <p class="section-note">
           These datasets cover the entire workflow from start to finish and are not tied to a single step.
@@ -74,6 +90,9 @@ function openDataset(uri: string) {
             @click="openDataset(ds.uri)"
           >
             {{ ds.title ?? ds.uri }}
+          </button>
+          <button class="dataset-chip dataset-chip--add" @click="openAddModal(workflow.uri)">
+            + Add dataset
           </button>
         </div>
       </section>
@@ -107,7 +126,7 @@ function openDataset(uri: string) {
 
               <p v-if="step.description" class="step-description">{{ step.description }}</p>
 
-              <div v-if="step.datasets.length > 0" class="step-datasets">
+              <div class="step-datasets">
                 <span class="step-datasets-label">Datasets collected here</span>
                 <div class="dataset-chips">
                   <button
@@ -119,16 +138,23 @@ function openDataset(uri: string) {
                   >
                     {{ ds.title ?? ds.uri }}
                   </button>
+                  <button class="dataset-chip dataset-chip--add" @click="openAddModal(step.uri)">
+                    + Add dataset
+                  </button>
                 </div>
               </div>
-
-              <p v-else class="step-no-datasets">No datasets are directly associated with this step.</p>
             </div>
           </li>
         </ol>
       </section>
     </template>
   </main>
+
+  <AddDatasetModal
+    v-model="showAddModal"
+    :preselected-step-uri="addToStepUri"
+    @created="onDatasetCreated"
+  />
 </template>
 
 <style scoped>
@@ -232,6 +258,17 @@ section h2 {
 .dataset-chip:hover {
   background: #dcfce7;
   border-color: #86efac;
+}
+
+.dataset-chip--add {
+  background: #fff;
+  border-style: dashed;
+  color: var(--color-primary);
+}
+
+.dataset-chip--add:hover {
+  background: #f0fdf4;
+  border-color: var(--color-primary);
 }
 
 /* Step timeline */

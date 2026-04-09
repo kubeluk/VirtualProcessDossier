@@ -1,7 +1,19 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { querySparql } from '@/services/sparql'
+import { querySparql, updateSparql } from '@/services/sparql'
 import { useGraphStore } from '@/stores/graph'
+
+export interface AddDatasetForm {
+  title: string
+  description: string
+  keywords: string
+  downloadUrl: string
+  mediaType: string
+  byteSize: string
+  stepUri: string
+  workflowInstanceUri: string
+  isFullWorkflowLink: boolean
+}
 
 export interface Dataset {
   uri: string
@@ -290,6 +302,98 @@ export const useCatalogStore = defineStore('catalog', () => {
     }
   }
 
+  async function addDataset(form: AddDatasetForm): Promise<string> {
+    const suffix = Date.now().toString(36)
+    const slug = form.title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 40) || 'dataset'
+
+    const base = 'https://example.org/vpd#'
+    const datasetUri = `${base}dataset-${slug}-${suffix}`
+    const distUri = `${base}dist-${slug}-${suffix}`
+    const obsUri = `${base}obs-${slug}-${suffix}`
+    const catalogUri = `${base}catalog`
+    const now = new Date().toISOString()
+    const today = now.slice(0, 10)
+
+    function esc(s: string): string {
+      return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+    }
+
+    const keywords = form.keywords
+      .split(',')
+      .map((k) => k.trim())
+      .filter(Boolean)
+
+    // Dataset triples
+    const datasetTriples: string[] = [
+      `<${datasetUri}> a dcat:Dataset`,
+      `  dcterms:title "${esc(form.title)}"@en`,
+    ]
+    if (form.description) datasetTriples.push(`  dcterms:description "${esc(form.description)}"@en`)
+    for (const kw of keywords) datasetTriples.push(`  dcat:keyword "${esc(kw)}"`)
+    datasetTriples.push(`  dcterms:modified "${today}"^^xsd:date`)
+    datasetTriples.push(`  dcat:distribution <${distUri}>`)
+    datasetTriples.push(`  prov:wasGeneratedBy <${obsUri}>`)
+    if (form.stepUri) datasetTriples.push(`  dcterms:isPartOf <${form.stepUri}>`)
+
+    // Distribution triples
+    const distTriples: string[] = [
+      `<${distUri}> a dcat:Distribution`,
+      `  dcat:downloadURL <${form.downloadUrl}>`,
+    ]
+    if (form.mediaType) {
+      distTriples.push(
+        `  dcat:mediaType <https://www.iana.org/assignments/media-types/${form.mediaType}>`,
+      )
+    }
+    if (form.byteSize) {
+      distTriples.push(
+        `  dcat:byteSize "${parseInt(form.byteSize, 10)}"^^xsd:nonNegativeInteger`,
+      )
+    }
+
+    // Observation triples
+    const obsTriples: string[] = [
+      `<${obsUri}> a sosa:Observation , prov:Activity , wild:ActivityInstance`,
+      `  sosa:hasResult <${datasetUri}>`,
+      `  prov:startedAtTime "${now}"^^xsd:dateTime`,
+      `  prov:endedAtTime "${now}"^^xsd:dateTime`,
+      `  wild:hasState wild:done`,
+    ]
+    // Only link to a specific activity if the step is a real activity (not the workflow model)
+    if (form.stepUri && !form.isFullWorkflowLink) {
+      obsTriples.push(`  wild:activityInstanceOf <${form.stepUri}>`)
+    }
+    if (form.workflowInstanceUri) {
+      obsTriples.push(`  wild:inWorkflowInstance <${form.workflowInstanceUri}>`)
+    }
+
+    const blocks = [
+      datasetTriples.join(' ;\n') + ' .',
+      distTriples.join(' ;\n') + ' .',
+      obsTriples.join(' ;\n') + ' .',
+      `<${catalogUri}> dcat:dataset <${datasetUri}> .`,
+    ]
+
+    const update = `
+PREFIX dcat:    <http://www.w3.org/ns/dcat#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX xsd:     <http://www.w3.org/2001/XMLSchema#>
+PREFIX prov:    <http://www.w3.org/ns/prov#>
+PREFIX sosa:    <http://www.w3.org/ns/sosa/>
+PREFIX wild:    <http://purl.org/wild/vocab#>
+
+INSERT DATA {
+${blocks.join('\n\n')}
+}
+`
+    await updateSparql(graphStore.updateEndpoint, update)
+    return datasetUri
+  }
+
   return {
     datasets,
     loading,
@@ -298,5 +402,6 @@ export const useCatalogStore = defineStore('catalog', () => {
     fetchDataset,
     fetchDatasetProvenance,
     fetchDatasetWorkflowContext,
+    addDataset,
   }
 })

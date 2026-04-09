@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCatalogStore } from '@/stores/catalog'
+import AddDatasetModal from '@/components/AddDatasetModal.vue'
 
 const router = useRouter()
 const catalog = useCatalogStore()
+const showModal = ref(false)
 
 onMounted(() => catalog.fetchDatasets())
 
@@ -15,14 +17,26 @@ function formatDate(iso: string): string {
 function openDataset(uri: string) {
   router.push({ name: 'dataset', query: { uri } })
 }
+
+function onDatasetCreated(uri: string) {
+  catalog.fetchDatasets()
+  router.push({ name: 'dataset', query: { uri } })
+}
 </script>
 
 <template>
   <main class="catalog">
     <header class="catalog-header">
-      <h1>Data Catalog</h1>
-      <p class="subtitle">Browse datasets available in the VPD knowledge graph.</p>
+      <div class="catalog-header-top">
+        <div>
+          <h1>Data Catalog</h1>
+          <p class="subtitle">Browse datasets available in the VPD knowledge graph.</p>
+        </div>
+        <button class="add-btn" @click="showModal = true">+ Add Dataset</button>
+      </div>
     </header>
+
+    <AddDatasetModal v-model="showModal" @created="onDatasetCreated" />
 
     <nav class="page-nav">
       <RouterLink to="/catalog" class="nav-tab nav-tab--active">Datasets</RouterLink>
@@ -71,6 +85,32 @@ function openDataset(uri: string) {
 
 .catalog-header {
   margin-bottom: 1.25rem;
+}
+
+.catalog-header-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.add-btn {
+  flex-shrink: 0;
+  padding: 0.5rem 1.1rem;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-top: 0.25rem;
+}
+
+.add-btn:hover {
+  background: var(--color-primary-dark);
 }
 
 .page-nav {
