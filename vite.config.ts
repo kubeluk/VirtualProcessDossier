@@ -14,6 +14,7 @@ export default defineConfig({
       '/sparql': {
         target: 'http://localhost:3030',
         changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/sparql/, '/vpd/sparql'),
       },
     },
   },

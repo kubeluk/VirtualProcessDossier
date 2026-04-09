@@ -19,12 +19,25 @@ src/
   assets/        # Global CSS
   router/        # Vue Router config
   services/      # SPARQL query/update helpers (sparql.ts)
-  stores/        # Pinia stores
-  views/         # Page-level components
+  stores/
+    graph.ts     # SPARQL endpoint config (endpoint ref, defaults to /sparql)
+    catalog.ts   # Dataset list + detail fetching (fetchDatasets, fetchDataset)
+  views/
+    HomeView.vue    # Landing page → links to /catalog
+    CatalogView.vue # Browse all datasets (card list)
+    DatasetView.vue # Dataset detail; route: /dataset?uri=<encoded-uri>
 data/
   catalog.ttl    # DCAT seed data (loaded automatically on first Docker start)
   seed.sh        # Init script run by the 'seed' Docker service
 ```
+
+## Routes
+
+| Path | Name | View | Description |
+|------|------|------|-------------|
+| `/` | `home` | HomeView | Landing page |
+| `/catalog` | `catalog` | CatalogView | Browse all datasets |
+| `/dataset?uri=` | `dataset` | DatasetView | Dataset detail (uri = full encoded dataset URI) |
 
 ## Commands
 
@@ -65,3 +78,10 @@ docker compose down -v           # Tear down including data volume (resets seed)
 ## Domain Context
 
 This UI abstracts RDF/SPARQL complexity from end users. Features are built around specific ontologies provided incrementally. All SPARQL is generated in the service layer — never exposed raw to users.
+
+## Features
+
+### Data Catalog Browse (implemented)
+- Dataset list at `/catalog`: queries all `dcat:Dataset` resources linked via `dcat:Catalog`, shows title, description, modified date, distribution count
+- Dataset detail at `/dataset?uri=<encoded-uri>`: shows full metadata (keywords, modified) and all distributions with format, file size, and download link
+- SPARQL queries live in `src/stores/catalog.ts`; views are purely presentational
