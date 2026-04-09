@@ -18,5 +18,16 @@ services:
       - jena-data:/fuseki
     restart: unless-stopped
 
+  seed:
+    image: curlimages/curl:latest
+    depends_on:
+      - jena
+    environment:
+      - ADMIN_PASSWORD=admin
+    volumes:
+      - ./data:/data:ro
+    entrypoint: ["sh", "/data/seed.sh"]
+    restart: "no"
+
 volumes:
   jena-data:
