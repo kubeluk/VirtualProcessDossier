@@ -72,8 +72,19 @@ docker compose down -v           # Tear down including data volume (resets seed)
 - **Resource URIs**: Hash URIs under a single base — `https://example.org/vpd#<resource>`
   - e.g. `vpd:catalog`, `vpd:dataset-air-quality`, `vpd:dist-air-quality-csv`
   - Rationale: all catalog resources belong to one document; hash URIs are appropriate per the [Cool URIs](https://www.w3.org/TR/cooluris/#hashuri) recommendation
-- **Supporting vocabularies**: `dcterms`, `foaf`, `xsd`
+- **Supporting vocabularies**: `dcterms`, `foaf`, `xsd`, `prov`, `sosa`, `ssn`, `geo`
 - Ontologies for new features are provided incrementally and documented here as they are added
+
+### Provenance (seeded)
+- Each `dcat:Dataset` is linked to exactly one `sosa:Observation` via `prov:wasGeneratedBy`; the observation also carries `sosa:hasResult <dataset>` — making the dataset the result of the observation
+- Each `sosa:Observation` is also typed `prov:Activity` to satisfy PROV-O semantics; it carries `prov:startedAtTime` / `prov:endedAtTime`
+- A `sosa:Observation` may have **at most one** `sosa:madeBySensor`, `sosa:hasFeatureOfInterest`, and `sosa:observedProperty` — none are required
+- Sensors (`sosa:Sensor`) use `sosa:observes` to link to their observable property
+- Features of interest (`sosa:FeatureOfInterest`) use `ssn:hasProperty` to link to their property
+- Observable properties are typed `sosa:ObservableProperty`
+- Verified namespaces (dereferenced from W3C specs): `prov: <http://www.w3.org/ns/prov#>`, `sosa: <http://www.w3.org/ns/sosa/>`, `ssn: <http://www.w3.org/ns/ssn/>`
+- Confirmed valid terms — SOSA: `Observation`, `Sensor`, `FeatureOfInterest`, `ObservableProperty`, `madeBySensor`, `hasFeatureOfInterest`, `observedProperty`, `hasResult`, `hasSimpleResult`, `resultTime`, `phenomenonTime`, `observes` — SSN: `hasProperty`, `Property` — PROV: `Activity`, `wasGeneratedBy`, `startedAtTime`, `endedAtTime`
+- `sosa:ObservationCollection` and `ssn:observes` do **not** exist in the standards — do not use them
 
 ## Domain Context
 

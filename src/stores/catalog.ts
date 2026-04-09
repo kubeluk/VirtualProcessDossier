@@ -24,6 +24,16 @@ export interface DatasetDetail extends Dataset {
   distributions: Distribution[]
 }
 
+export interface DatasetProvenance {
+  observationUri: string
+  observationTitle: string | null
+  startTime: string | null
+  endTime: string | null
+  sensor: { uri: string; title: string | null; description: string | null } | null
+  featureOfInterest: { uri: string; title: string | null; description: string | null } | null
+  observedProperty: { uri: string; title: string | null; description: string | null } | null
+}
+
 export const useCatalogStore = defineStore('catalog', () => {
   const graphStore = useGraphStore()
 
@@ -117,5 +127,74 @@ export const useCatalogStore = defineStore('catalog', () => {
     }
   }
 
-  return { datasets, loading, error, fetchDatasets, fetchDataset }
+  async function fetchDatasetProvenance(uri: string): Promise<DatasetProvenance | null> {
+    const query = `
+      PREFIX prov:    <http://www.w3.org/ns/prov#>
+      PREFIX sosa:    <http://www.w3.org/ns/sosa/>
+      PREFIX dcterms: <http://purl.org/dc/terms/>
+
+      SELECT ?obs ?obsTitle ?startTime ?endTime
+             ?sensor ?sensorTitle ?sensorDesc
+             ?foi ?foiTitle ?foiDesc
+             ?prop ?propTitle ?propDesc
+      WHERE {
+        BIND(<${uri}> AS ?dataset)
+        ?dataset prov:wasGeneratedBy ?obs .
+        ?obs a sosa:Observation .
+        OPTIONAL { ?obs dcterms:title ?obsTitle }
+        OPTIONAL { ?obs prov:startedAtTime ?startTime }
+        OPTIONAL { ?obs prov:endedAtTime ?endTime }
+        OPTIONAL {
+          ?obs sosa:madeBySensor ?sensor .
+          OPTIONAL { ?sensor dcterms:title ?sensorTitle }
+          OPTIONAL { ?sensor dcterms:description ?sensorDesc }
+        }
+        OPTIONAL {
+          ?obs sosa:hasFeatureOfInterest ?foi .
+          OPTIONAL { ?foi dcterms:title ?foiTitle }
+          OPTIONAL { ?foi dcterms:description ?foiDesc }
+        }
+        OPTIONAL {
+          ?obs sosa:observedProperty ?prop .
+          OPTIONAL { ?prop dcterms:title ?propTitle }
+          OPTIONAL { ?prop dcterms:description ?propDesc }
+        }
+      }
+      LIMIT 1
+    `
+
+    const results = await querySparql(graphStore.endpoint, query)
+    if (results.results.bindings.length === 0) return null
+
+    const b = results.results.bindings[0]
+    return {
+      observationUri: b.obs.value,
+      observationTitle: b.obsTitle?.value ?? null,
+      startTime: b.startTime?.value ?? null,
+      endTime: b.endTime?.value ?? null,
+      sensor: b.sensor
+        ? {
+            uri: b.sensor.value,
+            title: b.sensorTitle?.value ?? null,
+            description: b.sensorDesc?.value ?? null,
+          }
+        : null,
+      featureOfInterest: b.foi
+        ? {
+            uri: b.foi.value,
+            title: b.foiTitle?.value ?? null,
+            description: b.foiDesc?.value ?? null,
+          }
+        : null,
+      observedProperty: b.prop
+        ? {
+            uri: b.prop.value,
+            title: b.propTitle?.value ?? null,
+            description: b.propDesc?.value ?? null,
+          }
+        : null,
+    }
+  }
+
+  return { datasets, loading, error, fetchDatasets, fetchDataset, fetchDatasetProvenance }
 })

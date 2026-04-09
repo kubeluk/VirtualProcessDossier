@@ -4,6 +4,10 @@
 @prefix foaf:    <http://xmlns.com/foaf/0.1/> .
 @prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
 @prefix vpd:     <https://example.org/vpd#> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix sosa:    <http://www.w3.org/ns/sosa/> .
+@prefix ssn:     <http://www.w3.org/ns/ssn/> .
+@prefix geo:     <http://www.w3.org/2003/01/geo/wgs84_pos#> .
 
 # ---------------------------------------------------------------------------
 # Catalog
@@ -49,7 +53,8 @@ vpd:dataset-air-quality
     dcat:keyword         "air quality" , "PM2.5" , "pollution" , "sensors" ;
     dcat:theme           <http://eurovoc.europa.eu/2527> ;
     dcat:landingPage     <https://example.org/vpd/pages/air-quality> ;
-    dcat:distribution    vpd:dist-air-quality-csv , vpd:dist-air-quality-json .
+    dcat:distribution    vpd:dist-air-quality-csv , vpd:dist-air-quality-json ;
+    prov:wasGeneratedBy  vpd:obs-air-quality .
 
 vpd:dataset-traffic-flow
     a dcat:Dataset ;
@@ -63,7 +68,8 @@ vpd:dataset-traffic-flow
     dcat:keyword         "traffic" , "mobility" , "road sensors" ;
     dcat:theme           <http://eurovoc.europa.eu/4512> ;
     dcat:landingPage     <https://example.org/vpd/pages/traffic-flow> ;
-    dcat:distribution    vpd:dist-traffic-flow-csv .
+    dcat:distribution    vpd:dist-traffic-flow-csv ;
+    prov:wasGeneratedBy  vpd:obs-traffic-flow .
 
 vpd:dataset-weather-stations
     a dcat:Dataset ;
@@ -77,7 +83,8 @@ vpd:dataset-weather-stations
     dcat:keyword         "weather" , "temperature" , "humidity" , "climate" ;
     dcat:theme           <http://eurovoc.europa.eu/3355> ;
     dcat:landingPage     <https://example.org/vpd/pages/weather-stations> ;
-    dcat:distribution    vpd:dist-weather-csv , vpd:dist-weather-netcdf .
+    dcat:distribution    vpd:dist-weather-csv , vpd:dist-weather-netcdf ;
+    prov:wasGeneratedBy  vpd:obs-weather-stations .
 
 vpd:dataset-land-use-map
     a dcat:Dataset ;
@@ -90,7 +97,8 @@ vpd:dataset-land-use-map
     dcat:keyword         "land use" , "GIS" , "remote sensing" , "geospatial" ;
     dcat:theme           <http://eurovoc.europa.eu/2825> ;
     dcat:landingPage     <https://example.org/vpd/pages/land-use> ;
-    dcat:distribution    vpd:dist-land-use-geotiff .
+    dcat:distribution    vpd:dist-land-use-geotiff ;
+    prov:wasGeneratedBy  vpd:obs-land-use .
 
 # ---------------------------------------------------------------------------
 # Distributions
@@ -173,3 +181,134 @@ vpd:location-karlsruhe
 vpd:location-karlsruhe-region
     a dcterms:Location ;
     foaf:name "Karlsruhe Region, Germany" .
+
+# ---------------------------------------------------------------------------
+# Observable Properties (one per dataset)
+# ---------------------------------------------------------------------------
+
+vpd:prop-air-quality-params
+    a sosa:ObservableProperty ;
+    dcterms:title "Air Quality Parameters"@en ;
+    dcterms:description "Multicomponent air quality measurement: PM2.5, PM10, NO2 and O3 concentrations in µg/m³."@en .
+
+vpd:prop-vehicle-count
+    a sosa:ObservableProperty ;
+    dcterms:title "Daily Vehicle Count"@en ;
+    dcterms:description "Number of vehicles crossing a road cross-section per day, disaggregated by vehicle class."@en .
+
+vpd:prop-meteorological-params
+    a sosa:ObservableProperty ;
+    dcterms:title "Meteorological Parameters"@en ;
+    dcterms:description "Standard atmospheric measurements: air temperature (°C), relative humidity (%), precipitation (mm) and wind speed (m/s)."@en .
+
+vpd:prop-land-cover-class
+    a sosa:ObservableProperty ;
+    dcterms:title "Land Cover Classification"@en ;
+    dcterms:description "Discrete land cover class assigned per pixel (urban, forest, agriculture, water), derived from multispectral satellite imagery."@en .
+
+# ---------------------------------------------------------------------------
+# Features of Interest (one per dataset)
+# ---------------------------------------------------------------------------
+
+vpd:foi-air-karlsruhe
+    a sosa:FeatureOfInterest ;
+    dcterms:title "Ambient Air — Karlsruhe"@en ;
+    dcterms:description "Ambient air across the Karlsruhe urban area, characterised by its particulate and gaseous pollutant load."@en ;
+    ssn:hasProperty vpd:prop-air-quality-params .
+
+vpd:foi-road-network-karlsruhe
+    a sosa:FeatureOfInterest ;
+    dcterms:title "Road Network — Karlsruhe"@en ;
+    dcterms:description "The motorised road network within Karlsruhe city limits, characterised by vehicular traffic flow."@en ;
+    ssn:hasProperty vpd:prop-vehicle-count .
+
+vpd:foi-atmosphere-karlsruhe-region
+    a sosa:FeatureOfInterest ;
+    dcterms:title "Lower Atmosphere — Karlsruhe Region"@en ;
+    dcterms:description "The atmospheric boundary layer above the Karlsruhe administrative region."@en ;
+    ssn:hasProperty vpd:prop-meteorological-params .
+
+vpd:foi-land-surface-karlsruhe-region
+    a sosa:FeatureOfInterest ;
+    dcterms:title "Land Surface — Karlsruhe Region"@en ;
+    dcterms:description "Land surface of the Karlsruhe administrative region as observed by satellite remote sensing."@en ;
+    ssn:hasProperty vpd:prop-land-cover-class .
+
+# ---------------------------------------------------------------------------
+# Sensors (one per dataset)
+# ---------------------------------------------------------------------------
+
+vpd:sensor-aq-network
+    a sosa:Sensor ;
+    dcterms:title "Karlsruhe Air Quality Sensor Network"@en ;
+    dcterms:description "Network of optical particle counters and electrochemical gas sensors deployed across Karlsruhe, operated by KIT."@en ;
+    sosa:observes vpd:prop-air-quality-params .
+
+vpd:sensor-traffic-loop-network
+    a sosa:Sensor ;
+    dcterms:title "Karlsruhe Traffic Inductive Loop Network"@en ;
+    dcterms:description "Embedded inductive loop detectors at key road cross-sections in Karlsruhe, measuring daily vehicle counts and speed profiles."@en ;
+    sosa:observes vpd:prop-vehicle-count .
+
+vpd:sensor-weather-network
+    a sosa:Sensor ;
+    dcterms:title "Karlsruhe Weather Station Network"@en ;
+    dcterms:description "Automatic weather stations operated jointly by KIT (Campus South, WMO 10731) and DWD (Rheinstetten, station 4177)."@en ;
+    sosa:observes vpd:prop-meteorological-params .
+
+vpd:sensor-sentinel2-2a
+    a sosa:Sensor ;
+    dcterms:title "Sentinel-2A Multispectral Instrument (MSI)"@en ;
+    dcterms:description "ESA Copernicus Sentinel-2A satellite carrying the 13-band multispectral instrument at 10–60 m spatial resolution."@en ;
+    sosa:observes vpd:prop-land-cover-class .
+
+# ---------------------------------------------------------------------------
+# Observations — one per dataset, typed as both sosa:Observation and
+# prov:Activity. Each dataset is the result of its observation:
+#   dataset  prov:wasGeneratedBy  observation
+#   observation  sosa:hasResult   dataset
+# ---------------------------------------------------------------------------
+
+vpd:obs-air-quality
+    a sosa:Observation , prov:Activity ;
+    dcterms:title "Air Quality Monitoring — Karlsruhe"@en ;
+    sosa:madeBySensor         vpd:sensor-aq-network ;
+    sosa:hasFeatureOfInterest vpd:foi-air-karlsruhe ;
+    sosa:observedProperty     vpd:prop-air-quality-params ;
+    sosa:hasResult            vpd:dataset-air-quality ;
+    sosa:resultTime           "2026-03-01T23:00:00Z"^^xsd:dateTime ;
+    prov:startedAtTime        "2024-01-15T00:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime          "2026-03-01T23:00:00Z"^^xsd:dateTime .
+
+vpd:obs-traffic-flow
+    a sosa:Observation , prov:Activity ;
+    dcterms:title "Traffic Flow Monitoring — Karlsruhe"@en ;
+    sosa:madeBySensor         vpd:sensor-traffic-loop-network ;
+    sosa:hasFeatureOfInterest vpd:foi-road-network-karlsruhe ;
+    sosa:observedProperty     vpd:prop-vehicle-count ;
+    sosa:hasResult            vpd:dataset-traffic-flow ;
+    sosa:resultTime           "2026-04-01T23:59:59Z"^^xsd:dateTime ;
+    prov:startedAtTime        "2023-06-01T00:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime          "2026-04-01T23:59:59Z"^^xsd:dateTime .
+
+vpd:obs-weather-stations
+    a sosa:Observation , prov:Activity ;
+    dcterms:title "Meteorological Observations — Karlsruhe Region"@en ;
+    sosa:madeBySensor         vpd:sensor-weather-network ;
+    sosa:hasFeatureOfInterest vpd:foi-atmosphere-karlsruhe-region ;
+    sosa:observedProperty     vpd:prop-meteorological-params ;
+    sosa:hasResult            vpd:dataset-weather-stations ;
+    sosa:resultTime           "2026-04-08T23:00:00Z"^^xsd:dateTime ;
+    prov:startedAtTime        "2022-09-01T00:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime          "2026-04-08T23:00:00Z"^^xsd:dateTime .
+
+vpd:obs-land-use
+    a sosa:Observation , prov:Activity ;
+    dcterms:title "Land Cover Classification — Karlsruhe Region (Sentinel-2)"@en ;
+    sosa:madeBySensor         vpd:sensor-sentinel2-2a ;
+    sosa:hasFeatureOfInterest vpd:foi-land-surface-karlsruhe-region ;
+    sosa:observedProperty     vpd:prop-land-cover-class ;
+    sosa:hasResult            vpd:dataset-land-use-map ;
+    sosa:resultTime           "2025-11-20T00:00:00Z"^^xsd:dateTime ;
+    prov:startedAtTime        "2023-01-01T00:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime          "2025-11-20T00:00:00Z"^^xsd:dateTime .

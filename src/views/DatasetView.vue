@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useCatalogStore, type DatasetDetail } from '@/stores/catalog'
+import { useCatalogStore, type DatasetDetail, type DatasetProvenance } from '@/stores/catalog'
 
 const route = useRoute()
 const router = useRouter()
 const catalog = useCatalogStore()
 
 const dataset = ref<DatasetDetail | null>(null)
+const provenance = ref<DatasetProvenance | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
 
@@ -18,7 +19,10 @@ onMounted(async () => {
     return
   }
   try {
-    dataset.value = await catalog.fetchDataset(uri)
+    ;[dataset.value, provenance.value] = await Promise.all([
+      catalog.fetchDataset(uri),
+      catalog.fetchDatasetProvenance(uri),
+    ])
     if (!dataset.value) error.value = 'Dataset not found.'
   } catch {
     error.value = 'Failed to load dataset.'
@@ -38,7 +42,6 @@ function formatBytes(bytes: number): string {
 }
 
 function formatMediaType(uri: string): string {
-  // Extract e.g. "text/csv" from IANA URI or return as-is
   const match = uri.match(/media-types\/(.+)$/)
   return match ? match[1] : uri
 }
@@ -99,6 +102,58 @@ function formatMediaType(uri: string): string {
             </a>
           </li>
         </ul>
+      </section>
+
+      <section v-if="provenance" class="provenance-section">
+        <h2>Data Origin</h2>
+
+        <div class="prov-header">
+          <p v-if="provenance.observationTitle" class="prov-obs-title">
+            {{ provenance.observationTitle }}
+          </p>
+          <p v-if="provenance.startTime || provenance.endTime" class="prov-timerange">
+            <span class="prov-meta-label">Period:</span>
+            {{ provenance.startTime ? formatDate(provenance.startTime) : '—' }}
+            –
+            {{ provenance.endTime ? formatDate(provenance.endTime) : 'ongoing' }}
+          </p>
+        </div>
+
+        <dl class="prov-grid">
+          <template v-if="provenance.sensor">
+            <dt>Sensor</dt>
+            <dd>
+              <span class="entity-title">{{ provenance.sensor.title ?? provenance.sensor.uri }}</span>
+              <span v-if="provenance.sensor.description" class="entity-desc">
+                {{ provenance.sensor.description }}
+              </span>
+            </dd>
+          </template>
+
+          <template v-if="provenance.featureOfInterest">
+            <dt>Feature of Interest</dt>
+            <dd>
+              <span class="entity-title">
+                {{ provenance.featureOfInterest.title ?? provenance.featureOfInterest.uri }}
+              </span>
+              <span v-if="provenance.featureOfInterest.description" class="entity-desc">
+                {{ provenance.featureOfInterest.description }}
+              </span>
+            </dd>
+          </template>
+
+          <template v-if="provenance.observedProperty">
+            <dt>Observed Property</dt>
+            <dd>
+              <span class="entity-title">
+                {{ provenance.observedProperty.title ?? provenance.observedProperty.uri }}
+              </span>
+              <span v-if="provenance.observedProperty.description" class="entity-desc">
+                {{ provenance.observedProperty.description }}
+              </span>
+            </dd>
+          </template>
+        </dl>
       </section>
     </template>
   </main>
@@ -257,5 +312,61 @@ section h2 {
 
 .download-btn:hover {
   background: var(--color-primary-dark);
+}
+
+/* Provenance section */
+.prov-header {
+  margin-bottom: 1rem;
+}
+
+.prov-obs-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 0.35rem;
+}
+
+.prov-timerange {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.prov-meta-label {
+  font-weight: 500;
+  margin-right: 0.25rem;
+}
+
+.prov-grid {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 0.75rem 1rem;
+  margin: 0;
+}
+
+.prov-grid dt {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6b7280;
+  padding-top: 0.1rem;
+}
+
+.prov-grid dd {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.entity-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.entity-desc {
+  font-size: 0.8rem;
+  color: #6b7280;
+  line-height: 1.45;
 }
 </style>
