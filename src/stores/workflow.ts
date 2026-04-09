@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { querySparql } from '@/services/sparql'
+import { querySparql, updateSparql } from '@/services/sparql'
 import { useGraphStore } from '@/stores/graph'
 
 export interface WorkflowStepOption {
@@ -38,6 +38,9 @@ export interface WorkflowDetail {
   title: string
   description: string | null
   issued: string | null
+  instanceUri: string | null
+  instanceTitle: string | null
+  instanceDescription: string | null
   steps: WorkflowStep[]
   crossCuttingDatasets: WorkflowStepDataset[]
 }
@@ -75,6 +78,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
       PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
       SELECT ?wfTitle ?wfDesc ?wfIssued
+             ?instUri ?instTitle ?instDesc
              ?step ?stepTitle ?stepDesc ?stepType
              ?dataset ?datasetTitle ?datasetDesc
       WHERE {
@@ -82,6 +86,12 @@ export const useWorkflowStore = defineStore('workflow', () => {
         ?workflow dcterms:title ?wfTitle .
         OPTIONAL { ?workflow dcterms:description ?wfDesc }
         OPTIONAL { ?workflow dcterms:issued ?wfIssued }
+        OPTIONAL {
+          ?instUri a wild:WorkflowInstance ;
+                   wild:workflowInstanceOf ?workflow .
+          OPTIONAL { ?instUri dcterms:title ?instTitle }
+          OPTIONAL { ?instUri dcterms:description ?instDesc }
+        }
         OPTIONAL {
           ?workflow wild:hasBehaviour ?root .
           ?root wild:hasChildActivities/rdf:rest*/rdf:first ?step .
@@ -175,6 +185,9 @@ export const useWorkflowStore = defineStore('workflow', () => {
       title: first.wfTitle.value,
       description: first.wfDesc?.value ?? null,
       issued: first.wfIssued?.value ?? null,
+      instanceUri: first.instUri?.value ?? null,
+      instanceTitle: first.instTitle?.value ?? null,
+      instanceDescription: first.instDesc?.value ?? null,
       steps,
       crossCuttingDatasets,
     }
@@ -295,5 +308,33 @@ export const useWorkflowStore = defineStore('workflow', () => {
     return [...fullWorkflowOptions, ...options]
   }
 
-  return { fetchWorkflows, fetchWorkflow, fetchWorkflowStepOptions }
+  async function updateWorkflowInstance(
+    instanceUri: string,
+    title: string,
+    description: string,
+  ): Promise<void> {
+    const escapedTitle = title.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+    const escapedDesc = description.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+    const descTriple = description.trim()
+      ? `<${instanceUri}> dcterms:description "${escapedDesc}"@en .`
+      : ''
+    const update = `
+      PREFIX dcterms: <http://purl.org/dc/terms/>
+      DELETE {
+        <${instanceUri}> dcterms:title ?oldTitle .
+        <${instanceUri}> dcterms:description ?oldDesc .
+      }
+      INSERT {
+        <${instanceUri}> dcterms:title "${escapedTitle}"@en .
+        ${descTriple}
+      }
+      WHERE {
+        OPTIONAL { <${instanceUri}> dcterms:title ?oldTitle }
+        OPTIONAL { <${instanceUri}> dcterms:description ?oldDesc }
+      }
+    `
+    await updateSparql(graphStore.updateEndpoint, update)
+  }
+
+  return { fetchWorkflows, fetchWorkflow, fetchWorkflowStepOptions, updateWorkflowInstance }
 })

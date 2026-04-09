@@ -15,6 +15,46 @@ const error = ref<string | null>(null)
 const showAddModal = ref(false)
 const addToStepUri = ref<string | undefined>(undefined)
 
+const editingInstance = ref(false)
+const instanceTitleInput = ref('')
+const instanceDescInput = ref('')
+const savingInstance = ref(false)
+const saveInstanceError = ref<string | null>(null)
+
+function startEditInstance() {
+  instanceTitleInput.value = workflow.value?.instanceTitle ?? ''
+  instanceDescInput.value = workflow.value?.instanceDescription ?? ''
+  saveInstanceError.value = null
+  editingInstance.value = true
+}
+
+function cancelEditInstance() {
+  editingInstance.value = false
+}
+
+async function saveInstance() {
+  if (!workflow.value?.instanceUri) return
+  if (!instanceTitleInput.value.trim()) {
+    saveInstanceError.value = 'Title is required.'
+    return
+  }
+  savingInstance.value = true
+  saveInstanceError.value = null
+  try {
+    await workflowStore.updateWorkflowInstance(
+      workflow.value.instanceUri,
+      instanceTitleInput.value.trim(),
+      instanceDescInput.value.trim(),
+    )
+    workflow.value = await workflowStore.fetchWorkflow(route.query.uri as string)
+    editingInstance.value = false
+  } catch {
+    saveInstanceError.value = 'Failed to save. Please try again.'
+  } finally {
+    savingInstance.value = false
+  }
+}
+
 onMounted(async () => {
   const uri = route.query.uri as string
   if (!uri) {
@@ -73,6 +113,49 @@ async function onDatasetCreated(uri: string) {
         <h1 class="wf-title">{{ workflow.title }}</h1>
         <p v-if="workflow.description" class="wf-description">{{ workflow.description }}</p>
         <p v-if="workflow.issued" class="wf-issued">Created {{ formatDate(workflow.issued) }}</p>
+      </div>
+
+      <!-- Workflow instance section -->
+      <div v-if="workflow.instanceUri" class="wf-instance">
+        <div class="wf-instance-header">
+          <span class="wf-instance-label">Workflow Run</span>
+          <button v-if="!editingInstance" class="edit-btn" @click="startEditInstance">Edit</button>
+        </div>
+
+        <!-- View mode -->
+        <template v-if="!editingInstance">
+          <p class="wf-instance-title">{{ workflow.instanceTitle ?? '(no title)' }}</p>
+          <p v-if="workflow.instanceDescription" class="wf-instance-desc">{{ workflow.instanceDescription }}</p>
+        </template>
+
+        <!-- Edit mode -->
+        <template v-else>
+          <div class="edit-form">
+            <label class="edit-label" for="inst-title">Title</label>
+            <input
+              id="inst-title"
+              v-model="instanceTitleInput"
+              class="edit-input"
+              type="text"
+              placeholder="Workflow run title"
+            />
+            <label class="edit-label" for="inst-desc">Description</label>
+            <textarea
+              id="inst-desc"
+              v-model="instanceDescInput"
+              class="edit-textarea"
+              rows="3"
+              placeholder="Optional description"
+            />
+            <p v-if="saveInstanceError" class="edit-error">{{ saveInstanceError }}</p>
+            <div class="edit-actions">
+              <button class="btn-save" :disabled="savingInstance" @click="saveInstance">
+                {{ savingInstance ? 'Saving…' : 'Save' }}
+              </button>
+              <button class="btn-cancel" :disabled="savingInstance" @click="cancelEditInstance">Cancel</button>
+            </div>
+          </div>
+        </template>
       </div>
 
       <!-- Cross-cutting datasets (linked to the workflow as a whole) -->
@@ -191,7 +274,7 @@ async function onDatasetCreated(uri: string) {
 
 /* Workflow header */
 .wf-header {
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
 }
 
 .wf-title {
@@ -212,6 +295,142 @@ async function onDatasetCreated(uri: string) {
   font-size: 0.8rem;
   color: #6b7280;
   margin: 0;
+}
+
+/* Workflow instance */
+.wf-instance {
+  background: #f9fafb;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.wf-instance-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.wf-instance-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #6b7280;
+}
+
+.wf-instance-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 0.25rem;
+}
+
+.wf-instance-desc {
+  font-size: 0.875rem;
+  color: #4b5563;
+  margin: 0;
+  line-height: 1.55;
+}
+
+.edit-btn {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.8rem;
+  color: var(--color-primary);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.edit-btn:hover {
+  background: #f0fdf4;
+  border-color: var(--color-primary);
+}
+
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.edit-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.edit-input,
+.edit-textarea {
+  font-family: inherit;
+  font-size: 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 0.45rem 0.6rem;
+  color: var(--color-text);
+  background: #fff;
+  resize: vertical;
+}
+
+.edit-input:focus,
+.edit-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.edit-error {
+  font-size: 0.8rem;
+  color: #dc2626;
+  margin: 0;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.btn-save {
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.4rem 1rem;
+  font-size: 0.875rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.btn-save:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+}
+
+.btn-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-cancel {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 0.4rem 1rem;
+  font-size: 0.875rem;
+  font-family: inherit;
+  cursor: pointer;
+  color: #374151;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+
+.btn-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* Section shared styles */
