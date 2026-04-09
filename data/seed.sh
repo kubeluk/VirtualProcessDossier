@@ -28,9 +28,9 @@ fi
 COUNT=$(curl -sf -G "${FUSEKI}/${DATASET}/sparql" \
   --data-urlencode "query=SELECT (COUNT(*) AS ?n) WHERE { ?s ?p ?o }" \
   -H "Accept: application/sparql-results+json" \
-  | grep -o '"value":"[0-9]*"' | grep -o '[0-9]*')
+  | tr -d ' \t' | grep -o '"value":"[0-9]*"' | grep -o '[0-9]*' || echo "0")
 
-if [ "${COUNT:-0}" = "0" ]; then
+if [ "${COUNT}" = "0" ]; then
   echo "Loading seed data..."
   curl -sf -u admin:${ADMIN_PASSWORD} \
     -X POST "${FUSEKI}/${DATASET}/data?default" \
