@@ -28,6 +28,10 @@ export interface WorkflowStep {
   title: string | null
   description: string | null
   type: string | null
+  systemUri: string | null
+  systemTitle: string | null
+  inputUri: string | null
+  inputTitle: string | null
   children: WorkflowStep[]
 }
 
@@ -87,7 +91,15 @@ export interface StepForm {
   title: string
   description: string
   type: 'AtomicActivity' | 'ParallelActivity' | 'SequentialActivity'
+  systemUri?: string  // ssn:implementedBy target; only on AtomicActivity
+  inputUri?: string   // ssn:hasInput target; only on AtomicActivity
   children: StepForm[]
+}
+
+export interface ProcedureOption {
+  uri: string
+  title: string | null
+  description: string | null
 }
 
 export interface AddWorkflowForm {
@@ -164,8 +176,10 @@ export const useWorkflowStore = defineStore('workflow', () => {
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+      PREFIX ssn:     <http://www.w3.org/ns/ssn/>
 
-      SELECT DISTINCT ?parent ?child ?childTitle ?childDesc ?childType WHERE {
+      SELECT DISTINCT ?parent ?child ?childTitle ?childDesc ?childType
+                      ?childSystem ?childSystemTitle ?childInput ?childInputTitle WHERE {
         <${uri}> wild:hasBehaviour/(wild:hasChildActivities/rdf:rest*/rdf:first)* ?parent .
         ?parent wild:hasChildActivities/rdf:rest*/rdf:first ?child .
         OPTIONAL { ?child dcterms:title ?childTitle }
@@ -173,6 +187,14 @@ export const useWorkflowStore = defineStore('workflow', () => {
         OPTIONAL {
           ?child a ?childType .
           FILTER(STRSTARTS(STR(?childType), 'http://purl.org/wild/vocab#'))
+        }
+        OPTIONAL {
+          ?child ssn:implementedBy ?childSystem .
+          OPTIONAL { ?childSystem dcterms:title ?childSystemTitle }
+        }
+        OPTIONAL {
+          ?child ssn:hasInput ?childInput .
+          OPTIONAL { ?childInput dcterms:title ?childInputTitle }
         }
       }
     `
@@ -197,7 +219,15 @@ export const useWorkflowStore = defineStore('workflow', () => {
     }
 
     // Build node-metadata and children maps from tree query results
-    type NodeMeta = { title: string | null; desc: string | null; type: string | null }
+    type NodeMeta = {
+      title: string | null
+      desc: string | null
+      type: string | null
+      systemUri: string | null
+      systemTitle: string | null
+      inputUri: string | null
+      inputTitle: string | null
+    }
     const nodeMeta = new Map<string, NodeMeta>()
     // childrenMap: parentUri → ordered list of child URIs (insertion = SPARQL result order)
     const childrenMap = new Map<string, string[]>()
@@ -212,6 +242,10 @@ export const useWorkflowStore = defineStore('workflow', () => {
           title: b.childTitle?.value ?? null,
           desc: b.childDesc?.value ?? null,
           type: rawType ? rawType.replace('http://purl.org/wild/vocab#', '') : null,
+          systemUri: b.childSystem?.value ?? null,
+          systemTitle: b.childSystemTitle?.value ?? null,
+          inputUri: b.childInput?.value ?? null,
+          inputTitle: b.childInputTitle?.value ?? null,
         })
       }
       if (!childrenMap.has(parentUri)) childrenMap.set(parentUri, [])
@@ -229,13 +263,20 @@ export const useWorkflowStore = defineStore('workflow', () => {
     }
 
     function buildStep(nodeUri: string): WorkflowStep {
-      const meta = nodeMeta.get(nodeUri) ?? { title: null, desc: null, type: null }
+      const meta = nodeMeta.get(nodeUri) ?? {
+        title: null, desc: null, type: null,
+        systemUri: null, systemTitle: null, inputUri: null, inputTitle: null,
+      }
       const childUris = childrenMap.get(nodeUri) ?? []
       return {
         uri: nodeUri,
         title: meta.title,
         description: meta.desc,
         type: meta.type,
+        systemUri: meta.systemUri,
+        systemTitle: meta.systemTitle,
+        inputUri: meta.inputUri,
+        inputTitle: meta.inputTitle,
         children: sortByStepNumber(childUris.map(buildStep)),
       }
     }
@@ -485,8 +526,9 @@ export const useWorkflowStore = defineStore('workflow', () => {
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+      PREFIX ssn:     <http://www.w3.org/ns/ssn/>
 
-      SELECT DISTINCT ?parent ?child ?childTitle ?childDesc ?childType WHERE {
+      SELECT DISTINCT ?parent ?child ?childTitle ?childDesc ?childType ?childSystem ?childInput WHERE {
         <${uri}> wild:hasBehaviour/(wild:hasChildActivities/rdf:rest*/rdf:first)* ?parent .
         ?parent wild:hasChildActivities/rdf:rest*/rdf:first ?child .
         OPTIONAL { ?child dcterms:title ?childTitle }
@@ -495,6 +537,8 @@ export const useWorkflowStore = defineStore('workflow', () => {
           ?child a ?childType .
           FILTER(STRSTARTS(STR(?childType), 'http://purl.org/wild/vocab#'))
         }
+        OPTIONAL { ?child ssn:implementedBy ?childSystem }
+        OPTIONAL { ?child ssn:hasInput ?childInput }
       }
     `
 
@@ -511,7 +555,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
       return { title: first.wfTitle.value, description: first.wfDesc?.value ?? '', steps: [] }
     }
 
-    type NodeMeta = { title: string | null; desc: string | null; type: string | null }
+    type NodeMeta = { title: string | null; desc: string | null; type: string | null; systemUri: string | null; inputUri: string | null }
     const nodeMeta = new Map<string, NodeMeta>()
     const childrenMap = new Map<string, string[]>()
 
@@ -524,6 +568,8 @@ export const useWorkflowStore = defineStore('workflow', () => {
           title: b.childTitle?.value ?? null,
           desc: b.childDesc?.value ?? null,
           type: rawType ? rawType.replace('http://purl.org/wild/vocab#', '') : null,
+          systemUri: b.childSystem?.value ?? null,
+          inputUri: b.childInput?.value ?? null,
         })
       }
       if (!childrenMap.has(parentUri)) childrenMap.set(parentUri, [])
@@ -543,7 +589,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
     }
 
     function buildStepForm(nodeUri: string): StepForm {
-      const meta = nodeMeta.get(nodeUri) ?? { title: null, desc: null, type: null }
+      const meta = nodeMeta.get(nodeUri) ?? { title: null, desc: null, type: null, systemUri: null, inputUri: null }
       const rawType = meta.type ?? 'AtomicActivity'
       const type: StepForm['type'] =
         rawType === 'ParallelActivity' ? 'ParallelActivity' :
@@ -553,6 +599,8 @@ export const useWorkflowStore = defineStore('workflow', () => {
         title: meta.title?.replace(/^Step\s+\d+:\s*/i, '') ?? '',
         description: meta.desc ?? '',
         type,
+        ...(meta.systemUri ? { systemUri: meta.systemUri } : {}),
+        ...(meta.inputUri ? { inputUri: meta.inputUri } : {}),
         children: sortedChildren(nodeUri).map(buildStepForm),
       }
     }
@@ -609,6 +657,10 @@ export const useWorkflowStore = defineStore('workflow', () => {
       if (step.description.trim()) {
         insertLines.push(`  <${nodeUri}> dcterms:description "${esc(step.description)}"@en .`)
       }
+      if (step.type === 'AtomicActivity') {
+        if (step.systemUri) insertLines.push(`  <${nodeUri}> ssn:implementedBy <${step.systemUri}> .`)
+        if (step.inputUri) insertLines.push(`  <${nodeUri}> ssn:hasInput <${step.inputUri}> .`)
+      }
       if (step.type !== 'AtomicActivity' && step.children.length > 0) {
         const childUris = step.children.map(() => `${base}wfact-${slug}-${suffix}-${nodeCounter++}`)
         const [head, listTriples] = buildList(childUris)
@@ -629,6 +681,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+      PREFIX ssn:     <http://www.w3.org/ns/ssn/>
       PREFIX xsd:     <http://www.w3.org/2001/XMLSchema#>
 
       DELETE { <${uri}> ?p ?o }
@@ -681,6 +734,16 @@ ${insertLines.join('\n')}
                  OPTIONAL { <${resourceUri}> dcterms:description ?d } }`
     }
 
+    function ssnOp(resourceUri: string, systemUri: string | undefined, inputUri: string | undefined): string {
+      const sysInsert = systemUri ? `<${resourceUri}> ssn:implementedBy <${systemUri}> .` : ''
+      const inpInsert = inputUri ? `<${resourceUri}> ssn:hasInput <${inputUri}> .` : ''
+      return `
+        DELETE { <${resourceUri}> ssn:implementedBy ?sys . <${resourceUri}> ssn:hasInput ?inp }
+        INSERT { ${sysInsert} ${inpInsert} }
+        WHERE  { OPTIONAL { <${resourceUri}> ssn:implementedBy ?sys }
+                 OPTIONAL { <${resourceUri}> ssn:hasInput ?inp } }`
+    }
+
     const ops: string[] = []
     ops.push(metaOp(uri, form.title, form.description))
 
@@ -689,6 +752,9 @@ ${insertLines.join('\n')}
       const rawTitle = step.title.trim().replace(/^Step\s+\d+:\s*/i, '')
       const title = isTopLevel ? `Step ${stepNum}: ${rawTitle}` : rawTitle
       ops.push(metaOp(step.uri, title, step.description))
+      if (step.type === 'AtomicActivity') {
+        ops.push(ssnOp(step.uri, step.systemUri, step.inputUri))
+      }
       step.children.forEach((child) => collectOps(child, false, 0))
     }
 
@@ -696,6 +762,7 @@ ${insertLines.join('\n')}
 
     const update = `
       PREFIX dcterms: <http://purl.org/dc/terms/>
+      PREFIX ssn:     <http://www.w3.org/ns/ssn/>
       ${ops.join(' ;\n')}
     `
 
@@ -753,6 +820,10 @@ ${insertLines.join('\n')}
       if (step.description.trim()) {
         lines.push(`  <${nodeUri}> dcterms:description "${esc(step.description)}"@en .`)
       }
+      if (step.type === 'AtomicActivity') {
+        if (step.systemUri) lines.push(`  <${nodeUri}> ssn:implementedBy <${step.systemUri}> .`)
+        if (step.inputUri) lines.push(`  <${nodeUri}> ssn:hasInput <${step.inputUri}> .`)
+      }
       if (step.type !== 'AtomicActivity' && step.children.length > 0) {
         const childUris = step.children.map(() => `${base}wfact-${slug}-${suffix}-${nodeCounter++}`)
         const [head, listTriples] = buildList(childUris)
@@ -773,6 +844,7 @@ ${insertLines.join('\n')}
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+      PREFIX ssn:     <http://www.w3.org/ns/ssn/>
       PREFIX xsd:     <http://www.w3.org/2001/XMLSchema#>
 
       INSERT DATA {
@@ -782,6 +854,48 @@ ${lines.join('\n')}
 
     await updateSparql(graphStore.updateEndpoint, update)
     return workflowUri
+  }
+
+  // ── System / Input option lists (for workflow authoring selects) ─────────
+
+  async function fetchSystemOptions(): Promise<ProcedureOption[]> {
+    const query = `
+      PREFIX ssn:     <http://www.w3.org/ns/ssn/>
+      PREFIX dcterms: <http://purl.org/dc/terms/>
+
+      SELECT ?uri ?title ?description WHERE {
+        ?uri a ssn:System .
+        OPTIONAL { ?uri dcterms:title ?title }
+        OPTIONAL { ?uri dcterms:description ?description }
+      }
+      ORDER BY ?title
+    `
+    const results = await querySparql(graphStore.endpoint, query)
+    return results.results.bindings.map((b) => ({
+      uri: b.uri.value,
+      title: b.title?.value ?? null,
+      description: b.description?.value ?? null,
+    }))
+  }
+
+  async function fetchInputOptions(): Promise<ProcedureOption[]> {
+    const query = `
+      PREFIX ssn:     <http://www.w3.org/ns/ssn/>
+      PREFIX dcterms: <http://purl.org/dc/terms/>
+
+      SELECT ?uri ?title ?description WHERE {
+        ?uri a ssn:Input .
+        OPTIONAL { ?uri dcterms:title ?title }
+        OPTIONAL { ?uri dcterms:description ?description }
+      }
+      ORDER BY ?title
+    `
+    const results = await querySparql(graphStore.endpoint, query)
+    return results.results.bindings.map((b) => ({
+      uri: b.uri.value,
+      title: b.title?.value ?? null,
+      description: b.description?.value ?? null,
+    }))
   }
 
   // ── Step-picker options (for AddDatasetModal) ────────────────────────────
@@ -909,5 +1023,7 @@ ${lines.join('\n')}
     updateWorkflowModel,
     updateWorkflowModelMetadata,
     fetchWorkflowStepOptions,
+    fetchSystemOptions,
+    fetchInputOptions,
   }
 })

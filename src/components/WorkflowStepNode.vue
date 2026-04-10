@@ -59,6 +59,15 @@ const parsed = parseStepTitle(props.step.title)
           <span v-else-if="isSequential" class="step-badge step-badge--sequential">↕ sequential</span>
         </div>
         <p v-if="step.description" class="step-description">{{ step.description }}</p>
+        <!-- System & input — only on leaf (atomic) nodes -->
+        <div v-if="!hasChildren && (step.systemTitle || step.inputTitle)" class="step-meta">
+          <span v-if="step.systemTitle" class="meta-item">
+            <span class="meta-label">System:</span> {{ step.systemTitle }}
+          </span>
+          <span v-if="step.inputTitle" class="meta-item">
+            <span class="meta-label">Input:</span> {{ step.inputTitle }}
+          </span>
+        </div>
       </div>
     </div>
 
@@ -205,6 +214,23 @@ const parsed = parseStepTitle(props.step.title)
   color: #4b5563;
   line-height: 1.55;
   margin: 0;
+}
+
+.step-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin-top: 0.3rem;
+}
+
+.meta-item {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.meta-label {
+  font-weight: 600;
+  color: #4b5563;
 }
 
 /* ── Children clusters ── */

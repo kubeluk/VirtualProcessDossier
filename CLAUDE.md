@@ -105,6 +105,15 @@ docker compose down -v           # Tear down including data volume (resets seed)
 - Dataset-to-step context is also expressed directly via `dcterms:isPartOf` on each `dcat:Dataset` (pointing to the relevant step or the workflow model for cross-cutting datasets)
 - Confirmed valid WiLD terms: `WorkflowModel`, `WorkflowInstance`, `ActivityInstance`, `SequentialActivity`, `ParallelActivity`, `AtomicActivity`, `hasBehaviour`, `hasChildActivities`, `workflowInstanceOf`, `activityInstanceOf`, `inWorkflowInstance`, `hasState`, `done`, `active`
 
+### Procedure / System / Input (seeded)
+- **`wild:AtomicActivity` ≡ `sosa:Procedure`** in this data model — each atomic activity is also typed `sosa:Procedure`
+- Each `sosa:Procedure` may carry:
+  - `ssn:implementedBy` → `ssn:System` — the machine or station that executes the step
+  - `ssn:hasInput` → `ssn:Input` — the material or data consumed by the step
+- Seeded `ssn:System` resources: `vpd:sys-intake-station`, `vpd:sys-cnc-line-a`, `vpd:sys-hydraulic-presses-b`, `vpd:sys-cmm-dispatch`
+- Seeded `ssn:Input` resources: `vpd:input-raw-stock`, `vpd:input-machined-blanks`, `vpd:input-machined-parts`, `vpd:input-formed-parts`
+- Confirmed valid SSN terms used: `ssn:System`, `ssn:Input`, `ssn:hasInput`, `ssn:implementedBy`
+
 ## Domain Context
 
 This UI abstracts RDF/SPARQL complexity from end users. Features are built around specific ontologies provided incrementally. All SPARQL is generated in the service layer — never exposed raw to users.
@@ -166,3 +175,12 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 - Step titles are stored as "Step N: \<name\>" in the triple store for top-level steps only; `fetchWorkflowForEdit` strips this prefix for display and `addWorkflowModel`/`updateWorkflowModel` re-add it on save based on array position
 - `StepEditorNode.vue` is a self-referencing recursive component (uses both `<script>` for exported types/factory and `<script setup>` for instance logic); exports `StepFormWithId` and `newStepWithId` for use by `AddWorkflowModal`
 - `WorkflowStepNode.vue` is a self-referencing recursive component for read-only display; sequential children render in a grey-bordered cluster, parallel children in a blue-bordered cluster; each composite node has a ▶/▼ collapse toggle
+
+### System & Input on Atomic Activities (implemented)
+- Each `wild:AtomicActivity` (= `sosa:Procedure`) can have an optional `ssn:System` (via `ssn:implementedBy`) and `ssn:Input` (via `ssn:hasInput`) linked to it
+- **Browsing**: `WorkflowStepNode` displays "System: …" and "Input: …" as metadata rows on leaf nodes when values are present
+- **Authoring**: `StepEditorNode` shows a collapsible "▸ System & input" accordion on atomic nodes with two `<select>` dropdowns populated from the triple store; the section auto-expands when a step already has values linked
+- `StepFormWithId.systemUri` and `.inputUri` hold the selected URI (empty string = none); `StepForm.systemUri?` and `.inputUri?` are the optional store-layer equivalents
+- `AddWorkflowModal` loads `fetchSystemOptions()` and `fetchInputOptions()` in parallel when opening (both create and edit modes); passes them down to each `StepEditorNode`
+- System/input triples are written in `addWorkflowModel`, `updateWorkflowModel` (full edit), and `updateWorkflowModelMetadata` (metadata-only, safe when runs exist — these properties are not structural)
+- Workflow store: `fetchSystemOptions(): Promise<ProcedureOption[]>`, `fetchInputOptions(): Promise<ProcedureOption[]>` — query all `ssn:System` / `ssn:Input` resources ordered by title; `ProcedureOption` interface exported from `src/stores/workflow.ts`

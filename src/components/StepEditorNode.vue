@@ -6,6 +6,8 @@ export interface StepFormWithId {
   title: string
   description: string
   type: 'AtomicActivity' | 'ParallelActivity' | 'SequentialActivity'
+  systemUri: string  // '' means none
+  inputUri: string   // '' means none
   children: StepFormWithId[]
 }
 
@@ -18,6 +20,8 @@ export function newStepWithId(
     title: '',
     description: '',
     type: 'AtomicActivity',
+    systemUri: '',
+    inputUri: '',
     children: [],
     ...overrides,
   }
@@ -25,7 +29,8 @@ export function newStepWithId(
 </script>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
+import type { ProcedureOption } from '@/stores/workflow'
 import StepEditorNode from './StepEditorNode.vue'
 
 const props = defineProps<{
@@ -34,6 +39,8 @@ const props = defineProps<{
   stepNum: number | null  // 1-based for top-level steps; null for sub-nodes
   canRemove: boolean
   metadataOnly: boolean
+  systemOptions: ProcedureOption[]
+  inputOptions: ProcedureOption[]
 }>()
 
 defineEmits<{ remove: [] }>()
@@ -49,6 +56,9 @@ const typeLabel = computed(() => {
 const childrenClass = computed(() =>
   props.step.type === 'ParallelActivity' ? 'children--parallel' : 'children--sequential',
 )
+
+// Auto-expand details section when the step already has a system or input linked
+const detailsOpen = ref(!!(props.step.systemUri || props.step.inputUri))
 
 function onTypeChange() {
   if (props.step.type === 'AtomicActivity') {
@@ -138,6 +148,39 @@ const minChildren = computed(() =>
       </div>
     </div>
 
+    <!-- System & Input (atomic activities only) -->
+    <div v-if="step.type === 'AtomicActivity'" class="details-section">
+      <button type="button" class="details-toggle" @click="detailsOpen = !detailsOpen">
+        {{ detailsOpen ? '▾' : '▸' }} System &amp; input
+      </button>
+      <div v-if="detailsOpen" class="details-body">
+        <div class="field">
+          <label :for="`st-sys-${step.id}`" class="field-label">Implemented by (system)</label>
+          <select :id="`st-sys-${step.id}`" v-model="step.systemUri" class="field-input">
+            <option value="">— None —</option>
+            <option v-for="sys in systemOptions" :key="sys.uri" :value="sys.uri">
+              {{ sys.title ?? sys.uri }}
+            </option>
+          </select>
+          <p v-if="step.systemUri && systemOptions.find(s => s.uri === step.systemUri)?.description" class="field-hint">
+            {{ systemOptions.find(s => s.uri === step.systemUri)!.description }}
+          </p>
+        </div>
+        <div class="field">
+          <label :for="`st-inp-${step.id}`" class="field-label">Input</label>
+          <select :id="`st-inp-${step.id}`" v-model="step.inputUri" class="field-input">
+            <option value="">— None —</option>
+            <option v-for="inp in inputOptions" :key="inp.uri" :value="inp.uri">
+              {{ inp.title ?? inp.uri }}
+            </option>
+          </select>
+          <p v-if="step.inputUri && inputOptions.find(i => i.uri === step.inputUri)?.description" class="field-hint">
+            {{ inputOptions.find(i => i.uri === step.inputUri)!.description }}
+          </p>
+        </div>
+      </div>
+    </div>
+
     <!-- Children (composite activities) -->
     <div v-if="isComposite" class="children-section" :class="childrenClass">
       <div class="children-label">
@@ -152,6 +195,8 @@ const minChildren = computed(() =>
         :step-num="null"
         :can-remove="step.children.length > minChildren"
         :metadata-only="metadataOnly"
+        :system-options="systemOptions"
+        :input-options="inputOptions"
         @remove="removeChild(i)"
       />
 
@@ -253,6 +298,13 @@ const minChildren = computed(() =>
 
 .field-input:focus { border-color: var(--color-primary); }
 
+.field-hint {
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.4;
+}
+
 .field--type .radio-group {
   display: flex;
   gap: 1.1rem;
@@ -266,6 +318,38 @@ const minChildren = computed(() =>
   font-size: 0.85rem;
   color: var(--color-text);
   cursor: pointer;
+}
+
+/* Details (system & input) accordion */
+.details-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.details-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--color-primary);
+  cursor: pointer;
+  font-family: inherit;
+  align-self: flex-start;
+  line-height: 1.4;
+}
+
+.details-toggle:hover { color: var(--color-primary-dark); }
+
+.details-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  background: #f8faff;
+  border: 1px solid #e0e7ff;
+  border-radius: 6px;
 }
 
 /* Children clusters */

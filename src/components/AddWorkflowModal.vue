@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import { useWorkflowStore, type StepForm, type AddWorkflowForm, type WorkflowSummary } from '@/stores/workflow'
+import { useWorkflowStore, type StepForm, type AddWorkflowForm, type WorkflowSummary, type ProcedureOption } from '@/stores/workflow'
 import StepEditorNode, { type StepFormWithId, newStepWithId } from '@/components/StepEditorNode.vue'
 
 const props = defineProps<{
@@ -32,6 +32,10 @@ const templateWorkflows = ref<WorkflowSummary[]>([])
 const selectedTemplateUri = ref('')
 const templateLoading = ref(false)
 
+// System / Input options (loaded when modal opens)
+const systemOptions = ref<ProcedureOption[]>([])
+const inputOptions = ref<ProcedureOption[]>([])
+
 function close() {
   emit('update:modelValue', false)
 }
@@ -51,6 +55,8 @@ function toStepFormWithId(s: StepForm): StepFormWithId {
     title: s.title,
     description: s.description,
     type: s.type,
+    systemUri: s.systemUri ?? '',
+    inputUri: s.inputUri ?? '',
     children: s.children.map(toStepFormWithId),
   }
 }
@@ -62,6 +68,8 @@ function toStepFormWithIdNoUri(s: StepForm): StepFormWithId {
     title: s.title,
     description: s.description,
     type: s.type,
+    systemUri: s.systemUri ?? '',
+    inputUri: s.inputUri ?? '',
     children: s.children.map(toStepFormWithIdNoUri),
   }
 }
@@ -95,11 +103,23 @@ watch(
   async (open) => {
     if (!open) return
     if (props.editData) {
+      const [systems, inputs] = await Promise.all([
+        workflowStore.fetchSystemOptions(),
+        workflowStore.fetchInputOptions(),
+      ])
+      systemOptions.value = systems
+      inputOptions.value = inputs
       populateFrom(props.editData)
     } else {
       reset()
-      const workflows = await workflowStore.fetchWorkflows()
+      const [workflows, systems, inputs] = await Promise.all([
+        workflowStore.fetchWorkflows(),
+        workflowStore.fetchSystemOptions(),
+        workflowStore.fetchInputOptions(),
+      ])
       templateWorkflows.value = workflows
+      systemOptions.value = systems
+      inputOptions.value = inputs
     }
   },
 )
@@ -143,6 +163,8 @@ function toStepForm(s: StepFormWithId): StepForm {
     title: s.title.trim(),
     description: s.description.trim(),
     type: s.type,
+    ...(s.systemUri ? { systemUri: s.systemUri } : {}),
+    ...(s.inputUri ? { inputUri: s.inputUri } : {}),
     children: s.children.map(toStepForm),
   }
 }
@@ -277,6 +299,8 @@ reset()
               :step-num="si + 1"
               :can-remove="steps.length > 1"
               :metadata-only="!!metadataOnly"
+              :system-options="systemOptions"
+              :input-options="inputOptions"
               @remove="removeStep(si)"
             />
 

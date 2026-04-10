@@ -375,9 +375,11 @@ vpd:wfact-root
 # Step 1 — atomic: the single monitoring activity during this step is
 # the power consumption observation.
 vpd:step-material-preparation
-    a wild:AtomicActivity ;
+    a wild:AtomicActivity , sosa:Procedure ;
     dcterms:title       "Step 1: Raw Material Intake & Preparation"@en ;
-    dcterms:description "Incoming raw stock is received, inspected against material certificates, and cut to near-net-shape blanks. Transfer pallets are loaded and the production line is brought online. Power consumption monitoring begins at this point to establish the energy baseline for the full shift."@en .
+    dcterms:description "Incoming raw stock is received, inspected against material certificates, and cut to near-net-shape blanks. Transfer pallets are loaded and the production line is brought online. Power consumption monitoring begins at this point to establish the energy baseline for the full shift."@en ;
+    ssn:implementedBy   vpd:sys-intake-station ;
+    ssn:hasInput        vpd:input-raw-stock .
 
 # Step 2 — parallel: temperature monitoring and vibration monitoring
 # run concurrently on the CNC machines throughout the machining phase.
@@ -391,29 +393,37 @@ vpd:step-cnc-machining
     ) .
 
 vpd:wfact-cnc-temperature
-    a wild:AtomicActivity ;
+    a wild:AtomicActivity , sosa:Procedure ;
     dcterms:title       "CNC Temperature Monitoring"@en ;
-    dcterms:description "Continuous acquisition of spindle motor, coolant, and enclosure temperatures to detect thermal drift during cutting operations."@en .
+    dcterms:description "Continuous acquisition of spindle motor, coolant, and enclosure temperatures to detect thermal drift during cutting operations."@en ;
+    ssn:implementedBy   vpd:sys-cnc-line-a ;
+    ssn:hasInput        vpd:input-machined-blanks .
 
 vpd:wfact-cnc-vibration
-    a wild:AtomicActivity ;
+    a wild:AtomicActivity , sosa:Procedure ;
     dcterms:title       "CNC Vibration Condition Monitoring"@en ;
-    dcterms:description "Continuous tri-axial vibration monitoring of spindle bearing housings to identify wear signatures and trigger predictive maintenance actions."@en .
+    dcterms:description "Continuous tri-axial vibration monitoring of spindle bearing housings to identify wear signatures and trigger predictive maintenance actions."@en ;
+    ssn:implementedBy   vpd:sys-cnc-line-a ;
+    ssn:hasInput        vpd:input-machined-blanks .
 
 # Step 3 — atomic: the single monitoring activity is the hydraulic
 # pressure observation.
 vpd:step-hydraulic-forming
-    a wild:AtomicActivity ;
+    a wild:AtomicActivity , sosa:Procedure ;
     dcterms:title       "Step 3: Hydraulic Forming & Stamping"@en ;
-    dcterms:description "Machined parts are transferred to Hall B where hydraulic presses perform stamping, deep drawing, and bending to achieve final geometry. Hydraulic circuit pressure is recorded for every press cycle to verify forming force and detect seal or accumulator faults in real time."@en .
+    dcterms:description "Machined parts are transferred to Hall B where hydraulic presses perform stamping, deep drawing, and bending to achieve final geometry. Hydraulic circuit pressure is recorded for every press cycle to verify forming force and detect seal or accumulator faults in real time."@en ;
+    ssn:implementedBy   vpd:sys-hydraulic-presses-b ;
+    ssn:hasInput        vpd:input-machined-parts .
 
 # Step 4 — atomic: final inspection and dispatch. No sensor observation
 # dataset is currently associated with this step; process records from
 # Steps 1–3 are used for traceability.
 vpd:step-quality-dispatch
-    a wild:AtomicActivity ;
+    a wild:AtomicActivity , sosa:Procedure ;
     dcterms:title       "Step 4: Quality Inspection & Dispatch"@en ;
-    dcterms:description "Finished parts undergo dimensional verification on a coordinate measuring machine (CMM) and visual surface inspection. Each accepted part receives a traceability label linking it to the process records from Steps 1–3. Approved batches are packaged and transferred to the dispatch area."@en .
+    dcterms:description "Finished parts undergo dimensional verification on a coordinate measuring machine (CMM) and visual surface inspection. Each accepted part receives a traceability label linking it to the process records from Steps 1–3. Approved batches are packaged and transferred to the dispatch area."@en ;
+    ssn:implementedBy   vpd:sys-cmm-dispatch ;
+    ssn:hasInput        vpd:input-formed-parts .
 
 # ---------------------------------------------------------------------------
 # Manufacturing Workflow Instance (WiLD)
@@ -433,3 +443,51 @@ vpd:wfinst-manufacturing-line
     wild:workflowInstanceOf vpd:workflow-manufacturing-line ;
     wild:hasState           wild:active ;
     prov:startedAtTime      "2023-01-01T00:00:00Z"^^xsd:dateTime .
+
+# ---------------------------------------------------------------------------
+# Systems (ssn:System) — implement the atomic activities (sosa:Procedure)
+# ---------------------------------------------------------------------------
+
+vpd:sys-intake-station
+    a ssn:System ;
+    dcterms:title       "Raw Material Intake Station"@en ;
+    dcterms:description "Incoming inspection bench, certificate scanner, and band-saw cell for cutting raw stock to near-net-shape blanks."@en .
+
+vpd:sys-cnc-line-a
+    a ssn:System ;
+    dcterms:title       "CNC Machining Line — Hall A"@en ;
+    dcterms:description "Fleet of 12 CNC turning and milling centres performing precision material removal to final dimensions."@en .
+
+vpd:sys-hydraulic-presses-b
+    a ssn:System ;
+    dcterms:title       "Hydraulic Press Line — Hall B"@en ;
+    dcterms:description "Six hydraulic stamping and forming presses applying controlled force cycles to achieve final sheet-metal geometry."@en .
+
+vpd:sys-cmm-dispatch
+    a ssn:System ;
+    dcterms:title       "CMM & Dispatch Station"@en ;
+    dcterms:description "Coordinate measuring machine (CMM) cell combined with a labelling and palletising station for final inspection and dispatch."@en .
+
+# ---------------------------------------------------------------------------
+# Inputs (ssn:Input) — consumed by the atomic activities (sosa:Procedure)
+# ---------------------------------------------------------------------------
+
+vpd:input-raw-stock
+    a ssn:Input ;
+    dcterms:title       "Raw Material Stock"@en ;
+    dcterms:description "Bulk bar or plate stock delivered from the warehouse, cut to near-net-shape blanks during material intake."@en .
+
+vpd:input-machined-blanks
+    a ssn:Input ;
+    dcterms:title       "Near-Net-Shape Blanks"@en ;
+    dcterms:description "Pre-cut material blanks from the intake step, loaded onto CNC machine pallets for precision machining."@en .
+
+vpd:input-machined-parts
+    a ssn:Input ;
+    dcterms:title       "Machined Parts"@en ;
+    dcterms:description "Dimensioned parts from the CNC machining step, transferred to Hall B for hydraulic stamping and forming."@en .
+
+vpd:input-formed-parts
+    a ssn:Input ;
+    dcterms:title       "Formed Parts"@en ;
+    dcterms:description "Hydraulic-formed parts awaiting dimensional verification and surface inspection on the CMM."@en .
