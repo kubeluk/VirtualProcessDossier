@@ -3,6 +3,19 @@ import { ref } from 'vue'
 import { querySparql, updateSparql } from '@/services/sparql'
 import { useGraphStore } from '@/stores/graph'
 
+export interface DatasetFilters {
+  search?: string
+  keywords?: string[]
+  workflowRunUri?: string
+  workflowModelUri?: string
+}
+
+export interface DatasetFilterOptions {
+  keywords: string[]
+  workflowRuns: { uri: string; title: string | null }[]
+  workflowModels: { uri: string; title: string | null }[]
+}
+
 export interface AddDatasetForm {
   title: string
   description: string
@@ -74,14 +87,52 @@ export const useCatalogStore = defineStore('catalog', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  async function fetchDatasets() {
+  function escStr(s: string): string {
+    return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+  }
+
+  async function fetchDatasets(filters?: DatasetFilters) {
     loading.value = true
     error.value = null
-    const query = `
-      PREFIX dcat: <http://www.w3.org/ns/dcat#>
-      PREFIX dcterms: <http://purl.org/dc/terms/>
 
-      SELECT ?dataset ?title ?description ?modified (COUNT(?dist) AS ?distributionCount) WHERE {
+    const clauses: string[] = []
+
+    if (filters?.search?.trim()) {
+      const s = escStr(filters.search.trim())
+      clauses.push(`FILTER(
+        CONTAINS(LCASE(STR(?title)), LCASE("${s}")) ||
+        CONTAINS(LCASE(STR(?description)), LCASE("${s}")) ||
+        EXISTS { ?dataset dcat:keyword ?_skw . FILTER(CONTAINS(LCASE(STR(?_skw)), LCASE("${s}"))) }
+      )`)
+    }
+
+    if (filters?.keywords?.length) {
+      const kwList = filters.keywords.map((k) => `"${escStr(k)}"`).join(', ')
+      clauses.push(`FILTER EXISTS { ?dataset dcat:keyword ?_fkw . FILTER(?_fkw IN (${kwList})) }`)
+    }
+
+    if (filters?.workflowRunUri) {
+      const r = filters.workflowRunUri
+      clauses.push(`FILTER EXISTS {
+        { ?dataset dcterms:isPartOf <${r}> . }
+        UNION
+        { ?dataset dcterms:isPartOf ?_rai . ?_rai wild:inWorkflowInstance <${r}> . }
+      }`)
+    } else if (filters?.workflowModelUri) {
+      const m = filters.workflowModelUri
+      clauses.push(`FILTER EXISTS {
+        { ?dataset dcterms:isPartOf ?_mwi . ?_mwi wild:workflowInstanceOf <${m}> . }
+        UNION
+        { ?dataset dcterms:isPartOf ?_mai . ?_mai wild:inWorkflowInstance ?_mwi2 . ?_mwi2 wild:workflowInstanceOf <${m}> . }
+      }`)
+    }
+
+    const query = `
+      PREFIX dcat:    <http://www.w3.org/ns/dcat#>
+      PREFIX dcterms: <http://purl.org/dc/terms/>
+      PREFIX wild:    <http://purl.org/wild/vocab#>
+
+      SELECT ?dataset ?title ?description ?modified (COUNT(DISTINCT ?dist) AS ?distributionCount) WHERE {
         ?catalog a dcat:Catalog ;
                  dcat:dataset ?dataset .
         ?dataset a dcat:Dataset ;
@@ -89,6 +140,7 @@ export const useCatalogStore = defineStore('catalog', () => {
         OPTIONAL { ?dataset dcterms:description ?description }
         OPTIONAL { ?dataset dcterms:modified ?modified }
         OPTIONAL { ?dataset dcat:distribution ?dist }
+        ${clauses.join('\n        ')}
       }
       GROUP BY ?dataset ?title ?description ?modified
       ORDER BY ?title
@@ -106,6 +158,61 @@ export const useCatalogStore = defineStore('catalog', () => {
       error.value = 'Failed to load datasets. Make sure the triple store is running.'
     } finally {
       loading.value = false
+    }
+  }
+
+  async function fetchFilterOptions(): Promise<DatasetFilterOptions> {
+    const kwQuery = `
+      PREFIX dcat:    <http://www.w3.org/ns/dcat#>
+      SELECT DISTINCT ?keyword WHERE {
+        ?catalog a dcat:Catalog ; dcat:dataset ?dataset .
+        ?dataset dcat:keyword ?keyword .
+      }
+      ORDER BY ?keyword
+    `
+    const runQuery = `
+      PREFIX wild:    <http://purl.org/wild/vocab#>
+      PREFIX dcterms: <http://purl.org/dc/terms/>
+      SELECT DISTINCT ?inst ?title WHERE {
+        ?inst a wild:WorkflowInstance .
+        {
+          ?dataset dcterms:isPartOf ?inst .
+        } UNION {
+          ?dataset dcterms:isPartOf ?ai . ?ai wild:inWorkflowInstance ?inst .
+        }
+        OPTIONAL { ?inst dcterms:title ?title }
+      }
+      ORDER BY ?title
+    `
+    const modelQuery = `
+      PREFIX wild:    <http://purl.org/wild/vocab#>
+      PREFIX dcterms: <http://purl.org/dc/terms/>
+      SELECT DISTINCT ?model ?title WHERE {
+        ?model a wild:WorkflowModel .
+        {
+          ?dataset dcterms:isPartOf ?wi . ?wi wild:workflowInstanceOf ?model .
+        } UNION {
+          ?dataset dcterms:isPartOf ?ai . ?ai wild:inWorkflowInstance ?wi2 . ?wi2 wild:workflowInstanceOf ?model .
+        }
+        OPTIONAL { ?model dcterms:title ?title }
+      }
+      ORDER BY ?title
+    `
+    const [kwRes, runRes, modelRes] = await Promise.all([
+      querySparql(graphStore.endpoint, kwQuery),
+      querySparql(graphStore.endpoint, runQuery),
+      querySparql(graphStore.endpoint, modelQuery),
+    ])
+    return {
+      keywords: kwRes.results.bindings.map((b) => b.keyword.value),
+      workflowRuns: runRes.results.bindings.map((b) => ({
+        uri: b.inst.value,
+        title: b.title?.value ?? null,
+      })),
+      workflowModels: modelRes.results.bindings.map((b) => ({
+        uri: b.model.value,
+        title: b.title?.value ?? null,
+      })),
     }
   }
 
@@ -442,6 +549,7 @@ ${blocks.join('\n\n')}
     fetchDataset,
     fetchDatasetProvenance,
     fetchDatasetWorkflowContext,
+    fetchFilterOptions,
     addDataset,
   }
 })

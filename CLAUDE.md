@@ -146,6 +146,17 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 - `WorkflowStep` interface carries `children: WorkflowStep[]`; `fetchWorkflow` uses a two-query approach (metadata + full treeQuery) with a recursive `buildStep` to populate the tree at any depth
 - Workflow context on datasets: `fetchDatasetWorkflowContext(uri)` in `src/stores/catalog.ts`
 
+### Dataset Search & Filtering (implemented)
+- Filter panel on `/catalog` above the dataset list; filters are applied server-side via SPARQL
+- **Text search** (debounced 400 ms): `CONTAINS(LCASE(...))` across `dcterms:title`, `dcterms:description`, and `dcat:keyword` (keyword match via `FILTER EXISTS`)
+- **Keyword chips**: togglable pill buttons populated from all `dcat:keyword` values present in the catalog; multiple selections use OR logic (`FILTER EXISTS { ... IN (...) }`)
+- **Workflow Run select**: filters datasets directly `isPartOf` a `wild:WorkflowInstance` or linked via an `ActivityInstance`'s `wild:inWorkflowInstance`
+- **Workflow Model select**: same traversal extended by `wild:workflowInstanceOf`; disabled when a run is already selected (run is more specific)
+- Filter options (keywords, runs, models) are loaded once on mount via `fetchFilterOptions()` — only options that have at least one associated dataset are offered
+- Active filters shown as dismissible chips; "Clear all" button; result count updates to "X datasets matching your filters"
+- Catalog store: `fetchDatasets(filters?: DatasetFilters)` builds SPARQL `FILTER` / `FILTER EXISTS` clauses conditionally; `fetchFilterOptions(): Promise<DatasetFilterOptions>` runs 3 parallel queries for keywords, runs, models
+- `DatasetFilters` and `DatasetFilterOptions` interfaces exported from `src/stores/catalog.ts`
+
 ### Workflow Model Authoring (implemented)
 - **Create**: "Add Workflow" button on `/workflows` opens `AddWorkflowModal`; user defines title, description, and an arbitrarily deep tree of steps; each node can be `AtomicActivity` (leaf), `ParallelActivity`, or `SequentialActivity`; generates a WiLD-compliant `WorkflowModel` with a root `SequentialActivity` and nested `hasChildActivities` RDF lists; navigates to the new workflow on success
 - **Edit — full structural edit** (no runs exist): "Edit Workflow" button on `/workflow?uri=` opens `AddWorkflowModal` pre-populated via `fetchWorkflowForEdit`; user can change titles, descriptions, activity types, add/remove nodes at any depth; `updateWorkflowModel` deletes the old structure (4 sequential SPARQL DELETEs using depth-unlimited property paths) and inserts fresh triples; `dcterms:issued` is preserved via `FILTER(?p != dcterms:issued)`
