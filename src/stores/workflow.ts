@@ -28,6 +28,7 @@ export interface WorkflowStep {
   title: string | null
   description: string | null
   type: string | null
+  children: WorkflowStep[]
 }
 
 export interface WorkflowDetail {
@@ -81,18 +82,12 @@ export interface RunDetail {
 // AddWorkflowModel form types
 // ---------------------------------------------------------------------------
 
-export interface SubStepForm {
-  uri?: string   // present when loaded from an existing resource
-  title: string
-  description: string
-}
-
 export interface StepForm {
   uri?: string   // present when loaded from an existing resource
   title: string
   description: string
-  type: 'AtomicActivity' | 'ParallelActivity'
-  subSteps: SubStepForm[]
+  type: 'AtomicActivity' | 'ParallelActivity' | 'SequentialActivity'
+  children: StepForm[]
 }
 
 export interface AddWorkflowForm {
@@ -147,55 +142,106 @@ export const useWorkflowStore = defineStore('workflow', () => {
   }
 
   async function fetchWorkflow(uri: string): Promise<WorkflowDetail | null> {
-    const query = `
+    // Query 1: workflow metadata + root behaviour URI
+    const metaQuery = `
+      PREFIX wild:    <http://purl.org/wild/vocab#>
+      PREFIX dcterms: <http://purl.org/dc/terms/>
+
+      SELECT ?wfTitle ?wfDesc ?wfIssued ?root WHERE {
+        BIND(<${uri}> AS ?wf)
+        ?wf dcterms:title ?wfTitle .
+        OPTIONAL { ?wf dcterms:description ?wfDesc }
+        OPTIONAL { ?wf dcterms:issued ?wfIssued }
+        OPTIONAL { ?wf wild:hasBehaviour ?root }
+      }
+    `
+
+    // Query 2: all parent→child pairs in the activity tree.
+    // (path)* traverses the root + all composite descendants so every
+    // direct parent-child edge is captured regardless of nesting depth.
+    // Uses a literal URI (not BIND) to avoid the Jena BIND+UNION issue.
+    const treeQuery = `
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
-      SELECT ?wfTitle ?wfDesc ?wfIssued
-             ?step ?stepTitle ?stepDesc ?stepType
-      WHERE {
-        BIND(<${uri}> AS ?workflow)
-        ?workflow dcterms:title ?wfTitle .
-        OPTIONAL { ?workflow dcterms:description ?wfDesc }
-        OPTIONAL { ?workflow dcterms:issued ?wfIssued }
+      SELECT DISTINCT ?parent ?child ?childTitle ?childDesc ?childType WHERE {
+        <${uri}> wild:hasBehaviour/(wild:hasChildActivities/rdf:rest*/rdf:first)* ?parent .
+        ?parent wild:hasChildActivities/rdf:rest*/rdf:first ?child .
+        OPTIONAL { ?child dcterms:title ?childTitle }
+        OPTIONAL { ?child dcterms:description ?childDesc }
         OPTIONAL {
-          ?workflow wild:hasBehaviour ?root .
-          ?root wild:hasChildActivities/rdf:rest*/rdf:first ?step .
-          OPTIONAL { ?step dcterms:title ?stepTitle }
-          OPTIONAL { ?step dcterms:description ?stepDesc }
-          OPTIONAL {
-            ?step a ?stepType .
-            FILTER(STRSTARTS(STR(?stepType), 'http://purl.org/wild/vocab#'))
-          }
+          ?child a ?childType .
+          FILTER(STRSTARTS(STR(?childType), 'http://purl.org/wild/vocab#'))
         }
       }
     `
-    const results = await querySparql(graphStore.endpoint, query)
-    if (results.results.bindings.length === 0) return null
 
-    const first = results.results.bindings[0]
-    const stepsMap = new Map<string, WorkflowStep>()
+    const [metaResults, treeResults] = await Promise.all([
+      querySparql(graphStore.endpoint, metaQuery),
+      querySparql(graphStore.endpoint, treeQuery),
+    ])
 
-    for (const b of results.results.bindings) {
-      if (!b.step) continue
-      const stepUri = b.step.value
-      if (!stepsMap.has(stepUri)) {
-        const rawType = b.stepType?.value ?? null
-        stepsMap.set(stepUri, {
-          uri: stepUri,
-          title: b.stepTitle?.value ?? null,
-          description: b.stepDesc?.value ?? null,
-          type: rawType ? rawType.replace('http://purl.org/wild/vocab#', '') : null,
-        })
+    if (metaResults.results.bindings.length === 0) return null
+    const first = metaResults.results.bindings[0]
+    const rootUri = first.root?.value ?? null
+
+    if (!rootUri) {
+      return {
+        uri,
+        title: first.wfTitle.value,
+        description: first.wfDesc?.value ?? null,
+        issued: first.wfIssued?.value ?? null,
+        steps: [],
       }
     }
 
-    const steps = [...stepsMap.values()].sort((a, b) => {
-      const nA = parseInt(a.title?.match(/^Step (\d+)/)?.[1] ?? '99')
-      const nB = parseInt(b.title?.match(/^Step (\d+)/)?.[1] ?? '99')
-      return nA - nB
-    })
+    // Build node-metadata and children maps from tree query results
+    type NodeMeta = { title: string | null; desc: string | null; type: string | null }
+    const nodeMeta = new Map<string, NodeMeta>()
+    // childrenMap: parentUri → ordered list of child URIs (insertion = SPARQL result order)
+    const childrenMap = new Map<string, string[]>()
+
+    for (const b of treeResults.results.bindings) {
+      const parentUri = b.parent.value
+      const childUri = b.child.value
+      const rawType = b.childType?.value ?? null
+
+      if (!nodeMeta.has(childUri)) {
+        nodeMeta.set(childUri, {
+          title: b.childTitle?.value ?? null,
+          desc: b.childDesc?.value ?? null,
+          type: rawType ? rawType.replace('http://purl.org/wild/vocab#', '') : null,
+        })
+      }
+      if (!childrenMap.has(parentUri)) childrenMap.set(parentUri, [])
+      const siblings = childrenMap.get(parentUri)!
+      if (!siblings.includes(childUri)) siblings.push(childUri)
+    }
+
+    function sortByStepNumber(items: WorkflowStep[]): WorkflowStep[] {
+      return items.sort((a, b) => {
+        const nA = parseInt(a.title?.match(/^Step\s+(\d+)/i)?.[1] ?? '0')
+        const nB = parseInt(b.title?.match(/^Step\s+(\d+)/i)?.[1] ?? '0')
+        if (nA !== nB) return nA - nB
+        return (a.title ?? '').localeCompare(b.title ?? '')
+      })
+    }
+
+    function buildStep(nodeUri: string): WorkflowStep {
+      const meta = nodeMeta.get(nodeUri) ?? { title: null, desc: null, type: null }
+      const childUris = childrenMap.get(nodeUri) ?? []
+      return {
+        uri: nodeUri,
+        title: meta.title,
+        description: meta.desc,
+        type: meta.type,
+        children: sortByStepNumber(childUris.map(buildStep)),
+      }
+    }
+
+    const topLevelUris = childrenMap.get(rootUri) ?? []
+    const steps = sortByStepNumber(topLevelUris.map(buildStep))
 
     return {
       uri,
@@ -423,99 +469,96 @@ export const useWorkflowStore = defineStore('workflow', () => {
   // ── Fetch workflow data for editing ─────────────────────────────────────
 
   async function fetchWorkflowForEdit(uri: string): Promise<AddWorkflowForm | null> {
-    const stepsQuery = `
+    // Same two-query approach as fetchWorkflow to support arbitrary depth.
+    const metaQuery = `
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
-      PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
-      SELECT ?wfTitle ?wfDesc ?step ?stepTitle ?stepDesc ?stepType WHERE {
+      SELECT ?wfTitle ?wfDesc ?root WHERE {
         BIND(<${uri}> AS ?wf)
         ?wf dcterms:title ?wfTitle .
         OPTIONAL { ?wf dcterms:description ?wfDesc }
-        OPTIONAL {
-          ?wf wild:hasBehaviour/wild:hasChildActivities/rdf:rest*/rdf:first ?step .
-          OPTIONAL { ?step dcterms:title ?stepTitle }
-          OPTIONAL { ?step dcterms:description ?stepDesc }
-          OPTIONAL {
-            ?step a ?stepType .
-            FILTER(STRSTARTS(STR(?stepType), 'http://purl.org/wild/vocab#'))
-          }
-        }
+        OPTIONAL { ?wf wild:hasBehaviour ?root }
       }
     `
-    const leavesQuery = `
+    const treeQuery = `
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
-      SELECT ?step ?leaf ?leafTitle ?leafDesc WHERE {
-        <${uri}> wild:hasBehaviour/wild:hasChildActivities/rdf:rest*/rdf:first ?step .
-        ?step wild:hasChildActivities/rdf:rest*/rdf:first ?leaf .
-        OPTIONAL { ?leaf dcterms:title ?leafTitle }
-        OPTIONAL { ?leaf dcterms:description ?leafDesc }
+      SELECT DISTINCT ?parent ?child ?childTitle ?childDesc ?childType WHERE {
+        <${uri}> wild:hasBehaviour/(wild:hasChildActivities/rdf:rest*/rdf:first)* ?parent .
+        ?parent wild:hasChildActivities/rdf:rest*/rdf:first ?child .
+        OPTIONAL { ?child dcterms:title ?childTitle }
+        OPTIONAL { ?child dcterms:description ?childDesc }
+        OPTIONAL {
+          ?child a ?childType .
+          FILTER(STRSTARTS(STR(?childType), 'http://purl.org/wild/vocab#'))
+        }
       }
     `
 
-    const [stepsResult, leavesResult] = await Promise.all([
-      querySparql(graphStore.endpoint, stepsQuery),
-      querySparql(graphStore.endpoint, leavesQuery),
+    const [metaResults, treeResults] = await Promise.all([
+      querySparql(graphStore.endpoint, metaQuery),
+      querySparql(graphStore.endpoint, treeQuery),
     ])
 
-    if (stepsResult.results.bindings.length === 0) return null
-    const first = stepsResult.results.bindings[0]
+    if (metaResults.results.bindings.length === 0) return null
+    const first = metaResults.results.bindings[0]
+    const rootUri = first.root?.value ?? null
 
-    type StepData = {
-      uri: string
-      originalTitle: string | null
-      description: string
-      type: 'AtomicActivity' | 'ParallelActivity'
-      subSteps: SubStepForm[]
+    if (!rootUri) {
+      return { title: first.wfTitle.value, description: first.wfDesc?.value ?? '', steps: [] }
     }
 
-    const stepsMap = new Map<string, StepData>()
-    for (const b of stepsResult.results.bindings) {
-      if (!b.step) continue
-      const stepUri = b.step.value
-      if (!stepsMap.has(stepUri)) {
-        const rawType = b.stepType?.value?.replace('http://purl.org/wild/vocab#', '') ?? 'AtomicActivity'
-        stepsMap.set(stepUri, {
-          uri: stepUri,
-          originalTitle: b.stepTitle?.value ?? null,
-          description: b.stepDesc?.value ?? '',
-          type: rawType === 'ParallelActivity' ? 'ParallelActivity' : 'AtomicActivity',
-          subSteps: [],
+    type NodeMeta = { title: string | null; desc: string | null; type: string | null }
+    const nodeMeta = new Map<string, NodeMeta>()
+    const childrenMap = new Map<string, string[]>()
+
+    for (const b of treeResults.results.bindings) {
+      const parentUri = b.parent.value
+      const childUri = b.child.value
+      const rawType = b.childType?.value ?? null
+      if (!nodeMeta.has(childUri)) {
+        nodeMeta.set(childUri, {
+          title: b.childTitle?.value ?? null,
+          desc: b.childDesc?.value ?? null,
+          type: rawType ? rawType.replace('http://purl.org/wild/vocab#', '') : null,
         })
+      }
+      if (!childrenMap.has(parentUri)) childrenMap.set(parentUri, [])
+      const siblings = childrenMap.get(parentUri)!
+      if (!siblings.includes(childUri)) siblings.push(childUri)
+    }
+
+    function sortedChildren(parentUri: string): string[] {
+      return [...(childrenMap.get(parentUri) ?? [])].sort((a, b) => {
+        const tA = nodeMeta.get(a)?.title ?? ''
+        const tB = nodeMeta.get(b)?.title ?? ''
+        const nA = parseInt(tA.match(/^Step\s+(\d+)/i)?.[1] ?? '0')
+        const nB = parseInt(tB.match(/^Step\s+(\d+)/i)?.[1] ?? '0')
+        if (nA !== nB) return nA - nB
+        return tA.localeCompare(tB)
+      })
+    }
+
+    function buildStepForm(nodeUri: string): StepForm {
+      const meta = nodeMeta.get(nodeUri) ?? { title: null, desc: null, type: null }
+      const rawType = meta.type ?? 'AtomicActivity'
+      const type: StepForm['type'] =
+        rawType === 'ParallelActivity' ? 'ParallelActivity' :
+        rawType === 'SequentialActivity' ? 'SequentialActivity' : 'AtomicActivity'
+      return {
+        uri: nodeUri,
+        title: meta.title?.replace(/^Step\s+\d+:\s*/i, '') ?? '',
+        description: meta.desc ?? '',
+        type,
+        children: sortedChildren(nodeUri).map(buildStepForm),
       }
     }
 
-    for (const b of leavesResult.results.bindings) {
-      const step = stepsMap.get(b.step.value)
-      if (step) {
-        step.subSteps.push({
-          uri: b.leaf.value,
-          title: b.leafTitle?.value ?? '',
-          description: b.leafDesc?.value ?? '',
-        })
-      }
-    }
-
-    const sortedSteps = [...stepsMap.values()].sort((a, b) => {
-      const nA = parseInt(a.originalTitle?.match(/^Step\s+(\d+)/i)?.[1] ?? '99')
-      const nB = parseInt(b.originalTitle?.match(/^Step\s+(\d+)/i)?.[1] ?? '99')
-      return nA - nB
-    })
-
-    return {
-      title: first.wfTitle.value,
-      description: first.wfDesc?.value ?? '',
-      steps: sortedSteps.map((s) => ({
-        uri: s.uri,
-        title: s.originalTitle?.replace(/^Step\s+\d+:\s*/i, '') ?? '',
-        description: s.description,
-        type: s.type,
-        subSteps: s.subSteps,
-      })),
-    }
+    const steps = sortedChildren(rootUri).map(buildStepForm)
+    return { title: first.wfTitle.value, description: first.wfDesc?.value ?? '', steps }
   }
 
   // ── Update workflow model (only allowed when no runs exist) ───────────────
@@ -530,21 +573,20 @@ export const useWorkflowStore = defineStore('workflow', () => {
 
     const base = 'https://example.org/vpd#'
     const rootUri = `${base}wfbeh-${slug}-${suffix}`
-    const stepUris = form.steps.map((_, i) => `${base}step-${slug}-${suffix}-${i + 1}`)
-    const leafUris = form.steps.map((step, i) =>
-      step.subSteps.map((_, j) => `${base}wfact-${slug}-${suffix}-${i + 1}-${j + 1}`),
-    )
+    let nodeCounter = 0
+    let listCounter = 0
 
     function esc(s: string): string {
       return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
     }
 
-    function buildList(items: string[], prefix: string): [string, string] {
-      const head = `_:${prefix}0`
+    function buildList(items: string[]): [string, string] {
+      const p = `L${listCounter++}`
+      const head = `_:${p}n0`
       const triples = items
         .map((item, i) => {
-          const rest = i < items.length - 1 ? `_:${prefix}${i + 1}` : 'rdf:nil'
-          return `  _:${prefix}${i} rdf:first <${item}> .\n  _:${prefix}${i} rdf:rest ${rest} .`
+          const rest = i < items.length - 1 ? `_:${p}n${i + 1}` : 'rdf:nil'
+          return `  _:${p}n${i} rdf:first <${item}> .\n  _:${p}n${i} rdf:rest ${rest} .`
         })
         .join('\n')
       return [head, triples]
@@ -552,7 +594,6 @@ export const useWorkflowStore = defineStore('workflow', () => {
 
     const insertLines: string[] = []
 
-    // WorkflowModel (dcterms:issued preserved via FILTER in DELETE — not re-inserted)
     insertLines.push(`  <${uri}> a wild:WorkflowModel .`)
     insertLines.push(`  <${uri}> dcterms:title "${esc(form.title)}"@en .`)
     if (form.description.trim()) {
@@ -560,41 +601,29 @@ export const useWorkflowStore = defineStore('workflow', () => {
     }
     insertLines.push(`  <${uri}> wild:hasBehaviour <${rootUri}> .`)
 
-    const [rootHead, rootListTriples] = buildList(stepUris, 'rootList')
+    function generateNode(step: StepForm, nodeUri: string, topLevelIndex: number | null): void {
+      const rawTitle = step.title.trim().replace(/^Step\s+\d+:\s*/i, '')
+      const title = topLevelIndex !== null ? `Step ${topLevelIndex}: ${rawTitle}` : rawTitle
+      insertLines.push(`  <${nodeUri}> a wild:${step.type} .`)
+      insertLines.push(`  <${nodeUri}> dcterms:title "${esc(title)}"@en .`)
+      if (step.description.trim()) {
+        insertLines.push(`  <${nodeUri}> dcterms:description "${esc(step.description)}"@en .`)
+      }
+      if (step.type !== 'AtomicActivity' && step.children.length > 0) {
+        const childUris = step.children.map(() => `${base}wfact-${slug}-${suffix}-${nodeCounter++}`)
+        const [head, listTriples] = buildList(childUris)
+        insertLines.push(`  <${nodeUri}> wild:hasChildActivities ${head} .`)
+        insertLines.push(listTriples)
+        step.children.forEach((child, i) => generateNode(child, childUris[i], null))
+      }
+    }
+
+    const stepUris = form.steps.map(() => `${base}step-${slug}-${suffix}-${nodeCounter++}`)
+    const [rootHead, rootListTriples] = buildList(stepUris)
     insertLines.push(`  <${rootUri}> a wild:SequentialActivity .`)
     insertLines.push(`  <${rootUri}> wild:hasChildActivities ${rootHead} .`)
     insertLines.push(rootListTriples)
-
-    for (let i = 0; i < form.steps.length; i++) {
-      const step = form.steps[i]
-      const stepUri = stepUris[i]
-      const n = i + 1
-      const rawTitle = step.title.trim().replace(/^Step\s+\d+:\s*/i, '')
-      const stepTitle = `Step ${n}: ${rawTitle}`
-
-      insertLines.push(`  <${stepUri}> a wild:${step.type} .`)
-      insertLines.push(`  <${stepUri}> dcterms:title "${esc(stepTitle)}"@en .`)
-      if (step.description.trim()) {
-        insertLines.push(`  <${stepUri}> dcterms:description "${esc(step.description)}"@en .`)
-      }
-
-      if (step.type === 'ParallelActivity') {
-        const [leafHead, leafListTriples] = buildList(leafUris[i], `step${n}List`)
-        insertLines.push(`  <${stepUri}> wild:hasChildActivities ${leafHead} .`)
-        insertLines.push(leafListTriples)
-
-        for (let j = 0; j < step.subSteps.length; j++) {
-          const sub = step.subSteps[j]
-          const leafUri = leafUris[i][j]
-          const subTitle = sub.title.trim() || `${stepTitle} – branch ${j + 1}`
-          insertLines.push(`  <${leafUri}> a wild:AtomicActivity .`)
-          insertLines.push(`  <${leafUri}> dcterms:title "${esc(subTitle)}"@en .`)
-          if (sub.description.trim()) {
-            insertLines.push(`  <${leafUri}> dcterms:description "${esc(sub.description)}"@en .`)
-          }
-        }
-      }
-    }
+    form.steps.forEach((step, i) => generateNode(step, stepUris[i], i + 1))
 
     const update = `
       PREFIX wild:    <http://purl.org/wild/vocab#>
@@ -608,34 +637,17 @@ export const useWorkflowStore = defineStore('workflow', () => {
       DELETE { ?root ?p ?o }
       WHERE { <${uri}> wild:hasBehaviour ?root . ?root ?p ?o } ;
 
-      DELETE { ?step ?p ?o }
+      DELETE { ?desc ?p ?o }
       WHERE {
         <${uri}> wild:hasBehaviour ?root .
-        ?root wild:hasChildActivities/rdf:rest*/rdf:first ?step .
-        ?step ?p ?o
-      } ;
-
-      DELETE { ?leaf ?p ?o }
-      WHERE {
-        <${uri}> wild:hasBehaviour ?root .
-        ?root wild:hasChildActivities/rdf:rest*/rdf:first ?step .
-        ?step wild:hasChildActivities/rdf:rest*/rdf:first ?leaf .
-        ?leaf ?p ?o
+        ?root (wild:hasChildActivities/rdf:rest*/rdf:first)+ ?desc .
+        ?desc ?p ?o
       } ;
 
       DELETE { ?node rdf:first ?f . ?node rdf:rest ?r }
       WHERE {
-        <${uri}> wild:hasBehaviour ?root .
-        ?root wild:hasChildActivities/rdf:rest* ?node .
-        ?node rdf:first ?f .
-        ?node rdf:rest ?r
-      } ;
-
-      DELETE { ?node rdf:first ?f . ?node rdf:rest ?r }
-      WHERE {
-        <${uri}> wild:hasBehaviour ?root .
-        ?root wild:hasChildActivities/rdf:rest*/rdf:first ?step .
-        ?step wild:hasChildActivities/rdf:rest* ?node .
+        <${uri}> wild:hasBehaviour/(wild:hasChildActivities/rdf:rest*/rdf:first)* ?comp .
+        ?comp wild:hasChildActivities/rdf:rest* ?node .
         ?node rdf:first ?f .
         ?node rdf:rest ?r
       } ;
@@ -658,7 +670,6 @@ ${insertLines.join('\n')}
       return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
     }
 
-    // Build a DELETE/INSERT/WHERE block for a single resource
     function metaOp(resourceUri: string, newTitle: string, newDesc: string): string {
       const descInsert = newDesc.trim()
         ? `<${resourceUri}> dcterms:description "${esc(newDesc)}"@en .`
@@ -671,23 +682,17 @@ ${insertLines.join('\n')}
     }
 
     const ops: string[] = []
-
-    // Workflow model itself
     ops.push(metaOp(uri, form.title, form.description))
 
-    // Steps and their leaves
-    for (let i = 0; i < form.steps.length; i++) {
-      const step = form.steps[i]
-      if (!step.uri) continue
-      const n = i + 1
+    function collectOps(step: StepForm, isTopLevel: boolean, stepNum: number): void {
+      if (!step.uri) return
       const rawTitle = step.title.trim().replace(/^Step\s+\d+:\s*/i, '')
-      ops.push(metaOp(step.uri, `Step ${n}: ${rawTitle}`, step.description))
-
-      for (const sub of step.subSteps) {
-        if (!sub.uri) continue
-        ops.push(metaOp(sub.uri, sub.title.trim(), sub.description))
-      }
+      const title = isTopLevel ? `Step ${stepNum}: ${rawTitle}` : rawTitle
+      ops.push(metaOp(step.uri, title, step.description))
+      step.children.forEach((child) => collectOps(child, false, 0))
     }
+
+    form.steps.forEach((step, i) => collectOps(step, true, i + 1))
 
     const update = `
       PREFIX dcterms: <http://purl.org/dc/terms/>
@@ -710,24 +715,21 @@ ${insertLines.join('\n')}
     const base = 'https://example.org/vpd#'
     const workflowUri = `${base}workflow-${slug}-${suffix}`
     const rootUri = `${base}wfbeh-${slug}-${suffix}`
-    const stepUris = form.steps.map((_, i) => `${base}step-${slug}-${suffix}-${i + 1}`)
-    const leafUris = form.steps.map((step, i) =>
-      step.subSteps.map((_, j) => `${base}wfact-${slug}-${suffix}-${i + 1}-${j + 1}`),
-    )
-
     const now = new Date().toISOString()
+    let nodeCounter = 0
+    let listCounter = 0
 
     function esc(s: string): string {
       return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
     }
 
-    // Build RDF list triples; returns [head blank node label, triples string]
-    function buildList(items: string[], prefix: string): [string, string] {
-      const head = `_:${prefix}0`
+    function buildList(items: string[]): [string, string] {
+      const p = `L${listCounter++}`
+      const head = `_:${p}n0`
       const triples = items
-        .map((uri, i) => {
-          const rest = i < items.length - 1 ? `_:${prefix}${i + 1}` : 'rdf:nil'
-          return `  _:${prefix}${i} rdf:first <${uri}> .\n  _:${prefix}${i} rdf:rest ${rest} .`
+        .map((item, i) => {
+          const rest = i < items.length - 1 ? `_:${p}n${i + 1}` : 'rdf:nil'
+          return `  _:${p}n${i} rdf:first <${item}> .\n  _:${p}n${i} rdf:rest ${rest} .`
         })
         .join('\n')
       return [head, triples]
@@ -735,7 +737,6 @@ ${insertLines.join('\n')}
 
     const lines: string[] = []
 
-    // WorkflowModel
     lines.push(`  <${workflowUri}> a wild:WorkflowModel .`)
     lines.push(`  <${workflowUri}> dcterms:title "${esc(form.title)}"@en .`)
     if (form.description.trim()) {
@@ -744,44 +745,29 @@ ${insertLines.join('\n')}
     lines.push(`  <${workflowUri}> dcterms:issued "${now}"^^xsd:dateTime .`)
     lines.push(`  <${workflowUri}> wild:hasBehaviour <${rootUri}> .`)
 
-    // Root SequentialActivity + list
-    const [rootHead, rootListTriples] = buildList(stepUris, 'rootList')
+    function generateNode(step: StepForm, nodeUri: string, topLevelIndex: number | null): void {
+      const rawTitle = step.title.trim().replace(/^Step\s+\d+:\s*/i, '')
+      const title = topLevelIndex !== null ? `Step ${topLevelIndex}: ${rawTitle}` : rawTitle
+      lines.push(`  <${nodeUri}> a wild:${step.type} .`)
+      lines.push(`  <${nodeUri}> dcterms:title "${esc(title)}"@en .`)
+      if (step.description.trim()) {
+        lines.push(`  <${nodeUri}> dcterms:description "${esc(step.description)}"@en .`)
+      }
+      if (step.type !== 'AtomicActivity' && step.children.length > 0) {
+        const childUris = step.children.map(() => `${base}wfact-${slug}-${suffix}-${nodeCounter++}`)
+        const [head, listTriples] = buildList(childUris)
+        lines.push(`  <${nodeUri}> wild:hasChildActivities ${head} .`)
+        lines.push(listTriples)
+        step.children.forEach((child, i) => generateNode(child, childUris[i], null))
+      }
+    }
+
+    const stepUris = form.steps.map(() => `${base}step-${slug}-${suffix}-${nodeCounter++}`)
+    const [rootHead, rootListTriples] = buildList(stepUris)
     lines.push(`  <${rootUri}> a wild:SequentialActivity .`)
     lines.push(`  <${rootUri}> wild:hasChildActivities ${rootHead} .`)
     lines.push(rootListTriples)
-
-    // Steps
-    for (let i = 0; i < form.steps.length; i++) {
-      const step = form.steps[i]
-      const stepUri = stepUris[i]
-      const n = i + 1
-      // Strip any existing "Step N: " prefix the user may have typed
-      const rawTitle = step.title.trim().replace(/^Step\s+\d+:\s*/i, '')
-      const stepTitle = `Step ${n}: ${rawTitle}`
-
-      lines.push(`  <${stepUri}> a wild:${step.type} .`)
-      lines.push(`  <${stepUri}> dcterms:title "${esc(stepTitle)}"@en .`)
-      if (step.description.trim()) {
-        lines.push(`  <${stepUri}> dcterms:description "${esc(step.description)}"@en .`)
-      }
-
-      if (step.type === 'ParallelActivity') {
-        const [leafHead, leafListTriples] = buildList(leafUris[i], `step${n}List`)
-        lines.push(`  <${stepUri}> wild:hasChildActivities ${leafHead} .`)
-        lines.push(leafListTriples)
-
-        for (let j = 0; j < step.subSteps.length; j++) {
-          const sub = step.subSteps[j]
-          const leafUri = leafUris[i][j]
-          const subTitle = sub.title.trim() || `${stepTitle} – branch ${j + 1}`
-          lines.push(`  <${leafUri}> a wild:AtomicActivity .`)
-          lines.push(`  <${leafUri}> dcterms:title "${esc(subTitle)}"@en .`)
-          if (sub.description.trim()) {
-            lines.push(`  <${leafUri}> dcterms:description "${esc(sub.description)}"@en .`)
-          }
-        }
-      }
-    }
+    form.steps.forEach((step, i) => generateNode(step, stepUris[i], i + 1))
 
     const update = `
       PREFIX wild:    <http://purl.org/wild/vocab#>

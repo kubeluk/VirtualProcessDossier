@@ -8,6 +8,7 @@ import {
   type AddWorkflowForm,
 } from '@/stores/workflow'
 import AddWorkflowModal from '@/components/AddWorkflowModal.vue'
+import WorkflowStepNode from '@/components/WorkflowStepNode.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -66,13 +67,6 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
-function parseStepTitle(title: string | null): { number: string; name: string } {
-  if (!title) return { number: '?', name: 'Unnamed Step' }
-  const match = title.match(/^Step (\d+):\s*(.+)$/)
-  if (match) return { number: match[1], name: match[2] }
-  return { number: '?', name: title }
-}
-
 function openRun(uri: string) {
   router.push({ name: 'run', query: { uri } })
 }
@@ -123,23 +117,16 @@ function openRun(uri: string) {
 
         <div v-if="workflow.steps.length === 0" class="state-message">No steps defined.</div>
 
-        <ol v-else class="step-list">
-          <li v-for="(step, idx) in workflow.steps" :key="step.uri" class="step-item">
-            <div class="step-marker">
-              <div class="step-circle">{{ parseStepTitle(step.title).number }}</div>
-              <div v-if="idx < workflow.steps.length - 1" class="step-connector-line"></div>
-            </div>
-            <div class="step-content">
-              <div class="step-header">
-                <h3 class="step-name">{{ parseStepTitle(step.title).name }}</h3>
-                <span v-if="step.type === 'ParallelActivity'" class="step-badge step-badge--parallel">
-                  ⟷ parallel
-                </span>
-              </div>
-              <p v-if="step.description" class="step-description">{{ step.description }}</p>
-            </div>
-          </li>
-        </ol>
+        <div v-else class="step-list">
+          <WorkflowStepNode
+            v-for="(step, idx) in workflow.steps"
+            :key="step.uri"
+            :step="step"
+            :index="idx"
+            :total="workflow.steps.length"
+            context="sequential"
+          />
+        </div>
       </section>
 
       <!-- Workflow runs -->
@@ -309,86 +296,9 @@ section h2 {
   margin: 0 0 1rem;
 }
 
-/* Step timeline */
+/* Step list container */
 .step-list {
-  list-style: none;
   padding: 0;
-  margin: 0;
-}
-
-.step-item {
-  display: flex;
-  gap: 1.25rem;
-}
-
-.step-marker {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex-shrink: 0;
-  width: 2rem;
-}
-
-.step-circle {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  background: var(--color-primary);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.875rem;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.step-connector-line {
-  flex: 1;
-  width: 2px;
-  background: var(--color-border);
-  margin: 0.3rem 0;
-  min-height: 1.5rem;
-}
-
-.step-content {
-  flex: 1;
-  padding-bottom: 1.5rem;
-}
-
-.step-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.35rem;
-  flex-wrap: wrap;
-}
-
-.step-name {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--color-text);
-  margin: 0;
-}
-
-.step-badge {
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 0.15rem 0.55rem;
-  border-radius: 20px;
-  letter-spacing: 0.02em;
-}
-
-.step-badge--parallel {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
-}
-
-.step-description {
-  font-size: 0.875rem;
-  color: #4b5563;
-  line-height: 1.55;
   margin: 0;
 }
 

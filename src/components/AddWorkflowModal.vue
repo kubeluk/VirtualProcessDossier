@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import { useWorkflowStore, type StepForm, type SubStepForm, type AddWorkflowForm } from '@/stores/workflow'
+import { useWorkflowStore, type StepForm, type AddWorkflowForm } from '@/stores/workflow'
+import StepEditorNode, { type StepFormWithId, newStepWithId } from '@/components/StepEditorNode.vue'
 
 const props = defineProps<{
   modelValue: boolean
-  editUri?: string              // When set: edit mode (update existing workflow)
-  editData?: AddWorkflowForm | null  // Pre-populated form data for edit mode
-  metadataOnly?: boolean        // When true: lock structure, only title/description editable
+  editUri?: string
+  editData?: AddWorkflowForm | null
+  metadataOnly?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -20,8 +21,7 @@ const isEditMode = computed(() => !!props.editUri)
 // Form state
 const title = ref('')
 const description = ref('')
-const steps = ref<(StepForm & { id: number; subSteps: (SubStepForm & { id: number })[] })[]>([])
-let nextId = 0
+const steps = ref<StepFormWithId[]>([])
 
 // UI state
 const submitting = ref(false)
@@ -34,24 +34,28 @@ function close() {
 function reset() {
   title.value = ''
   description.value = ''
-  steps.value = [newStep()]
+  steps.value = [newStepWithId()]
   submitError.value = null
+}
+
+function toStepFormWithId(s: StepForm): StepFormWithId {
+  return {
+    id: Math.random(),  // just needs to be unique for :key
+    uri: s.uri,
+    title: s.title,
+    description: s.description,
+    type: s.type,
+    children: s.children.map(toStepFormWithId),
+  }
 }
 
 function populateFrom(data: AddWorkflowForm) {
   title.value = data.title
   description.value = data.description
-  steps.value = data.steps.map((s) => ({
-    id: nextId++,
-    title: s.title,
-    description: s.description,
-    type: s.type,
-    subSteps: s.subSteps.map((ss) => ({ id: nextId++, ...ss })),
-  }))
+  steps.value = data.steps.map(toStepFormWithId)
   submitError.value = null
 }
 
-// Sync form when modal opens
 watch(
   () => props.modelValue,
   (open) => {
@@ -64,55 +68,47 @@ watch(
   },
 )
 
-function newStep() {
-  return { id: nextId++, title: '', description: '', type: 'AtomicActivity' as const, subSteps: [] }
-}
-
-function newSubStep() {
-  return { id: nextId++, title: '', description: '' }
-}
-
 function addStep() {
-  steps.value.push(newStep())
+  steps.value.push(newStepWithId())
 }
 
 function removeStep(idx: number) {
   steps.value.splice(idx, 1)
 }
 
-function onTypeChange(idx: number) {
-  const step = steps.value[idx]
-  if (step.type === 'ParallelActivity' && step.subSteps.length < 2) {
-    // Pre-fill with 2 sub-steps
-    step.subSteps = [newSubStep(), newSubStep()]
-  } else if (step.type === 'AtomicActivity') {
-    step.subSteps = []
-  }
-}
-
-function addSubStep(stepIdx: number) {
-  steps.value[stepIdx].subSteps.push(newSubStep())
-}
-
-function removeSubStep(stepIdx: number, subIdx: number) {
-  steps.value[stepIdx].subSteps.splice(subIdx, 1)
-}
-
 function validate(): string | null {
   if (!title.value.trim()) return 'Workflow title is required.'
   if (steps.value.length === 0) return 'At least one step is required.'
-  for (let i = 0; i < steps.value.length; i++) {
-    const s = steps.value[i]
-    if (!s.title.trim()) return `Step ${i + 1} title is required.`
-    if (s.type === 'ParallelActivity') {
-      if (s.subSteps.length < 2) return `Parallel step ${i + 1} must have at least 2 sub-steps.`
-      for (let j = 0; j < s.subSteps.length; j++) {
-        if (!s.subSteps[j].title.trim())
-          return `Sub-step ${j + 1} in step ${i + 1} title is required.`
+
+  function validateNode(s: StepFormWithId, path: string): string | null {
+    if (!s.title.trim()) return `${path} title is required.`
+    if (s.type !== 'AtomicActivity') {
+      if (s.children.length < 1) return `${path} must have at least one sub-activity.`
+      if (s.type === 'ParallelActivity' && s.children.length < 2)
+        return `${path} (parallel) must have at least 2 branches.`
+      for (let i = 0; i < s.children.length; i++) {
+        const err = validateNode(s.children[i], `${path} › sub-activity ${i + 1}`)
+        if (err) return err
       }
     }
+    return null
+  }
+
+  for (let i = 0; i < steps.value.length; i++) {
+    const err = validateNode(steps.value[i], `Step ${i + 1}`)
+    if (err) return err
   }
   return null
+}
+
+function toStepForm(s: StepFormWithId): StepForm {
+  return {
+    ...(s.uri ? { uri: s.uri } : {}),
+    title: s.title.trim(),
+    description: s.description.trim(),
+    type: s.type,
+    children: s.children.map(toStepForm),
+  }
 }
 
 async function submit() {
@@ -126,15 +122,7 @@ async function submit() {
   const form: AddWorkflowForm = {
     title: title.value.trim(),
     description: description.value.trim(),
-    steps: steps.value.map((s) => ({
-      title: s.title.trim(),
-      description: s.description.trim(),
-      type: s.type,
-      subSteps: s.subSteps.map((ss) => ({
-        title: ss.title.trim(),
-        description: ss.description.trim(),
-      })),
-    })),
+    steps: steps.value.map(toStepForm),
   }
 
   submitting.value = true
@@ -162,7 +150,6 @@ async function submit() {
   }
 }
 
-// Initialize with one empty step
 reset()
 </script>
 
@@ -171,7 +158,15 @@ reset()
     <div v-if="modelValue" class="modal-backdrop" @click.self="close">
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="wf-modal-title">
         <div class="modal-header">
-          <h2 id="wf-modal-title">{{ isEditMode ? (metadataOnly ? 'Edit Workflow Names & Descriptions' : 'Edit Workflow Model') : 'Create Workflow Model' }}</h2>
+          <h2 id="wf-modal-title">
+            {{
+              isEditMode
+                ? metadataOnly
+                  ? 'Edit Workflow Names & Descriptions'
+                  : 'Edit Workflow Model'
+                : 'Create Workflow Model'
+            }}
+          </h2>
           <button class="modal-close" aria-label="Close" @click="close">✕</button>
         </div>
 
@@ -215,124 +210,25 @@ reset()
                 Step structure is fixed once a workflow has runs. You can edit names and descriptions.
               </p>
               <p v-else class="field-hint">
-                Define the sequence of steps. Use "Parallel step" when sub-activities happen simultaneously.
+                Define the sequence of steps. Use "Parallel" or "Sequential" to create nested
+                composite activities.
               </p>
             </div>
 
-            <div
+            <StepEditorNode
               v-for="(step, si) in steps"
               :key="step.id"
-              class="step-card"
-            >
-              <div class="step-card-header">
-                <div class="step-number-row">
-                  <span class="step-number">Step {{ si + 1 }}</span>
-                  <span v-if="metadataOnly" class="step-type-badge">
-                    {{ step.type === 'ParallelActivity' ? '⟷ parallel' : 'single' }}
-                  </span>
-                </div>
-                <button
-                  v-if="!metadataOnly"
-                  type="button"
-                  class="remove-btn"
-                  :disabled="steps.length === 1"
-                  @click="removeStep(si)"
-                >
-                  Remove
-                </button>
-              </div>
+              :step="step"
+              :depth="0"
+              :step-num="si + 1"
+              :can-remove="steps.length > 1"
+              :metadata-only="!!metadataOnly"
+              @remove="removeStep(si)"
+            />
 
-              <div class="field">
-                <label :for="`step-title-${step.id}`" class="field-label">
-                  Title <span class="required">*</span>
-                </label>
-                <input
-                  :id="`step-title-${step.id}`"
-                  v-model="step.title"
-                  type="text"
-                  class="field-input"
-                  placeholder="e.g. Material Preparation"
-                  autocomplete="off"
-                />
-              </div>
-
-              <div class="field">
-                <label :for="`step-desc-${step.id}`" class="field-label">Description</label>
-                <input
-                  :id="`step-desc-${step.id}`"
-                  v-model="step.description"
-                  type="text"
-                  class="field-input"
-                  placeholder="Optional step description"
-                  autocomplete="off"
-                />
-              </div>
-
-              <div v-if="!metadataOnly" class="field field--type">
-                <span class="field-label">Type</span>
-                <div class="radio-group">
-                  <label class="radio-label">
-                    <input
-                      v-model="step.type"
-                      type="radio"
-                      value="AtomicActivity"
-                      @change="onTypeChange(si)"
-                    />
-                    Single step
-                  </label>
-                  <label class="radio-label">
-                    <input
-                      v-model="step.type"
-                      type="radio"
-                      value="ParallelActivity"
-                      @change="onTypeChange(si)"
-                    />
-                    Parallel step
-                  </label>
-                </div>
-              </div>
-
-              <!-- Sub-steps for parallel -->
-              <div v-if="step.type === 'ParallelActivity'" class="substeps-section">
-                <div
-                  v-for="(sub, ssi) in step.subSteps"
-                  :key="sub.id"
-                  class="substep-row"
-                >
-                  <span class="substep-label">{{ String.fromCharCode(97 + ssi) }}.</span>
-                  <div class="substep-fields">
-                    <input
-                      v-model="sub.title"
-                      type="text"
-                      class="field-input"
-                      :placeholder="metadataOnly ? 'Sub-step title' : 'Sub-step title (required)'"
-                      autocomplete="off"
-                    />
-                    <input
-                      v-model="sub.description"
-                      type="text"
-                      class="field-input substep-desc"
-                      placeholder="Description (optional)"
-                      autocomplete="off"
-                    />
-                  </div>
-                  <button
-                    v-if="!metadataOnly"
-                    type="button"
-                    class="remove-btn remove-btn--small"
-                    :disabled="step.subSteps.length <= 2"
-                    @click="removeSubStep(si, ssi)"
-                  >
-                    ✕
-                  </button>
-                </div>
-                <button v-if="!metadataOnly" type="button" class="add-substep-btn" @click="addSubStep(si)">
-                  + Add sub-step
-                </button>
-              </div>
-            </div>
-
-            <button v-if="!metadataOnly" type="button" class="add-step-btn" @click="addStep">+ Add Step</button>
+            <button v-if="!metadataOnly" type="button" class="add-step-btn" @click="addStep">
+              + Add Step
+            </button>
           </div>
 
           <!-- Error -->
@@ -344,7 +240,15 @@ reset()
               Cancel
             </button>
             <button type="submit" class="btn btn--primary" :disabled="submitting">
-              {{ submitting ? (isEditMode ? 'Saving…' : 'Creating…') : (isEditMode ? 'Save Changes' : 'Create Workflow') }}
+              {{
+                submitting
+                  ? isEditMode
+                    ? 'Saving…'
+                    : 'Creating…'
+                  : isEditMode
+                    ? 'Save Changes'
+                    : 'Create Workflow'
+              }}
             </button>
           </div>
         </form>
@@ -370,7 +274,7 @@ reset()
   border-radius: 10px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
   width: 100%;
-  max-width: 600px;
+  max-width: 640px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
@@ -429,9 +333,7 @@ reset()
   color: var(--color-text);
 }
 
-.required {
-  color: #dc2626;
-}
+.required { color: #dc2626; }
 
 .field-hint {
   font-size: 0.8rem;
@@ -454,9 +356,7 @@ reset()
   width: 100%;
 }
 
-.field-input:focus {
-  border-color: var(--color-primary);
-}
+.field-input:focus { border-color: var(--color-primary); }
 
 .field-textarea {
   resize: vertical;
@@ -469,7 +369,6 @@ reset()
   margin: 0;
 }
 
-/* Steps section */
 .steps-section {
   display: flex;
   flex-direction: column;
@@ -480,143 +379,6 @@ reset()
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
-}
-
-.step-card {
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  background: #fafafa;
-}
-
-.step-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.step-number-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.step-number {
-  font-size: 0.8rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #6b7280;
-}
-
-.step-type-badge {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: #1d4ed8;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  border-radius: 20px;
-  padding: 0.1rem 0.45rem;
-}
-
-.remove-btn {
-  background: none;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  padding: 0.2rem 0.6rem;
-  font-size: 0.78rem;
-  color: #6b7280;
-  cursor: pointer;
-  font-family: inherit;
-  transition: background 0.15s, color 0.15s;
-}
-
-.remove-btn:hover:not(:disabled) {
-  background: #fee2e2;
-  color: #dc2626;
-  border-color: #fca5a5;
-}
-
-.remove-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.field--type .radio-group {
-  display: flex;
-  gap: 1.25rem;
-}
-
-.radio-label {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.875rem;
-  color: var(--color-text);
-  cursor: pointer;
-}
-
-/* Sub-steps */
-.substeps-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  background: #f0fdf4;
-  border-radius: 6px;
-  border: 1px solid #bbf7d0;
-}
-
-.substep-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-}
-
-.substep-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #6b7280;
-  padding-top: 0.55rem;
-  flex-shrink: 0;
-  width: 1.2rem;
-}
-
-.substep-fields {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.substep-desc {
-  font-size: 0.85rem;
-}
-
-.remove-btn--small {
-  padding: 0.2rem 0.4rem;
-  font-size: 0.75rem;
-  margin-top: 0.45rem;
-  flex-shrink: 0;
-}
-
-.add-substep-btn {
-  background: none;
-  border: none;
-  padding: 0;
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: #166534;
-  cursor: pointer;
-  font-family: inherit;
-  align-self: flex-start;
-}
-
-.add-substep-btn:hover {
-  color: #14532d;
 }
 
 .add-step-btn {
@@ -633,9 +395,7 @@ reset()
   align-self: flex-start;
 }
 
-.add-step-btn:hover {
-  background: #f0fdf4;
-}
+.add-step-btn:hover { background: #f0fdf4; }
 
 .submit-error {
   font-size: 0.875rem;
@@ -687,9 +447,7 @@ reset()
   border-color: var(--color-border);
 }
 
-.btn--secondary:hover:not(:disabled) {
-  background: #f9fafb;
-}
+.btn--secondary:hover:not(:disabled) { background: #f9fafb; }
 
 .btn--secondary:disabled {
   opacity: 0.6;

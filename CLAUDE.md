@@ -26,6 +26,8 @@ src/
   components/
     AddDatasetModal.vue    # Modal for adding a new dataset to a run step
     AddWorkflowModal.vue   # Modal for creating a workflow model or editing its metadata/structure
+    StepEditorNode.vue     # Recursive step-editing component used by AddWorkflowModal
+    WorkflowStepNode.vue   # Recursive read-only step display used by WorkflowView
   views/
     HomeView.vue         # Landing page → links to /catalog
     CatalogView.vue      # Browse all datasets (card list)
@@ -140,12 +142,15 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
   - Shows the model activity title (via `activityInstanceOf`) as "Collected during"
   - Shows parent step if the model activity is a leaf (e.g. under `ParallelActivity`)
   - "Part of run: [name] →" navigates to the run detail page
-- Workflow store: `src/stores/workflow.ts` — `fetchWorkflows()`, `fetchWorkflow(uri)`, `fetchWorkflowInstances(modelUri)`, `fetchRun(instanceUri)`, `updateWorkflowInstance(uri, title, desc)`, `fetchWorkflowStepOptions(instanceUri?)`, `addWorkflowModel(form)`, `fetchWorkflowForEdit(uri)`, `updateWorkflowModel(uri, form)`, `updateWorkflowModelMetadata(uri, form)`
+- Workflow store: `src/stores/workflow.ts` — `fetchWorkflows()`, `fetchWorkflow(uri)` (returns recursive `WorkflowStep` tree), `fetchWorkflowInstances(modelUri)`, `fetchRun(instanceUri)`, `updateWorkflowInstance(uri, title, desc)`, `fetchWorkflowStepOptions(instanceUri?)`, `addWorkflowModel(form)`, `fetchWorkflowForEdit(uri)` (returns recursive `StepForm` tree), `updateWorkflowModel(uri, form)`, `updateWorkflowModelMetadata(uri, form)`
+- `WorkflowStep` interface carries `children: WorkflowStep[]`; `fetchWorkflow` uses a two-query approach (metadata + full treeQuery) with a recursive `buildStep` to populate the tree at any depth
 - Workflow context on datasets: `fetchDatasetWorkflowContext(uri)` in `src/stores/catalog.ts`
 
 ### Workflow Model Authoring (implemented)
-- **Create**: "Add Workflow" button on `/workflows` opens `AddWorkflowModal`; user defines title, description, and an ordered list of steps (each `AtomicActivity` or `ParallelActivity` with optional sub-steps); generates a WiLD-compliant `WorkflowModel` with a root `SequentialActivity` and `hasChildActivities` RDF lists; navigates to the new workflow on success
-- **Edit — full structural edit** (no runs exist): "Edit Workflow" button on `/workflow?uri=` opens `AddWorkflowModal` pre-populated via `fetchWorkflowForEdit`; user can change titles, descriptions, step types, add/remove steps; `updateWorkflowModel` deletes the old structure (6 sequential SPARQL DELETEs covering steps, leaves, and list blank nodes) and inserts fresh triples; `dcterms:issued` is preserved via `FILTER(?p != dcterms:issued)`
-- **Edit — metadata only** (runs exist): same button opens the modal in `metadataOnly` mode; structural controls (add/remove step, type change) are hidden and a note explains why; only `dcterms:title` and `dcterms:description` are updated on the workflow model and each existing step/leaf via `updateWorkflowModelMetadata`; the RDF list structure is never touched
-- `StepForm.uri` and `SubStepForm.uri` carry existing resource URIs when loaded via `fetchWorkflowForEdit`; these are used by `updateWorkflowModelMetadata` to target the correct triples
-- Step titles are stored as "Step N: \<name\>" in the triple store; `fetchWorkflowForEdit` strips this prefix for display and `addWorkflowModel`/`updateWorkflowModel` re-add it on save based on array position
+- **Create**: "Add Workflow" button on `/workflows` opens `AddWorkflowModal`; user defines title, description, and an arbitrarily deep tree of steps; each node can be `AtomicActivity` (leaf), `ParallelActivity`, or `SequentialActivity`; generates a WiLD-compliant `WorkflowModel` with a root `SequentialActivity` and nested `hasChildActivities` RDF lists; navigates to the new workflow on success
+- **Edit — full structural edit** (no runs exist): "Edit Workflow" button on `/workflow?uri=` opens `AddWorkflowModal` pre-populated via `fetchWorkflowForEdit`; user can change titles, descriptions, activity types, add/remove nodes at any depth; `updateWorkflowModel` deletes the old structure (4 sequential SPARQL DELETEs using depth-unlimited property paths) and inserts fresh triples; `dcterms:issued` is preserved via `FILTER(?p != dcterms:issued)`
+- **Edit — metadata only** (runs exist): same button opens the modal in `metadataOnly` mode; structural controls (add/remove, type change) are hidden; only `dcterms:title` and `dcterms:description` are updated recursively on the workflow model and all existing activity nodes via `updateWorkflowModelMetadata`; the RDF list structure is never touched
+- `StepForm` is self-referencing (`children: StepForm[]`) to support arbitrary nesting; `StepForm.uri` carries the existing resource URI when loaded for edit and is used by `updateWorkflowModelMetadata` to target the correct triples
+- Step titles are stored as "Step N: \<name\>" in the triple store for top-level steps only; `fetchWorkflowForEdit` strips this prefix for display and `addWorkflowModel`/`updateWorkflowModel` re-add it on save based on array position
+- `StepEditorNode.vue` is a self-referencing recursive component (uses both `<script>` for exported types/factory and `<script setup>` for instance logic); exports `StepFormWithId` and `newStepWithId` for use by `AddWorkflowModal`
+- `WorkflowStepNode.vue` is a self-referencing recursive component for read-only display; sequential children render in a grey-bordered cluster, parallel children in a blue-bordered cluster; each composite node has a ▶/▼ collapse toggle
