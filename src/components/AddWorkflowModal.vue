@@ -13,6 +13,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
   created: [workflowUri: string]
+  deleted: []
 }>()
 
 const workflowStore = useWorkflowStore()
@@ -26,6 +27,7 @@ const steps = ref<StepFormWithId[]>([])
 // UI state
 const submitting = ref(false)
 const submitError = ref<string | null>(null)
+const deleting = ref(false)
 
 // Template state (create mode only)
 const templateWorkflows = ref<WorkflowSummary[]>([])
@@ -208,6 +210,20 @@ async function submit() {
   }
 }
 
+async function deleteWorkflow() {
+  if (!props.editUri) return
+  if (!confirm(`Delete "${title.value}"? This cannot be undone.`)) return
+  deleting.value = true
+  try {
+    await workflowStore.deleteWorkflowModel(props.editUri)
+    close()
+    emit('deleted')
+  } catch {
+    submitError.value = 'Failed to delete workflow. Check the triple store is running.'
+    deleting.value = false
+  }
+}
+
 reset()
 </script>
 
@@ -314,20 +330,31 @@ reset()
 
           <!-- Actions -->
           <div class="modal-actions">
-            <button type="button" class="btn btn--secondary" :disabled="submitting" @click="close">
-              Cancel
+            <button
+              v-if="isEditMode && !metadataOnly"
+              type="button"
+              class="btn btn--danger"
+              :disabled="submitting || deleting"
+              @click="deleteWorkflow"
+            >
+              {{ deleting ? 'Deleting…' : 'Delete Workflow' }}
             </button>
-            <button type="submit" class="btn btn--primary" :disabled="submitting">
-              {{
-                submitting
-                  ? isEditMode
-                    ? 'Saving…'
-                    : 'Creating…'
-                  : isEditMode
-                    ? 'Save Changes'
-                    : 'Create Workflow'
-              }}
-            </button>
+            <div class="modal-actions-right">
+              <button type="button" class="btn btn--secondary" :disabled="submitting || deleting" @click="close">
+                Cancel
+              </button>
+              <button type="submit" class="btn btn--primary" :disabled="submitting || deleting">
+                {{
+                  submitting
+                    ? isEditMode
+                      ? 'Saving…'
+                      : 'Creating…'
+                    : isEditMode
+                      ? 'Save Changes'
+                      : 'Create Workflow'
+                }}
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -487,9 +514,15 @@ reset()
 
 .modal-actions {
   display: flex;
-  gap: 0.75rem;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   padding-top: 0.25rem;
+}
+
+.modal-actions-right {
+  display: flex;
+  gap: 0.75rem;
+  margin-left: auto;
 }
 
 .btn {
@@ -528,6 +561,19 @@ reset()
 .btn--secondary:hover:not(:disabled) { background: #f9fafb; }
 
 .btn--secondary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.btn--danger {
+  background: #fff;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+.btn--danger:hover:not(:disabled) { background: #fef2f2; }
+
+.btn--danger:disabled {
   opacity: 0.6;
   cursor: default;
 }

@@ -87,6 +87,7 @@ function openRun(uri: string) {
         :edit-data="editData"
         :metadata-only="instances.length > 0"
         @created="onWorkflowSaved"
+        @deleted="router.replace({ name: 'workflows' })"
       />
 
       <!-- Workflow model header -->

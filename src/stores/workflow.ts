@@ -1012,6 +1012,37 @@ ${lines.join('\n')}
     return [...fullWorkflowOptions, ...options]
   }
 
+  // ── Delete workflow model (only allowed when no runs exist) ─────────────
+
+  async function deleteWorkflowModel(uri: string): Promise<void> {
+    const update = `
+      PREFIX wild:    <http://purl.org/wild/vocab#>
+      PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+      DELETE { <${uri}> ?p ?o }
+      WHERE  { <${uri}> ?p ?o } ;
+
+      DELETE { ?root ?p ?o }
+      WHERE  { <${uri}> wild:hasBehaviour ?root . ?root ?p ?o } ;
+
+      DELETE { ?desc ?p ?o }
+      WHERE  {
+        <${uri}> wild:hasBehaviour ?root .
+        ?root (wild:hasChildActivities/rdf:rest*/rdf:first)+ ?desc .
+        ?desc ?p ?o
+      } ;
+
+      DELETE { ?node rdf:first ?f . ?node rdf:rest ?r }
+      WHERE  {
+        <${uri}> wild:hasBehaviour/(wild:hasChildActivities/rdf:rest*/rdf:first)* ?comp .
+        ?comp wild:hasChildActivities/rdf:rest* ?node .
+        ?node rdf:first ?f .
+        ?node rdf:rest ?r
+      }
+    `
+    await updateSparql(graphStore.updateEndpoint, update)
+  }
+
   return {
     fetchWorkflows,
     fetchWorkflow,
@@ -1022,6 +1053,7 @@ ${lines.join('\n')}
     addWorkflowModel,
     updateWorkflowModel,
     updateWorkflowModelMetadata,
+    deleteWorkflowModel,
     fetchWorkflowStepOptions,
     fetchSystemOptions,
     fetchInputOptions,
