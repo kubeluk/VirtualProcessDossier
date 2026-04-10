@@ -87,14 +87,16 @@ function formatMediaType(uri: string): string {
         <h2>Workflow Context</h2>
 
         <template v-if="workflowContext.isDirectWorkflowLink">
-          <p class="wc-note">This dataset spans the full workflow and is not tied to a single step.</p>
+          <p class="wc-note">This dataset spans the full workflow run and is not tied to a single step.</p>
         </template>
 
-        <template v-else-if="workflowContext.stepUri">
+        <template v-else-if="workflowContext.activityInstanceUri">
           <p class="wc-label">Collected during</p>
-          <p class="wc-step-title">{{ workflowContext.stepTitle ?? workflowContext.stepUri }}</p>
-          <p v-if="workflowContext.stepDescription" class="wc-step-desc">
-            {{ workflowContext.stepDescription }}
+          <p class="wc-step-title">
+            {{ workflowContext.modelActivityTitle ?? workflowContext.activityInstanceTitle ?? workflowContext.activityInstanceUri }}
+          </p>
+          <p v-if="workflowContext.modelActivityDescription" class="wc-step-desc">
+            {{ workflowContext.modelActivityDescription }}
           </p>
           <p v-if="workflowContext.parentStepUri" class="wc-parent-step">
             <span class="wc-workflow-label">Part of step</span>
@@ -102,13 +104,13 @@ function formatMediaType(uri: string): string {
           </p>
         </template>
 
-        <div v-if="workflowContext.workflowUri" class="wc-workflow-row">
-          <span class="wc-workflow-label">Part of workflow</span>
+        <div v-if="workflowContext.runUri" class="wc-workflow-row">
+          <span class="wc-workflow-label">Part of run</span>
           <button
             class="wc-workflow-link"
-            @click="router.push({ name: 'workflow', query: { uri: workflowContext.workflowUri! } })"
+            @click="router.push({ name: 'run', query: { uri: workflowContext.runUri! } })"
           >
-            {{ workflowContext.workflowTitle ?? workflowContext.workflowUri }} →
+            {{ workflowContext.runTitle ?? workflowContext.runUri }} →
           </button>
         </div>
       </section>

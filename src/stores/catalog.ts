@@ -47,13 +47,22 @@ export interface DatasetProvenance {
 }
 
 export interface WorkflowContext {
-  stepUri: string | null
-  stepTitle: string | null
-  stepDescription: string | null
-  // Set when stepUri is a leaf activity nested inside a composite (e.g. parallel) step
+  // True when dcterms:isPartOf points directly to a wild:WorkflowInstance (cross-cutting)
+  isDirectWorkflowLink: boolean
+  // The activity instance (sosa:Observation / wild:ActivityInstance) the dataset is isPartOf
+  activityInstanceUri: string | null
+  activityInstanceTitle: string | null
+  // The model activity this instance is activityInstanceOf
+  modelActivityUri: string | null
+  modelActivityTitle: string | null
+  modelActivityDescription: string | null
+  // Parent step in the model (set when model activity is a leaf, e.g. under ParallelActivity)
   parentStepUri: string | null
   parentStepTitle: string | null
-  isDirectWorkflowLink: boolean
+  // The workflow instance (run)
+  runUri: string | null
+  runTitle: string | null
+  // The workflow model
   workflowUri: string | null
   workflowTitle: string | null
 }
@@ -221,19 +230,19 @@ export const useCatalogStore = defineStore('catalog', () => {
   }
 
   async function fetchDatasetWorkflowContext(uri: string): Promise<WorkflowContext | null> {
-    // Step 1: find the resource the dataset is isPartOf (leaf activity, step, or workflow)
+    // Step 1: find the dcterms:isPartOf target — either a wild:WorkflowInstance (cross-cutting)
+    // or a wild:ActivityInstance (step-level observation).
     const contextQuery = `
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX wild:    <http://purl.org/wild/vocab#>
 
-      SELECT ?context ?title ?description ?isWorkflow WHERE {
+      SELECT ?context ?contextTitle ?isWorkflowInstance WHERE {
         BIND(<${uri}> AS ?dataset)
         ?dataset dcterms:isPartOf ?context .
-        OPTIONAL { ?context dcterms:title ?title }
-        OPTIONAL { ?context dcterms:description ?description }
+        OPTIONAL { ?context dcterms:title ?contextTitle }
         OPTIONAL {
-          ?context a wild:WorkflowModel .
-          BIND(true AS ?isWorkflow)
+          ?context a wild:WorkflowInstance .
+          BIND(true AS ?isWorkflowInstance)
         }
       }
       LIMIT 1
@@ -243,62 +252,87 @@ export const useCatalogStore = defineStore('catalog', () => {
 
     const cb = contextResults.results.bindings[0]
     const contextUri = cb.context.value
-    const isWorkflow = cb.isWorkflow?.value === 'true'
+    const isWorkflowInstance = cb.isWorkflowInstance?.value === 'true'
 
-    if (isWorkflow) {
+    if (isWorkflowInstance) {
+      // Cross-cutting: resolve the workflow model for navigation
+      const modelQuery = `
+        PREFIX wild:    <http://purl.org/wild/vocab#>
+        PREFIX dcterms: <http://purl.org/dc/terms/>
+
+        SELECT ?model ?modelTitle WHERE {
+          <${contextUri}> wild:workflowInstanceOf ?model .
+          OPTIONAL { ?model dcterms:title ?modelTitle }
+        }
+        LIMIT 1
+      `
+      const modelResults = await querySparql(graphStore.endpoint, modelQuery)
+      const mb = modelResults.results.bindings[0]
       return {
-        stepUri: null,
-        stepTitle: null,
-        stepDescription: null,
+        isDirectWorkflowLink: true,
+        activityInstanceUri: null,
+        activityInstanceTitle: null,
+        modelActivityUri: null,
+        modelActivityTitle: null,
+        modelActivityDescription: null,
         parentStepUri: null,
         parentStepTitle: null,
-        isDirectWorkflowLink: true,
-        workflowUri: contextUri,
-        workflowTitle: cb.title?.value ?? null,
+        runUri: contextUri,
+        runTitle: cb.contextTitle?.value ?? null,
+        workflowUri: mb?.model?.value ?? null,
+        workflowTitle: mb?.modelTitle?.value ?? null,
       }
     }
 
-    // Step 2: find parent step (if context is a leaf within a composite) and parent workflow.
-    // The context is either a direct child of the root (top-level step) or a grandchild
-    // (leaf activity inside a composite/parallel step).
-    const parentQuery = `
+    // Step-level: context is an ActivityInstance.
+    // Resolve: activityInstanceOf → model activity (+ parent step if leaf),
+    //          inWorkflowInstance → workflow instance → workflow model.
+    const detailQuery = `
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
-      SELECT ?parentStep ?parentStepTitle ?workflow ?workflowTitle WHERE {
+      SELECT ?modelActivity ?modelActivityTitle ?modelActivityDesc
+             ?parentStep ?parentStepTitle
+             ?workflowInstance ?workflowInstanceTitle
+             ?workflowModel ?workflowModelTitle
+      WHERE {
         OPTIONAL {
-          ?parentStep wild:hasChildActivities/rdf:rest*/rdf:first <${contextUri}> .
-          OPTIONAL { ?parentStep dcterms:title ?parentStepTitle }
+          <${contextUri}> wild:activityInstanceOf ?modelActivity .
+          OPTIONAL { ?modelActivity dcterms:title ?modelActivityTitle }
+          OPTIONAL { ?modelActivity dcterms:description ?modelActivityDesc }
+          OPTIONAL {
+            ?parentStep wild:hasChildActivities/rdf:rest*/rdf:first ?modelActivity .
+            OPTIONAL { ?parentStep dcterms:title ?parentStepTitle }
+          }
         }
         OPTIONAL {
-          ?workflow a wild:WorkflowModel ;
-                   wild:hasBehaviour ?root .
-          {
-            ?root wild:hasChildActivities/rdf:rest*/rdf:first <${contextUri}> .
+          <${contextUri}> wild:inWorkflowInstance ?workflowInstance .
+          OPTIONAL { ?workflowInstance dcterms:title ?workflowInstanceTitle }
+          OPTIONAL {
+            ?workflowInstance wild:workflowInstanceOf ?workflowModel .
+            OPTIONAL { ?workflowModel dcterms:title ?workflowModelTitle }
           }
-          UNION
-          {
-            ?root wild:hasChildActivities/rdf:rest*/rdf:first ?anyStep .
-            ?anyStep wild:hasChildActivities/rdf:rest*/rdf:first <${contextUri}> .
-          }
-          OPTIONAL { ?workflow dcterms:title ?workflowTitle }
         }
       }
       LIMIT 1
     `
-    const parentResults = await querySparql(graphStore.endpoint, parentQuery)
-    const pb = parentResults.results.bindings[0]
+    const detailResults = await querySparql(graphStore.endpoint, detailQuery)
+    const db = detailResults.results.bindings[0]
 
     return {
-      stepUri: contextUri,
-      stepTitle: cb.title?.value ?? null,
-      stepDescription: cb.description?.value ?? null,
-      parentStepUri: pb?.parentStep?.value ?? null,
-      parentStepTitle: pb?.parentStepTitle?.value ?? null,
       isDirectWorkflowLink: false,
-      workflowUri: pb?.workflow?.value ?? null,
-      workflowTitle: pb?.workflowTitle?.value ?? null,
+      activityInstanceUri: contextUri,
+      activityInstanceTitle: cb.contextTitle?.value ?? null,
+      modelActivityUri: db?.modelActivity?.value ?? null,
+      modelActivityTitle: db?.modelActivityTitle?.value ?? null,
+      modelActivityDescription: db?.modelActivityDesc?.value ?? null,
+      parentStepUri: db?.parentStep?.value ?? null,
+      parentStepTitle: db?.parentStepTitle?.value ?? null,
+      runUri: db?.workflowInstance?.value ?? null,
+      runTitle: db?.workflowInstanceTitle?.value ?? null,
+      workflowUri: db?.workflowModel?.value ?? null,
+      workflowTitle: db?.workflowModelTitle?.value ?? null,
     }
   }
 
@@ -337,7 +371,13 @@ export const useCatalogStore = defineStore('catalog', () => {
     datasetTriples.push(`  dcterms:modified "${today}"^^xsd:date`)
     datasetTriples.push(`  dcat:distribution <${distUri}>`)
     datasetTriples.push(`  prov:wasGeneratedBy <${obsUri}>`)
-    if (form.stepUri) datasetTriples.push(`  dcterms:isPartOf <${form.stepUri}>`)
+    // isPartOf → the new observation (= activity instance) for step-level datasets,
+    // or the workflow instance for cross-cutting datasets.
+    if (form.isFullWorkflowLink && form.workflowInstanceUri) {
+      datasetTriples.push(`  dcterms:isPartOf <${form.workflowInstanceUri}>`)
+    } else if (!form.isFullWorkflowLink && form.stepUri) {
+      datasetTriples.push(`  dcterms:isPartOf <${obsUri}>`)
+    }
 
     // Distribution triples
     const distTriples: string[] = [

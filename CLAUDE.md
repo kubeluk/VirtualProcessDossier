@@ -108,7 +108,8 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 | `/catalog` | `catalog` | CatalogView | Browse all datasets |
 | `/dataset?uri=` | `dataset` | DatasetView | Dataset detail (uri = full encoded dataset URI) |
 | `/workflows` | `workflows` | WorkflowListView | Browse all workflow models |
-| `/workflow?uri=` | `workflow` | WorkflowView | Workflow detail with step timeline (uri = full encoded workflow URI) |
+| `/workflow?uri=` | `workflow` | WorkflowView | Workflow model detail: step skeleton + list of runs (uri = WorkflowModel URI) |
+| `/run?uri=` | `run` | RunView | Workflow run detail: editable header, step timeline with activity instances + datasets (uri = WorkflowInstance URI) |
 
 ## Features
 
@@ -120,17 +121,17 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 
 ### Workflow & Provenance Browsing (implemented)
 - Workflow list at `/workflows`: queries all `wild:WorkflowModel` resources, shows title and description
-- Workflow detail at `/workflow?uri=<encoded-uri>`: renders a vertical step timeline
-  - Steps are retrieved by traversing `wild:hasBehaviour / wild:hasChildActivities / rdf:rest* / rdf:first` (SPARQL 1.1 property path over the RDF list)
-  - Steps sorted on the frontend by the "Step N:" prefix in `dcterms:title`
-  - `wild:ParallelActivity` steps show a "⟷ parallel" badge
-  - Each step shows its associated datasets as clickable chips (navigate to dataset detail)
-  - Cross-cutting datasets (linked via `dcterms:isPartOf` to the workflow model directly, not a step) are shown in a separate "Full-workflow Datasets" section
-  - Steps with no associated dataset show a "no datasets" note
-- Dataset detail at `/dataset?uri=` gains a **Workflow Context** section:
-  - Shows the step the dataset was collected during (title + description from `dcterms:isPartOf`)
-  - For cross-cutting datasets, shows "spans the full workflow"
-  - "Part of workflow: [name] →" button navigates to the workflow detail page
-  - Context is fetched in two queries: one to resolve `dcterms:isPartOf`, one to find the parent `wild:WorkflowModel` via list traversal
-- Workflow store: `src/stores/workflow.ts` — `fetchWorkflows()`, `fetchWorkflow(uri)`
-- Workflow context on datasets: `fetchDatasetWorkflowContext(uri)` added to `src/stores/catalog.ts`
+- Workflow model at `/workflow?uri=<modelUri>`: shows read-only step skeleton + a list of `wild:WorkflowInstance` run cards; clicking a run navigates to `/run`
+- Workflow run at `/run?uri=<instanceUri>`: editable title/description (SPARQL DELETE/INSERT), step timeline driven by `wild:ActivityInstance` resources linked via `wild:inWorkflowInstance`
+  - Steps retrieved by traversing the model's `wild:hasBehaviour / wild:hasChildActivities / rdf:rest* / rdf:first`
+  - Activity instances attached to steps via `wild:activityInstanceOf` (direct or via leaf of parallel step)
+  - Datasets shown per activity instance via `dcterms:isPartOf <activityInstanceUri>`
+  - Cross-cutting datasets (`dcterms:isPartOf <workflowInstanceUri>`) in a "Full-run Datasets" section
+  - "Add dataset" per step/activity instance opens `AddDatasetModal` scoped to the current run
+- `dcterms:isPartOf` on a dataset points to a `wild:ActivityInstance` (step-level) or `wild:WorkflowInstance` (cross-cutting) — never to a model activity
+- Dataset detail at `/dataset?uri=` **Workflow Context** section:
+  - Shows the model activity title (via `activityInstanceOf`) as "Collected during"
+  - Shows parent step if the model activity is a leaf (e.g. under `ParallelActivity`)
+  - "Part of run: [name] →" navigates to the run detail page
+- Workflow store: `src/stores/workflow.ts` — `fetchWorkflows()`, `fetchWorkflow(uri)`, `fetchWorkflowInstances(modelUri)`, `fetchRun(instanceUri)`, `updateWorkflowInstance(uri, title, desc)`, `fetchWorkflowStepOptions(instanceUri?)`
+- Workflow context on datasets: `fetchDatasetWorkflowContext(uri)` in `src/stores/catalog.ts`

@@ -6,6 +6,8 @@ import { useWorkflowStore, type WorkflowStepOption } from '@/stores/workflow'
 const props = defineProps<{
   modelValue: boolean
   preselectedStepUri?: string
+  // When set, filters step options to this specific run and pre-fills the instance
+  workflowInstanceUri?: string
 }>()
 
 const emit = defineEmits<{
@@ -36,10 +38,16 @@ const loadError = ref<string | null>(null)
 const submitting = ref(false)
 const submitError = ref<string | null>(null)
 
-// Group step options by workflow for display
+// When workflowInstanceUri prop is set, limit choices to that run's options
+const visibleOptions = computed(() => {
+  if (!props.workflowInstanceUri) return stepOptions.value
+  return stepOptions.value.filter((o) => o.workflowInstanceUri === props.workflowInstanceUri)
+})
+
+// Group visible step options by workflow for display
 const groupedOptions = computed(() => {
   const groups = new Map<string, { workflowTitle: string | null; options: WorkflowStepOption[] }>()
-  for (const opt of stepOptions.value) {
+  for (const opt of visibleOptions.value) {
     if (!groups.has(opt.workflowUri)) {
       groups.set(opt.workflowUri, { workflowTitle: opt.workflowTitle, options: [] })
     }
@@ -50,7 +58,7 @@ const groupedOptions = computed(() => {
 
 // When the preselectedStepUri changes or the modal opens, sync the selection
 watch(
-  () => [props.modelValue, props.preselectedStepUri, stepOptions.value.length] as const,
+  () => [props.modelValue, props.preselectedStepUri, visibleOptions.value.length] as const,
   ([open]) => {
     if (!open) return
     applyPreselection()
@@ -60,12 +68,12 @@ watch(
 function applyPreselection() {
   if (!props.preselectedStepUri) {
     selectedStepUri.value = ''
-    selectedWorkflowInstanceUri.value = ''
+    selectedWorkflowInstanceUri.value = props.workflowInstanceUri ?? ''
     isFullWorkflowLink.value = false
     return
   }
   // Exact match — atomic step or full-workflow option (uri === workflowUri)
-  const exact = stepOptions.value.find((o) => o.uri === props.preselectedStepUri)
+  const exact = visibleOptions.value.find((o) => o.uri === props.preselectedStepUri)
   if (exact) {
     selectedStepUri.value = exact.uri
     selectedWorkflowInstanceUri.value = exact.workflowInstanceUri ?? ''
@@ -73,7 +81,7 @@ function applyPreselection() {
     return
   }
   // Parallel step URI: preselect the first leaf whose parentStepUri matches
-  const leaf = stepOptions.value.find((o) => o.parentStepUri === props.preselectedStepUri)
+  const leaf = visibleOptions.value.find((o) => o.parentStepUri === props.preselectedStepUri)
   if (leaf) {
     selectedStepUri.value = leaf.uri
     selectedWorkflowInstanceUri.value = leaf.workflowInstanceUri ?? ''
@@ -83,7 +91,7 @@ function applyPreselection() {
 
 // Keep workflowInstanceUri and isFullWorkflowLink in sync with the selected step
 function onStepChange() {
-  const opt = stepOptions.value.find((o) => o.uri === selectedStepUri.value)
+  const opt = visibleOptions.value.find((o) => o.uri === selectedStepUri.value)
   selectedWorkflowInstanceUri.value = opt?.workflowInstanceUri ?? ''
   isFullWorkflowLink.value = opt ? opt.uri === opt.workflowUri : false
 }
