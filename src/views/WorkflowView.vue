@@ -5,7 +5,9 @@ import {
   useWorkflowStore,
   type WorkflowDetail,
   type WorkflowInstanceSummary,
+  type AddWorkflowForm,
 } from '@/stores/workflow'
+import AddWorkflowModal from '@/components/AddWorkflowModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -15,6 +17,12 @@ const workflow = ref<WorkflowDetail | null>(null)
 const instances = ref<WorkflowInstanceSummary[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
+
+// Edit workflow model
+const showEditModal = ref(false)
+const editData = ref<AddWorkflowForm | null>(null)
+const loadingEdit = ref(false)
+const loadEditError = ref<string | null>(null)
 
 onMounted(async () => {
   const uri = route.query.uri as string
@@ -34,6 +42,25 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+async function openEditModal() {
+  const uri = route.query.uri as string
+  loadEditError.value = null
+  loadingEdit.value = true
+  try {
+    editData.value = await workflowStore.fetchWorkflowForEdit(uri)
+    showEditModal.value = true
+  } catch {
+    loadEditError.value = 'Failed to load workflow data for editing.'
+  } finally {
+    loadingEdit.value = false
+  }
+}
+
+async function onWorkflowSaved() {
+  const uri = route.query.uri as string
+  workflow.value = await workflowStore.fetchWorkflow(uri)
+}
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })
@@ -60,9 +87,27 @@ function openRun(uri: string) {
     <div v-else-if="error" class="state-message error">{{ error }}</div>
 
     <template v-else-if="workflow">
+      <AddWorkflowModal
+        v-model="showEditModal"
+        :edit-uri="(route.query.uri as string)"
+        :edit-data="editData"
+        @created="onWorkflowSaved"
+      />
+
       <!-- Workflow model header -->
       <div class="wf-header">
-        <p class="wf-type-label">Workflow Model</p>
+        <div class="wf-header-row">
+          <p class="wf-type-label">Workflow Model</p>
+          <button
+            v-if="instances.length === 0"
+            class="btn btn--secondary"
+            :disabled="loadingEdit"
+            @click="openEditModal"
+          >
+            {{ loadingEdit ? 'Loading…' : 'Edit Workflow' }}
+          </button>
+        </div>
+        <p v-if="loadEditError" class="load-edit-error">{{ loadEditError }}</p>
         <h1 class="wf-title">{{ workflow.title }}</h1>
         <p v-if="workflow.description" class="wf-description">{{ workflow.description }}</p>
         <p v-if="workflow.issued" class="wf-issued">Defined {{ formatDate(workflow.issued) }}</p>
@@ -175,13 +220,53 @@ function openRun(uri: string) {
   margin-bottom: 2rem;
 }
 
+.wf-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.35rem;
+}
+
 .wf-type-label {
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
   color: #6b7280;
-  margin: 0 0 0.35rem;
+  margin: 0;
+}
+
+.load-edit-error {
+  font-size: 0.8rem;
+  color: #dc2626;
+  margin: 0 0 0.5rem;
+}
+
+.btn {
+  padding: 0.4rem 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.btn--secondary {
+  background: #fff;
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.btn--secondary:hover:not(:disabled) {
+  background: #f9fafb;
+}
+
+.btn--secondary:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .wf-title {

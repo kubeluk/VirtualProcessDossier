@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWorkflowStore, type WorkflowSummary } from '@/stores/workflow'
+import AddWorkflowModal from '@/components/AddWorkflowModal.vue'
 
 const router = useRouter()
 const workflowStore = useWorkflowStore()
@@ -9,6 +10,7 @@ const workflowStore = useWorkflowStore()
 const workflows = ref<WorkflowSummary[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
+const showAddModal = ref(false)
 
 onMounted(async () => {
   try {
@@ -19,6 +21,10 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+async function onWorkflowCreated(uri: string) {
+  router.push({ name: 'workflow', query: { uri } })
+}
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' })
@@ -32,9 +38,16 @@ function openWorkflow(uri: string) {
 <template>
   <main class="workflow-list">
     <header class="page-header">
-      <h1>Workflows</h1>
-      <p class="subtitle">Browse manufacturing workflows and their associated datasets.</p>
+      <div class="page-header-row">
+        <div>
+          <h1>Workflows</h1>
+          <p class="subtitle">Browse manufacturing workflows and their associated datasets.</p>
+        </div>
+        <button class="btn btn--primary" @click="showAddModal = true">+ Add Workflow</button>
+      </div>
     </header>
+
+    <AddWorkflowModal v-model="showAddModal" @created="onWorkflowCreated" />
 
     <nav class="page-nav">
       <RouterLink to="/catalog" class="nav-tab">Datasets</RouterLink>
@@ -78,6 +91,13 @@ function openWorkflow(uri: string) {
 
 .page-header {
   margin-bottom: 1.25rem;
+}
+
+.page-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
 .page-header h1 {
@@ -186,5 +206,28 @@ function openWorkflow(uri: string) {
 .meta-link {
   color: var(--color-primary);
   font-weight: 500;
+}
+
+.btn {
+  padding: 0.5rem 1.1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn--primary {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+}
+
+.btn--primary:hover {
+  background: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
 }
 </style>

@@ -78,6 +78,28 @@ export interface RunDetail {
 }
 
 // ---------------------------------------------------------------------------
+// AddWorkflowModel form types
+// ---------------------------------------------------------------------------
+
+export interface SubStepForm {
+  title: string
+  description: string
+}
+
+export interface StepForm {
+  title: string
+  description: string
+  type: 'AtomicActivity' | 'ParallelActivity'
+  subSteps: SubStepForm[]
+}
+
+export interface AddWorkflowForm {
+  title: string
+  description: string
+  steps: StepForm[]
+}
+
+// ---------------------------------------------------------------------------
 // Step-picker option (used by AddDatasetModal)
 // ---------------------------------------------------------------------------
 
@@ -396,6 +418,333 @@ export const useWorkflowStore = defineStore('workflow', () => {
     await updateSparql(graphStore.updateEndpoint, update)
   }
 
+  // ── Fetch workflow data for editing ─────────────────────────────────────
+
+  async function fetchWorkflowForEdit(uri: string): Promise<AddWorkflowForm | null> {
+    const stepsQuery = `
+      PREFIX wild:    <http://purl.org/wild/vocab#>
+      PREFIX dcterms: <http://purl.org/dc/terms/>
+      PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+      SELECT ?wfTitle ?wfDesc ?step ?stepTitle ?stepDesc ?stepType WHERE {
+        BIND(<${uri}> AS ?wf)
+        ?wf dcterms:title ?wfTitle .
+        OPTIONAL { ?wf dcterms:description ?wfDesc }
+        OPTIONAL {
+          ?wf wild:hasBehaviour/wild:hasChildActivities/rdf:rest*/rdf:first ?step .
+          OPTIONAL { ?step dcterms:title ?stepTitle }
+          OPTIONAL { ?step dcterms:description ?stepDesc }
+          OPTIONAL {
+            ?step a ?stepType .
+            FILTER(STRSTARTS(STR(?stepType), 'http://purl.org/wild/vocab#'))
+          }
+        }
+      }
+    `
+    const leavesQuery = `
+      PREFIX wild:    <http://purl.org/wild/vocab#>
+      PREFIX dcterms: <http://purl.org/dc/terms/>
+      PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+      SELECT ?step ?leaf ?leafTitle ?leafDesc WHERE {
+        <${uri}> wild:hasBehaviour/wild:hasChildActivities/rdf:rest*/rdf:first ?step .
+        ?step wild:hasChildActivities/rdf:rest*/rdf:first ?leaf .
+        OPTIONAL { ?leaf dcterms:title ?leafTitle }
+        OPTIONAL { ?leaf dcterms:description ?leafDesc }
+      }
+    `
+
+    const [stepsResult, leavesResult] = await Promise.all([
+      querySparql(graphStore.endpoint, stepsQuery),
+      querySparql(graphStore.endpoint, leavesQuery),
+    ])
+
+    if (stepsResult.results.bindings.length === 0) return null
+    const first = stepsResult.results.bindings[0]
+
+    type StepData = {
+      uri: string
+      originalTitle: string | null
+      description: string
+      type: 'AtomicActivity' | 'ParallelActivity'
+      subSteps: SubStepForm[]
+    }
+
+    const stepsMap = new Map<string, StepData>()
+    for (const b of stepsResult.results.bindings) {
+      if (!b.step) continue
+      const stepUri = b.step.value
+      if (!stepsMap.has(stepUri)) {
+        const rawType = b.stepType?.value?.replace('http://purl.org/wild/vocab#', '') ?? 'AtomicActivity'
+        stepsMap.set(stepUri, {
+          uri: stepUri,
+          originalTitle: b.stepTitle?.value ?? null,
+          description: b.stepDesc?.value ?? '',
+          type: rawType === 'ParallelActivity' ? 'ParallelActivity' : 'AtomicActivity',
+          subSteps: [],
+        })
+      }
+    }
+
+    for (const b of leavesResult.results.bindings) {
+      const step = stepsMap.get(b.step.value)
+      if (step) {
+        step.subSteps.push({
+          title: b.leafTitle?.value ?? '',
+          description: b.leafDesc?.value ?? '',
+        })
+      }
+    }
+
+    const sortedSteps = [...stepsMap.values()].sort((a, b) => {
+      const nA = parseInt(a.originalTitle?.match(/^Step\s+(\d+)/i)?.[1] ?? '99')
+      const nB = parseInt(b.originalTitle?.match(/^Step\s+(\d+)/i)?.[1] ?? '99')
+      return nA - nB
+    })
+
+    return {
+      title: first.wfTitle.value,
+      description: first.wfDesc?.value ?? '',
+      steps: sortedSteps.map((s) => ({
+        title: s.originalTitle?.replace(/^Step\s+\d+:\s*/i, '') ?? '',
+        description: s.description,
+        type: s.type,
+        subSteps: s.subSteps,
+      })),
+    }
+  }
+
+  // ── Update workflow model (only allowed when no runs exist) ───────────────
+
+  async function updateWorkflowModel(uri: string, form: AddWorkflowForm): Promise<void> {
+    const suffix = Date.now().toString(36)
+    const slug = form.title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 40) || 'workflow'
+
+    const base = 'https://example.org/vpd#'
+    const rootUri = `${base}wfbeh-${slug}-${suffix}`
+    const stepUris = form.steps.map((_, i) => `${base}step-${slug}-${suffix}-${i + 1}`)
+    const leafUris = form.steps.map((step, i) =>
+      step.subSteps.map((_, j) => `${base}wfact-${slug}-${suffix}-${i + 1}-${j + 1}`),
+    )
+
+    function esc(s: string): string {
+      return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+    }
+
+    function buildList(items: string[], prefix: string): [string, string] {
+      const head = `_:${prefix}0`
+      const triples = items
+        .map((item, i) => {
+          const rest = i < items.length - 1 ? `_:${prefix}${i + 1}` : 'rdf:nil'
+          return `  _:${prefix}${i} rdf:first <${item}> .\n  _:${prefix}${i} rdf:rest ${rest} .`
+        })
+        .join('\n')
+      return [head, triples]
+    }
+
+    const insertLines: string[] = []
+
+    // WorkflowModel (dcterms:issued preserved via FILTER in DELETE — not re-inserted)
+    insertLines.push(`  <${uri}> a wild:WorkflowModel .`)
+    insertLines.push(`  <${uri}> dcterms:title "${esc(form.title)}"@en .`)
+    if (form.description.trim()) {
+      insertLines.push(`  <${uri}> dcterms:description "${esc(form.description)}"@en .`)
+    }
+    insertLines.push(`  <${uri}> wild:hasBehaviour <${rootUri}> .`)
+
+    const [rootHead, rootListTriples] = buildList(stepUris, 'rootList')
+    insertLines.push(`  <${rootUri}> a wild:SequentialActivity .`)
+    insertLines.push(`  <${rootUri}> wild:hasChildActivities ${rootHead} .`)
+    insertLines.push(rootListTriples)
+
+    for (let i = 0; i < form.steps.length; i++) {
+      const step = form.steps[i]
+      const stepUri = stepUris[i]
+      const n = i + 1
+      const rawTitle = step.title.trim().replace(/^Step\s+\d+:\s*/i, '')
+      const stepTitle = `Step ${n}: ${rawTitle}`
+
+      insertLines.push(`  <${stepUri}> a wild:${step.type} .`)
+      insertLines.push(`  <${stepUri}> dcterms:title "${esc(stepTitle)}"@en .`)
+      if (step.description.trim()) {
+        insertLines.push(`  <${stepUri}> dcterms:description "${esc(step.description)}"@en .`)
+      }
+
+      if (step.type === 'ParallelActivity') {
+        const [leafHead, leafListTriples] = buildList(leafUris[i], `step${n}List`)
+        insertLines.push(`  <${stepUri}> wild:hasChildActivities ${leafHead} .`)
+        insertLines.push(leafListTriples)
+
+        for (let j = 0; j < step.subSteps.length; j++) {
+          const sub = step.subSteps[j]
+          const leafUri = leafUris[i][j]
+          const subTitle = sub.title.trim() || `${stepTitle} – branch ${j + 1}`
+          insertLines.push(`  <${leafUri}> a wild:AtomicActivity .`)
+          insertLines.push(`  <${leafUri}> dcterms:title "${esc(subTitle)}"@en .`)
+          if (sub.description.trim()) {
+            insertLines.push(`  <${leafUri}> dcterms:description "${esc(sub.description)}"@en .`)
+          }
+        }
+      }
+    }
+
+    const update = `
+      PREFIX wild:    <http://purl.org/wild/vocab#>
+      PREFIX dcterms: <http://purl.org/dc/terms/>
+      PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+      PREFIX xsd:     <http://www.w3.org/2001/XMLSchema#>
+
+      DELETE { <${uri}> ?p ?o }
+      WHERE { <${uri}> ?p ?o . FILTER(?p != dcterms:issued) } ;
+
+      DELETE { ?root ?p ?o }
+      WHERE { <${uri}> wild:hasBehaviour ?root . ?root ?p ?o } ;
+
+      DELETE { ?step ?p ?o }
+      WHERE {
+        <${uri}> wild:hasBehaviour ?root .
+        ?root wild:hasChildActivities/rdf:rest*/rdf:first ?step .
+        ?step ?p ?o
+      } ;
+
+      DELETE { ?leaf ?p ?o }
+      WHERE {
+        <${uri}> wild:hasBehaviour ?root .
+        ?root wild:hasChildActivities/rdf:rest*/rdf:first ?step .
+        ?step wild:hasChildActivities/rdf:rest*/rdf:first ?leaf .
+        ?leaf ?p ?o
+      } ;
+
+      DELETE { ?node rdf:first ?f . ?node rdf:rest ?r }
+      WHERE {
+        <${uri}> wild:hasBehaviour ?root .
+        ?root wild:hasChildActivities/rdf:rest* ?node .
+        ?node rdf:first ?f .
+        ?node rdf:rest ?r
+      } ;
+
+      DELETE { ?node rdf:first ?f . ?node rdf:rest ?r }
+      WHERE {
+        <${uri}> wild:hasBehaviour ?root .
+        ?root wild:hasChildActivities/rdf:rest*/rdf:first ?step .
+        ?step wild:hasChildActivities/rdf:rest* ?node .
+        ?node rdf:first ?f .
+        ?node rdf:rest ?r
+      } ;
+
+      INSERT DATA {
+${insertLines.join('\n')}
+      }
+    `
+
+    await updateSparql(graphStore.updateEndpoint, update)
+  }
+
+  // ── Create workflow model ────────────────────────────────────────────────
+
+  async function addWorkflowModel(form: AddWorkflowForm): Promise<string> {
+    const suffix = Date.now().toString(36)
+    const slug = form.title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 40) || 'workflow'
+
+    const base = 'https://example.org/vpd#'
+    const workflowUri = `${base}workflow-${slug}-${suffix}`
+    const rootUri = `${base}wfbeh-${slug}-${suffix}`
+    const stepUris = form.steps.map((_, i) => `${base}step-${slug}-${suffix}-${i + 1}`)
+    const leafUris = form.steps.map((step, i) =>
+      step.subSteps.map((_, j) => `${base}wfact-${slug}-${suffix}-${i + 1}-${j + 1}`),
+    )
+
+    const now = new Date().toISOString()
+
+    function esc(s: string): string {
+      return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+    }
+
+    // Build RDF list triples; returns [head blank node label, triples string]
+    function buildList(items: string[], prefix: string): [string, string] {
+      const head = `_:${prefix}0`
+      const triples = items
+        .map((uri, i) => {
+          const rest = i < items.length - 1 ? `_:${prefix}${i + 1}` : 'rdf:nil'
+          return `  _:${prefix}${i} rdf:first <${uri}> .\n  _:${prefix}${i} rdf:rest ${rest} .`
+        })
+        .join('\n')
+      return [head, triples]
+    }
+
+    const lines: string[] = []
+
+    // WorkflowModel
+    lines.push(`  <${workflowUri}> a wild:WorkflowModel .`)
+    lines.push(`  <${workflowUri}> dcterms:title "${esc(form.title)}"@en .`)
+    if (form.description.trim()) {
+      lines.push(`  <${workflowUri}> dcterms:description "${esc(form.description)}"@en .`)
+    }
+    lines.push(`  <${workflowUri}> dcterms:issued "${now}"^^xsd:dateTime .`)
+    lines.push(`  <${workflowUri}> wild:hasBehaviour <${rootUri}> .`)
+
+    // Root SequentialActivity + list
+    const [rootHead, rootListTriples] = buildList(stepUris, 'rootList')
+    lines.push(`  <${rootUri}> a wild:SequentialActivity .`)
+    lines.push(`  <${rootUri}> wild:hasChildActivities ${rootHead} .`)
+    lines.push(rootListTriples)
+
+    // Steps
+    for (let i = 0; i < form.steps.length; i++) {
+      const step = form.steps[i]
+      const stepUri = stepUris[i]
+      const n = i + 1
+      // Strip any existing "Step N: " prefix the user may have typed
+      const rawTitle = step.title.trim().replace(/^Step\s+\d+:\s*/i, '')
+      const stepTitle = `Step ${n}: ${rawTitle}`
+
+      lines.push(`  <${stepUri}> a wild:${step.type} .`)
+      lines.push(`  <${stepUri}> dcterms:title "${esc(stepTitle)}"@en .`)
+      if (step.description.trim()) {
+        lines.push(`  <${stepUri}> dcterms:description "${esc(step.description)}"@en .`)
+      }
+
+      if (step.type === 'ParallelActivity') {
+        const [leafHead, leafListTriples] = buildList(leafUris[i], `step${n}List`)
+        lines.push(`  <${stepUri}> wild:hasChildActivities ${leafHead} .`)
+        lines.push(leafListTriples)
+
+        for (let j = 0; j < step.subSteps.length; j++) {
+          const sub = step.subSteps[j]
+          const leafUri = leafUris[i][j]
+          const subTitle = sub.title.trim() || `${stepTitle} – branch ${j + 1}`
+          lines.push(`  <${leafUri}> a wild:AtomicActivity .`)
+          lines.push(`  <${leafUri}> dcterms:title "${esc(subTitle)}"@en .`)
+          if (sub.description.trim()) {
+            lines.push(`  <${leafUri}> dcterms:description "${esc(sub.description)}"@en .`)
+          }
+        }
+      }
+    }
+
+    const update = `
+      PREFIX wild:    <http://purl.org/wild/vocab#>
+      PREFIX dcterms: <http://purl.org/dc/terms/>
+      PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+      PREFIX xsd:     <http://www.w3.org/2001/XMLSchema#>
+
+      INSERT DATA {
+${lines.join('\n')}
+      }
+    `
+
+    await updateSparql(graphStore.updateEndpoint, update)
+    return workflowUri
+  }
+
   // ── Step-picker options (for AddDatasetModal) ────────────────────────────
   // Returns model activity URIs so new observations can set activityInstanceOf correctly.
   // When instanceUri is provided the results are already scoped to that run's model;
@@ -516,6 +865,9 @@ export const useWorkflowStore = defineStore('workflow', () => {
     fetchWorkflowInstances,
     fetchRun,
     updateWorkflowInstance,
+    fetchWorkflowForEdit,
+    addWorkflowModel,
+    updateWorkflowModel,
     fetchWorkflowStepOptions,
   }
 })
