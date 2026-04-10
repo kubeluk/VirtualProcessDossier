@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import { useWorkflowStore, type StepForm, type AddWorkflowForm } from '@/stores/workflow'
+import { useWorkflowStore, type StepForm, type AddWorkflowForm, type WorkflowSummary } from '@/stores/workflow'
 import StepEditorNode, { type StepFormWithId, newStepWithId } from '@/components/StepEditorNode.vue'
 
 const props = defineProps<{
@@ -27,6 +27,11 @@ const steps = ref<StepFormWithId[]>([])
 const submitting = ref(false)
 const submitError = ref<string | null>(null)
 
+// Template state (create mode only)
+const templateWorkflows = ref<WorkflowSummary[]>([])
+const selectedTemplateUri = ref('')
+const templateLoading = ref(false)
+
 function close() {
   emit('update:modelValue', false)
 }
@@ -36,6 +41,7 @@ function reset() {
   description.value = ''
   steps.value = [newStepWithId()]
   submitError.value = null
+  selectedTemplateUri.value = ''
 }
 
 function toStepFormWithId(s: StepForm): StepFormWithId {
@@ -49,6 +55,34 @@ function toStepFormWithId(s: StepForm): StepFormWithId {
   }
 }
 
+function toStepFormWithIdNoUri(s: StepForm): StepFormWithId {
+  return {
+    id: Math.random(),
+    uri: undefined,
+    title: s.title,
+    description: s.description,
+    type: s.type,
+    children: s.children.map(toStepFormWithIdNoUri),
+  }
+}
+
+async function onTemplateChange() {
+  if (!selectedTemplateUri.value) return
+  templateLoading.value = true
+  try {
+    const data = await workflowStore.fetchWorkflowForEdit(selectedTemplateUri.value)
+    if (data) {
+      title.value = data.title
+      description.value = data.description
+      steps.value = data.steps.map(toStepFormWithIdNoUri)
+      submitError.value = null
+    }
+  } finally {
+    templateLoading.value = false
+    selectedTemplateUri.value = ''
+  }
+}
+
 function populateFrom(data: AddWorkflowForm) {
   title.value = data.title
   description.value = data.description
@@ -58,12 +92,14 @@ function populateFrom(data: AddWorkflowForm) {
 
 watch(
   () => props.modelValue,
-  (open) => {
+  async (open) => {
     if (!open) return
     if (props.editData) {
       populateFrom(props.editData)
     } else {
       reset()
+      const workflows = await workflowStore.fetchWorkflows()
+      templateWorkflows.value = workflows
     }
   },
 )
@@ -171,6 +207,24 @@ reset()
         </div>
 
         <form class="modal-body" @submit.prevent="submit">
+          <!-- Template selector (create mode only) -->
+          <div v-if="!isEditMode && templateWorkflows.length > 0" class="field">
+            <label for="wf-template" class="field-label">Start from a template</label>
+            <select
+              id="wf-template"
+              :value="selectedTemplateUri"
+              :disabled="templateLoading"
+              class="field-input"
+              @change="selectedTemplateUri = ($event.target as HTMLSelectElement).value; onTemplateChange()"
+            >
+              <option value="">— Select an existing workflow —</option>
+              <option v-for="wf in templateWorkflows" :key="wf.uri" :value="wf.uri">
+                {{ wf.title }}
+              </option>
+            </select>
+            <p v-if="templateLoading" class="field-hint">Loading template…</p>
+          </div>
+
           <!-- Title -->
           <div class="field">
             <label for="wf-title" class="field-label">
