@@ -82,11 +82,13 @@ export interface RunDetail {
 // ---------------------------------------------------------------------------
 
 export interface SubStepForm {
+  uri?: string   // present when loaded from an existing resource
   title: string
   description: string
 }
 
 export interface StepForm {
+  uri?: string   // present when loaded from an existing resource
   title: string
   description: string
   type: 'AtomicActivity' | 'ParallelActivity'
@@ -490,6 +492,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
       const step = stepsMap.get(b.step.value)
       if (step) {
         step.subSteps.push({
+          uri: b.leaf.value,
           title: b.leafTitle?.value ?? '',
           description: b.leafDesc?.value ?? '',
         })
@@ -506,6 +509,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
       title: first.wfTitle.value,
       description: first.wfDesc?.value ?? '',
       steps: sortedSteps.map((s) => ({
+        uri: s.uri,
         title: s.originalTitle?.replace(/^Step\s+\d+:\s*/i, '') ?? '',
         description: s.description,
         type: s.type,
@@ -639,6 +643,55 @@ export const useWorkflowStore = defineStore('workflow', () => {
       INSERT DATA {
 ${insertLines.join('\n')}
       }
+    `
+
+    await updateSparql(graphStore.updateEndpoint, update)
+  }
+
+  // ── Update workflow model metadata (safe when runs exist) ────────────────
+  // Only updates dcterms:title and dcterms:description on the workflow model
+  // and each existing step / leaf activity. The structural RDF (types, lists,
+  // hasBehaviour) is untouched.
+
+  async function updateWorkflowModelMetadata(uri: string, form: AddWorkflowForm): Promise<void> {
+    function esc(s: string): string {
+      return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+    }
+
+    // Build a DELETE/INSERT/WHERE block for a single resource
+    function metaOp(resourceUri: string, newTitle: string, newDesc: string): string {
+      const descInsert = newDesc.trim()
+        ? `<${resourceUri}> dcterms:description "${esc(newDesc)}"@en .`
+        : ''
+      return `
+        DELETE { <${resourceUri}> dcterms:title ?t . <${resourceUri}> dcterms:description ?d }
+        INSERT { <${resourceUri}> dcterms:title "${esc(newTitle)}"@en . ${descInsert} }
+        WHERE  { OPTIONAL { <${resourceUri}> dcterms:title ?t }
+                 OPTIONAL { <${resourceUri}> dcterms:description ?d } }`
+    }
+
+    const ops: string[] = []
+
+    // Workflow model itself
+    ops.push(metaOp(uri, form.title, form.description))
+
+    // Steps and their leaves
+    for (let i = 0; i < form.steps.length; i++) {
+      const step = form.steps[i]
+      if (!step.uri) continue
+      const n = i + 1
+      const rawTitle = step.title.trim().replace(/^Step\s+\d+:\s*/i, '')
+      ops.push(metaOp(step.uri, `Step ${n}: ${rawTitle}`, step.description))
+
+      for (const sub of step.subSteps) {
+        if (!sub.uri) continue
+        ops.push(metaOp(sub.uri, sub.title.trim(), sub.description))
+      }
+    }
+
+    const update = `
+      PREFIX dcterms: <http://purl.org/dc/terms/>
+      ${ops.join(' ;\n')}
     `
 
     await updateSparql(graphStore.updateEndpoint, update)
@@ -868,6 +921,7 @@ ${lines.join('\n')}
     fetchWorkflowForEdit,
     addWorkflowModel,
     updateWorkflowModel,
+    updateWorkflowModelMetadata,
     fetchWorkflowStepOptions,
   }
 })

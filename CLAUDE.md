@@ -21,11 +21,18 @@ src/
   services/      # SPARQL query/update helpers (sparql.ts)
   stores/
     graph.ts     # SPARQL endpoint config (endpoint ref, defaults to /sparql)
-    catalog.ts   # Dataset list + detail fetching (fetchDatasets, fetchDataset)
+    catalog.ts   # Dataset list + detail fetching/adding (fetchDatasets, fetchDataset, addDataset)
+    workflow.ts  # Workflow model + run queries and mutations
+  components/
+    AddDatasetModal.vue    # Modal for adding a new dataset to a run step
+    AddWorkflowModal.vue   # Modal for creating a workflow model or editing its metadata/structure
   views/
-    HomeView.vue    # Landing page → links to /catalog
-    CatalogView.vue # Browse all datasets (card list)
-    DatasetView.vue # Dataset detail; route: /dataset?uri=<encoded-uri>
+    HomeView.vue         # Landing page → links to /catalog
+    CatalogView.vue      # Browse all datasets (card list)
+    DatasetView.vue      # Dataset detail; route: /dataset?uri=<encoded-uri>
+    WorkflowListView.vue # Browse all workflow models; create new workflow
+    WorkflowView.vue     # Workflow model detail: step skeleton + runs list + edit button
+    RunView.vue          # Workflow run detail: editable header, step timeline, datasets
 data/
   catalog.ttl    # DCAT seed data (loaded automatically on first Docker start)
   seed.sh        # Init script run by the 'seed' Docker service
@@ -133,5 +140,12 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
   - Shows the model activity title (via `activityInstanceOf`) as "Collected during"
   - Shows parent step if the model activity is a leaf (e.g. under `ParallelActivity`)
   - "Part of run: [name] →" navigates to the run detail page
-- Workflow store: `src/stores/workflow.ts` — `fetchWorkflows()`, `fetchWorkflow(uri)`, `fetchWorkflowInstances(modelUri)`, `fetchRun(instanceUri)`, `updateWorkflowInstance(uri, title, desc)`, `fetchWorkflowStepOptions(instanceUri?)`
+- Workflow store: `src/stores/workflow.ts` — `fetchWorkflows()`, `fetchWorkflow(uri)`, `fetchWorkflowInstances(modelUri)`, `fetchRun(instanceUri)`, `updateWorkflowInstance(uri, title, desc)`, `fetchWorkflowStepOptions(instanceUri?)`, `addWorkflowModel(form)`, `fetchWorkflowForEdit(uri)`, `updateWorkflowModel(uri, form)`, `updateWorkflowModelMetadata(uri, form)`
 - Workflow context on datasets: `fetchDatasetWorkflowContext(uri)` in `src/stores/catalog.ts`
+
+### Workflow Model Authoring (implemented)
+- **Create**: "Add Workflow" button on `/workflows` opens `AddWorkflowModal`; user defines title, description, and an ordered list of steps (each `AtomicActivity` or `ParallelActivity` with optional sub-steps); generates a WiLD-compliant `WorkflowModel` with a root `SequentialActivity` and `hasChildActivities` RDF lists; navigates to the new workflow on success
+- **Edit — full structural edit** (no runs exist): "Edit Workflow" button on `/workflow?uri=` opens `AddWorkflowModal` pre-populated via `fetchWorkflowForEdit`; user can change titles, descriptions, step types, add/remove steps; `updateWorkflowModel` deletes the old structure (6 sequential SPARQL DELETEs covering steps, leaves, and list blank nodes) and inserts fresh triples; `dcterms:issued` is preserved via `FILTER(?p != dcterms:issued)`
+- **Edit — metadata only** (runs exist): same button opens the modal in `metadataOnly` mode; structural controls (add/remove step, type change) are hidden and a note explains why; only `dcterms:title` and `dcterms:description` are updated on the workflow model and each existing step/leaf via `updateWorkflowModelMetadata`; the RDF list structure is never touched
+- `StepForm.uri` and `SubStepForm.uri` carry existing resource URIs when loaded via `fetchWorkflowForEdit`; these are used by `updateWorkflowModelMetadata` to target the correct triples
+- Step titles are stored as "Step N: \<name\>" in the triple store; `fetchWorkflowForEdit` strips this prefix for display and `addWorkflowModel`/`updateWorkflowModel` re-add it on save based on array position

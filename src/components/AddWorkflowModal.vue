@@ -4,8 +4,9 @@ import { useWorkflowStore, type StepForm, type SubStepForm, type AddWorkflowForm
 
 const props = defineProps<{
   modelValue: boolean
-  editUri?: string        // When set: edit mode (update existing workflow)
+  editUri?: string              // When set: edit mode (update existing workflow)
   editData?: AddWorkflowForm | null  // Pre-populated form data for edit mode
+  metadataOnly?: boolean        // When true: lock structure, only title/description editable
 }>()
 
 const emit = defineEmits<{
@@ -139,7 +140,11 @@ async function submit() {
   submitting.value = true
   try {
     if (isEditMode.value && props.editUri) {
-      await workflowStore.updateWorkflowModel(props.editUri, form)
+      if (props.metadataOnly) {
+        await workflowStore.updateWorkflowModelMetadata(props.editUri, form)
+      } else {
+        await workflowStore.updateWorkflowModel(props.editUri, form)
+      }
       reset()
       close()
       emit('created', props.editUri)
@@ -166,7 +171,7 @@ reset()
     <div v-if="modelValue" class="modal-backdrop" @click.self="close">
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="wf-modal-title">
         <div class="modal-header">
-          <h2 id="wf-modal-title">{{ isEditMode ? 'Edit Workflow Model' : 'Create Workflow Model' }}</h2>
+          <h2 id="wf-modal-title">{{ isEditMode ? (metadataOnly ? 'Edit Workflow Names & Descriptions' : 'Edit Workflow Model') : 'Create Workflow Model' }}</h2>
           <button class="modal-close" aria-label="Close" @click="close">✕</button>
         </div>
 
@@ -203,8 +208,13 @@ reset()
           <!-- Steps -->
           <div class="steps-section">
             <div class="steps-header">
-              <span class="field-label">Process Steps <span class="required">*</span></span>
-              <p class="field-hint">
+              <span class="field-label">
+                Process Steps <span v-if="!metadataOnly" class="required">*</span>
+              </span>
+              <p v-if="metadataOnly" class="field-hint">
+                Step structure is fixed once a workflow has runs. You can edit names and descriptions.
+              </p>
+              <p v-else class="field-hint">
                 Define the sequence of steps. Use "Parallel step" when sub-activities happen simultaneously.
               </p>
             </div>
@@ -215,8 +225,14 @@ reset()
               class="step-card"
             >
               <div class="step-card-header">
-                <span class="step-number">Step {{ si + 1 }}</span>
+                <div class="step-number-row">
+                  <span class="step-number">Step {{ si + 1 }}</span>
+                  <span v-if="metadataOnly" class="step-type-badge">
+                    {{ step.type === 'ParallelActivity' ? '⟷ parallel' : 'single' }}
+                  </span>
+                </div>
                 <button
+                  v-if="!metadataOnly"
                   type="button"
                   class="remove-btn"
                   :disabled="steps.length === 1"
@@ -252,7 +268,7 @@ reset()
                 />
               </div>
 
-              <div class="field field--type">
+              <div v-if="!metadataOnly" class="field field--type">
                 <span class="field-label">Type</span>
                 <div class="radio-group">
                   <label class="radio-label">
@@ -289,7 +305,7 @@ reset()
                       v-model="sub.title"
                       type="text"
                       class="field-input"
-                      :placeholder="`Sub-step title (required)`"
+                      :placeholder="metadataOnly ? 'Sub-step title' : 'Sub-step title (required)'"
                       autocomplete="off"
                     />
                     <input
@@ -301,6 +317,7 @@ reset()
                     />
                   </div>
                   <button
+                    v-if="!metadataOnly"
                     type="button"
                     class="remove-btn remove-btn--small"
                     :disabled="step.subSteps.length <= 2"
@@ -309,13 +326,13 @@ reset()
                     ✕
                   </button>
                 </div>
-                <button type="button" class="add-substep-btn" @click="addSubStep(si)">
+                <button v-if="!metadataOnly" type="button" class="add-substep-btn" @click="addSubStep(si)">
                   + Add sub-step
                 </button>
               </div>
             </div>
 
-            <button type="button" class="add-step-btn" @click="addStep">+ Add Step</button>
+            <button v-if="!metadataOnly" type="button" class="add-step-btn" @click="addStep">+ Add Step</button>
           </div>
 
           <!-- Error -->
@@ -481,12 +498,28 @@ reset()
   justify-content: space-between;
 }
 
+.step-number-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .step-number {
   font-size: 0.8rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: #6b7280;
+}
+
+.step-type-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 20px;
+  padding: 0.1rem 0.45rem;
 }
 
 .remove-btn {

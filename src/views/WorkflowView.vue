@@ -91,6 +91,7 @@ function openRun(uri: string) {
         v-model="showEditModal"
         :edit-uri="(route.query.uri as string)"
         :edit-data="editData"
+        :metadata-only="instances.length > 0"
         @created="onWorkflowSaved"
       />
 
@@ -99,7 +100,6 @@ function openRun(uri: string) {
         <div class="wf-header-row">
           <p class="wf-type-label">Workflow Model</p>
           <button
-            v-if="instances.length === 0"
             class="btn btn--secondary"
             :disabled="loadingEdit"
             @click="openEditModal"
