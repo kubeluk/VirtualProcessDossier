@@ -17,14 +17,8 @@ const isParallel = props.step.type?.endsWith('ParallelActivity') ?? false
 const isSequential = props.step.type?.endsWith('SequentialActivity') ?? false
 const hasChildren = props.step.children.length > 0
 
-function parseStepTitle(title: string | null): { number: string; name: string } {
-  if (!title) return { number: '?', name: 'Unnamed Step' }
-  const match = title.match(/^Step\s+(\d+):\s*(.+)$/)
-  if (match) return { number: match[1], name: match[2] }
-  return { number: '?', name: title }
-}
-
-const parsed = parseStepTitle(props.step.title)
+const stepNumber = props.index + 1
+const stepName = props.step.title ?? 'Unnamed Step'
 </script>
 
 <template>
@@ -33,7 +27,7 @@ const parsed = parseStepTitle(props.step.title)
     <div class="step-item">
       <!-- Marker (circle + connector) — only for sequential context -->
       <div v-if="context === 'sequential'" class="step-marker">
-        <div class="step-circle">{{ parsed.number }}</div>
+        <div class="step-circle">{{ stepNumber }}</div>
         <div v-if="index < total - 1 || (hasChildren && expanded)" class="step-connector-line"></div>
       </div>
 
@@ -54,7 +48,7 @@ const parsed = parseStepTitle(props.step.title)
           >
             {{ expanded ? '▼' : '▶' }}
           </button>
-          <h3 class="step-name">{{ parsed.name }}</h3>
+          <h3 class="step-name">{{ stepName }}</h3>
           <span v-if="isParallel" class="step-badge step-badge--parallel">⟷ parallel</span>
           <span v-else-if="isSequential" class="step-badge step-badge--sequential">↕ sequential</span>
         </div>

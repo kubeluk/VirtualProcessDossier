@@ -254,15 +254,6 @@ export const useWorkflowStore = defineStore('workflow', () => {
       if (!siblings.includes(childUri)) siblings.push(childUri)
     }
 
-    function sortByStepNumber(items: WorkflowStep[]): WorkflowStep[] {
-      return items.sort((a, b) => {
-        const nA = parseInt(a.title?.match(/^Step\s+(\d+)/i)?.[1] ?? '0')
-        const nB = parseInt(b.title?.match(/^Step\s+(\d+)/i)?.[1] ?? '0')
-        if (nA !== nB) return nA - nB
-        return (a.title ?? '').localeCompare(b.title ?? '')
-      })
-    }
-
     function buildStep(nodeUri: string): WorkflowStep {
       const meta = nodeMeta.get(nodeUri) ?? {
         title: null, desc: null, type: null,
@@ -278,12 +269,12 @@ export const useWorkflowStore = defineStore('workflow', () => {
         systemTitle: meta.systemTitle,
         inputUri: meta.inputUri,
         inputTitle: meta.inputTitle,
-        children: sortByStepNumber(childUris.map(buildStep)),
+        children: childUris.map(buildStep),
       }
     }
 
     const topLevelUris = childrenMap.get(rootUri) ?? []
-    const steps = sortByStepNumber(topLevelUris.map(buildStep))
+    const steps = topLevelUris.map(buildStep)
 
     return {
       uri,
@@ -608,7 +599,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
         rawType === 'SequentialActivity' ? 'SequentialActivity' : 'AtomicActivity'
       return {
         uri: nodeUri,
-        title: meta.title?.replace(/^Step\s+\d+:\s*/i, '') ?? '',
+        title: meta.title ?? '',
         description: meta.desc ?? '',
         type,
         ...(meta.systemUri ? { systemUri: meta.systemUri } : {}),
@@ -661,9 +652,8 @@ export const useWorkflowStore = defineStore('workflow', () => {
     }
     insertLines.push(`  <${uri}> wild:hasBehaviour <${rootUri}> .`)
 
-    function generateNode(step: StepForm, nodeUri: string, topLevelIndex: number | null): void {
-      const rawTitle = step.title.trim().replace(/^Step\s+\d+:\s*/i, '')
-      const title = topLevelIndex !== null ? `Step ${topLevelIndex}: ${rawTitle}` : rawTitle
+    function generateNode(step: StepForm, nodeUri: string): void {
+      const title = step.title.trim()
       insertLines.push(`  <${nodeUri}> a wild:${step.type} .`)
       insertLines.push(`  <${nodeUri}> dcterms:title "${esc(title)}"@en .`)
       if (step.description.trim()) {
@@ -678,7 +668,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
         const [head, listTriples] = buildList(childUris)
         insertLines.push(`  <${nodeUri}> wild:hasChildActivities ${head} .`)
         insertLines.push(listTriples)
-        step.children.forEach((child, i) => generateNode(child, childUris[i], null))
+        step.children.forEach((child, i) => generateNode(child, childUris[i]))
       }
     }
 
@@ -687,7 +677,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
     insertLines.push(`  <${rootUri}> a wild:${form.rootType} .`)
     insertLines.push(`  <${rootUri}> wild:hasChildActivities ${rootHead} .`)
     insertLines.push(rootListTriples)
-    form.steps.forEach((step, i) => generateNode(step, stepUris[i], i + 1))
+    form.steps.forEach((step, i) => generateNode(step, stepUris[i]))
 
     const update = `
       PREFIX wild:    <http://purl.org/wild/vocab#>
@@ -759,18 +749,16 @@ ${insertLines.join('\n')}
     const ops: string[] = []
     ops.push(metaOp(uri, form.title, form.description))
 
-    function collectOps(step: StepForm, isTopLevel: boolean, stepNum: number): void {
+    function collectOps(step: StepForm): void {
       if (!step.uri) return
-      const rawTitle = step.title.trim().replace(/^Step\s+\d+:\s*/i, '')
-      const title = isTopLevel ? `Step ${stepNum}: ${rawTitle}` : rawTitle
-      ops.push(metaOp(step.uri, title, step.description))
+      ops.push(metaOp(step.uri, step.title.trim(), step.description))
       if (step.type === 'AtomicActivity') {
         ops.push(ssnOp(step.uri, step.systemUri, step.inputUri))
       }
-      step.children.forEach((child) => collectOps(child, false, 0))
+      step.children.forEach((child) => collectOps(child))
     }
 
-    form.steps.forEach((step, i) => collectOps(step, true, i + 1))
+    form.steps.forEach((step) => collectOps(step))
 
     const update = `
       PREFIX dcterms: <http://purl.org/dc/terms/>
@@ -824,9 +812,8 @@ ${insertLines.join('\n')}
     lines.push(`  <${workflowUri}> dcterms:issued "${now}"^^xsd:dateTime .`)
     lines.push(`  <${workflowUri}> wild:hasBehaviour <${rootUri}> .`)
 
-    function generateNode(step: StepForm, nodeUri: string, topLevelIndex: number | null): void {
-      const rawTitle = step.title.trim().replace(/^Step\s+\d+:\s*/i, '')
-      const title = topLevelIndex !== null ? `Step ${topLevelIndex}: ${rawTitle}` : rawTitle
+    function generateNode(step: StepForm, nodeUri: string): void {
+      const title = step.title.trim()
       lines.push(`  <${nodeUri}> a wild:${step.type} .`)
       lines.push(`  <${nodeUri}> dcterms:title "${esc(title)}"@en .`)
       if (step.description.trim()) {
@@ -841,7 +828,7 @@ ${insertLines.join('\n')}
         const [head, listTriples] = buildList(childUris)
         lines.push(`  <${nodeUri}> wild:hasChildActivities ${head} .`)
         lines.push(listTriples)
-        step.children.forEach((child, i) => generateNode(child, childUris[i], null))
+        step.children.forEach((child, i) => generateNode(child, childUris[i]))
       }
     }
 
@@ -850,7 +837,7 @@ ${insertLines.join('\n')}
     lines.push(`  <${rootUri}> a wild:${form.rootType} .`)
     lines.push(`  <${rootUri}> wild:hasChildActivities ${rootHead} .`)
     lines.push(rootListTriples)
-    form.steps.forEach((step, i) => generateNode(step, stepUris[i], i + 1))
+    form.steps.forEach((step, i) => generateNode(step, stepUris[i]))
 
     const update = `
       PREFIX wild:    <http://purl.org/wild/vocab#>
