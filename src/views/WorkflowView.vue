@@ -8,6 +8,7 @@ import {
   type AddWorkflowForm,
 } from '@/stores/workflow'
 import AddWorkflowModal from '@/components/AddWorkflowModal.vue'
+import AddRunModal from '@/components/AddRunModal.vue'
 import WorkflowStepNode from '@/components/WorkflowStepNode.vue'
 
 const route = useRoute()
@@ -18,6 +19,13 @@ const workflow = ref<WorkflowDetail | null>(null)
 const instances = ref<WorkflowInstanceSummary[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
+
+// Start run
+const showAddRunModal = ref(false)
+
+function onRunCreated(instanceUri: string) {
+  router.push({ name: 'run', query: { uri: instanceUri } })
+}
 
 // Edit workflow model
 const showEditModal = ref(false)
@@ -81,6 +89,12 @@ function openRun(uri: string) {
     <div v-else-if="error" class="state-message error">{{ error }}</div>
 
     <template v-else-if="workflow">
+      <AddRunModal
+        v-model="showAddRunModal"
+        :workflow-uri="(route.query.uri as string)"
+        @created="onRunCreated"
+      />
+
       <AddWorkflowModal
         v-model="showEditModal"
         :edit-uri="(route.query.uri as string)"
@@ -132,7 +146,12 @@ function openRun(uri: string) {
 
       <!-- Workflow runs -->
       <section class="runs-section">
-        <h2>Runs</h2>
+        <div class="runs-header">
+          <h2>Runs</h2>
+          <button class="btn btn--primary btn--sm" @click="showAddRunModal = true">
+            + Start Run
+          </button>
+        </div>
         <p class="section-note">
           Each run is an execution of this workflow. Open a run to browse its datasets.
         </p>
@@ -301,6 +320,38 @@ section h2 {
 .step-list {
   padding: 0;
   margin: 0;
+}
+
+/* Runs header */
+.runs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 0;
+}
+
+.runs-header h2 {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.btn--primary {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
+}
+
+.btn--sm {
+  padding: 0.3rem 0.8rem;
+  font-size: 0.8rem;
 }
 
 /* Runs list */

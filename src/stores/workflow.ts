@@ -448,8 +448,12 @@ export const useWorkflowStore = defineStore('workflow', () => {
       attachedActInsts.add(actUri)
 
       const actInst = actInstMap.get(actUri)!
-      // If the model activity is a leaf under a parallel step, attach to the parallel step
-      const targetStepUri = b.parentStep?.value ?? b.modelActivity.value
+      // Use parentStep only when it is itself a top-level step (parallel leaf case).
+      // For top-level atomic steps the parentStep is the root behaviour, which is
+      // not in stepsMap, so we fall back to the model activity URI directly.
+      const parentStepUri = b.parentStep?.value ?? null
+      const targetStepUri =
+        parentStepUri && stepsMap.has(parentStepUri) ? parentStepUri : b.modelActivity.value
       if (stepsMap.has(targetStepUri)) {
         stepsMap.get(targetStepUri)!.activityInstances.push(actInst)
       }
@@ -864,6 +868,82 @@ ${lines.join('\n')}
     return workflowUri
   }
 
+  // ── Create workflow run (WorkflowInstance + ActivityInstances) ──────────
+
+  async function addWorkflowRun(
+    modelUri: string,
+    title: string,
+    description: string,
+  ): Promise<string> {
+    // Query all activities in the model: root behaviour + all descendants
+    const activityQuery = `
+      PREFIX wild: <http://purl.org/wild/vocab#>
+      PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+      SELECT ?root ?activity WHERE {
+        <${modelUri}> wild:hasBehaviour ?root .
+        ?root (wild:hasChildActivities/rdf:rest*/rdf:first)* ?activity .
+      }
+    `
+    const activityResults = await querySparql(graphStore.endpoint, activityQuery)
+
+    const suffix = Date.now().toString(36)
+    const slug = title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 40) || 'run'
+    const base = 'https://example.org/vpd#'
+    const instanceUri = `${base}wfinst-${slug}-${suffix}`
+    const now = new Date().toISOString()
+
+    function esc(s: string): string {
+      return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+    }
+
+    const lines: string[] = []
+
+    // WorkflowInstance
+    lines.push(`  <${instanceUri}> a wild:WorkflowInstance .`)
+    lines.push(`  <${instanceUri}> wild:workflowInstanceOf <${modelUri}> .`)
+    lines.push(`  <${instanceUri}> dcterms:title "${esc(title)}"@en .`)
+    if (description.trim()) {
+      lines.push(`  <${instanceUri}> dcterms:description "${esc(description)}"@en .`)
+    }
+    lines.push(`  <${instanceUri}> prov:startedAtTime "${now}"^^xsd:dateTime .`)
+    lines.push(`  <${instanceUri}> wild:hasState wild:initialized .`)
+
+    // ActivityInstances: one per activity node, root gets wild:active
+    let actCounter = 0
+    let rootUri: string | null = null
+
+    for (const b of activityResults.results.bindings) {
+      if (!rootUri) rootUri = b.root.value
+      const actUri = b.activity.value
+      const actInstUri = `${base}actinst-${slug}-${suffix}-${actCounter++}`
+      const isRoot = actUri === rootUri
+
+      lines.push(`  <${actInstUri}> a wild:ActivityInstance .`)
+      lines.push(`  <${actInstUri}> wild:activityInstanceOf <${actUri}> .`)
+      lines.push(`  <${actInstUri}> wild:inWorkflowInstance <${instanceUri}> .`)
+      lines.push(`  <${actInstUri}> wild:hasState ${isRoot ? 'wild:active' : 'wild:initialized'} .`)
+    }
+
+    const update = `
+      PREFIX wild:    <http://purl.org/wild/vocab#>
+      PREFIX dcterms: <http://purl.org/dc/terms/>
+      PREFIX prov:    <http://www.w3.org/ns/prov#>
+      PREFIX xsd:     <http://www.w3.org/2001/XMLSchema#>
+
+      INSERT DATA {
+${lines.join('\n')}
+      }
+    `
+
+    await updateSparql(graphStore.updateEndpoint, update)
+    return instanceUri
+  }
+
   // ── System / Input option lists (for workflow authoring selects) ─────────
 
   async function fetchSystemOptions(): Promise<ProcedureOption[]> {
@@ -1062,6 +1142,7 @@ ${lines.join('\n')}
     updateWorkflowModel,
     updateWorkflowModelMetadata,
     deleteWorkflowModel,
+    addWorkflowRun,
     fetchWorkflowStepOptions,
     fetchSystemOptions,
     fetchInputOptions,

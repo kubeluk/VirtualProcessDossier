@@ -177,6 +177,14 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 - `StepEditorNode.vue` is a self-referencing recursive component (uses both `<script>` for exported types/factory and `<script setup>` for instance logic); exports `StepFormWithId` and `newStepWithId` for use by `AddWorkflowModal`
 - `WorkflowStepNode.vue` is a self-referencing recursive component for read-only display; sequential children render in a grey-bordered cluster, parallel children in a blue-bordered cluster; each composite node has a ▶/▼ collapse toggle
 
+### Workflow Run Registration (implemented)
+- **Start Run**: "+ Start Run" button in the Runs section of `/workflow?uri=` opens `AddRunModal`; user provides a title (required) and optional description; navigates directly to the new run on success
+- **What gets created**: a `wild:WorkflowInstance` with `workflowInstanceOf <modelUri>`, `dcterms:title`, optional `dcterms:description`, `prov:startedAtTime`, and `wild:hasState wild:initialized`; plus one `wild:ActivityInstance` per activity node in the model (root behaviour + all descendants via `(wild:hasChildActivities/rdf:rest*/rdf:first)*`); the root behaviour's activity instance gets `wild:hasState wild:active`, all others get `wild:hasState wild:initialized`
+- Activity instance URIs use the pattern `vpd:actinst-<slug>-<suffix>-<n>`; workflow instance URI uses `vpd:wfinst-<slug>-<suffix>`
+- `AddRunModal.vue` — simple modal (title + description); emits `created(instanceUri)` on success
+- Workflow store: `addWorkflowRun(modelUri, title, description): Promise<string>` — queries all model activities, builds and executes a single `INSERT DATA`; returns the new instance URI
+- `fetchRun` bug fix: `parentStep` is now only used as the attachment target when it is itself present in `stepsMap` (i.e. a parallel step); previously top-level atomic steps were silently dropped because their `parentStep` was the root behaviour (not in `stepsMap`)
+
 ### System & Input on Atomic Activities (implemented)
 - Each `wild:AtomicActivity` (= `sosa:Procedure`) can have an optional `ssn:System` (via `ssn:implementedBy`) and `ssn:Input` (via `ssn:hasInput`) linked to it
 - **Browsing**: `WorkflowStepNode` displays "System: …" and "Input: …" as metadata rows on leaf nodes when values are present
