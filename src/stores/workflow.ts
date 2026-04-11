@@ -105,6 +105,7 @@ export interface ProcedureOption {
 export interface AddWorkflowForm {
   title: string
   description: string
+  rootType: 'SequentialActivity' | 'ParallelActivity'
   steps: StepForm[]
 }
 
@@ -515,11 +516,14 @@ export const useWorkflowStore = defineStore('workflow', () => {
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
 
-      SELECT ?wfTitle ?wfDesc ?root WHERE {
+      SELECT ?wfTitle ?wfDesc ?root ?rootType WHERE {
         BIND(<${uri}> AS ?wf)
         ?wf dcterms:title ?wfTitle .
         OPTIONAL { ?wf dcterms:description ?wfDesc }
-        OPTIONAL { ?wf wild:hasBehaviour ?root }
+        OPTIONAL {
+          ?wf wild:hasBehaviour ?root .
+          OPTIONAL { ?root a ?rootType . FILTER(STRSTARTS(STR(?rootType), 'http://purl.org/wild/vocab#')) }
+        }
       }
     `
     const treeQuery = `
@@ -551,8 +555,12 @@ export const useWorkflowStore = defineStore('workflow', () => {
     const first = metaResults.results.bindings[0]
     const rootUri = first.root?.value ?? null
 
+    const rawRootType = first.rootType?.value?.replace('http://purl.org/wild/vocab#', '') ?? ''
+    const rootType: AddWorkflowForm['rootType'] =
+      rawRootType === 'ParallelActivity' ? 'ParallelActivity' : 'SequentialActivity'
+
     if (!rootUri) {
-      return { title: first.wfTitle.value, description: first.wfDesc?.value ?? '', steps: [] }
+      return { title: first.wfTitle.value, description: first.wfDesc?.value ?? '', rootType: 'SequentialActivity', steps: [] }
     }
 
     type NodeMeta = { title: string | null; desc: string | null; type: string | null; systemUri: string | null; inputUri: string | null }
@@ -606,7 +614,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
     }
 
     const steps = sortedChildren(rootUri).map(buildStepForm)
-    return { title: first.wfTitle.value, description: first.wfDesc?.value ?? '', steps }
+    return { title: first.wfTitle.value, description: first.wfDesc?.value ?? '', rootType, steps }
   }
 
   // ── Update workflow model (only allowed when no runs exist) ───────────────
@@ -672,7 +680,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
 
     const stepUris = form.steps.map(() => `${base}step-${slug}-${suffix}-${nodeCounter++}`)
     const [rootHead, rootListTriples] = buildList(stepUris)
-    insertLines.push(`  <${rootUri}> a wild:SequentialActivity .`)
+    insertLines.push(`  <${rootUri}> a wild:${form.rootType} .`)
     insertLines.push(`  <${rootUri}> wild:hasChildActivities ${rootHead} .`)
     insertLines.push(rootListTriples)
     form.steps.forEach((step, i) => generateNode(step, stepUris[i], i + 1))
@@ -835,7 +843,7 @@ ${insertLines.join('\n')}
 
     const stepUris = form.steps.map(() => `${base}step-${slug}-${suffix}-${nodeCounter++}`)
     const [rootHead, rootListTriples] = buildList(stepUris)
-    lines.push(`  <${rootUri}> a wild:SequentialActivity .`)
+    lines.push(`  <${rootUri}> a wild:${form.rootType} .`)
     lines.push(`  <${rootUri}> wild:hasChildActivities ${rootHead} .`)
     lines.push(rootListTriples)
     form.steps.forEach((step, i) => generateNode(step, stepUris[i], i + 1))

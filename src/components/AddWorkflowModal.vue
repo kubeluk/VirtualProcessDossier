@@ -22,6 +22,7 @@ const isEditMode = computed(() => !!props.editUri)
 // Form state
 const title = ref('')
 const description = ref('')
+const rootType = ref<'SequentialActivity' | 'ParallelActivity'>('SequentialActivity')
 const steps = ref<StepFormWithId[]>([])
 
 // UI state
@@ -45,6 +46,7 @@ function close() {
 function reset() {
   title.value = ''
   description.value = ''
+  rootType.value = 'SequentialActivity'
   steps.value = [newStepWithId()]
   submitError.value = null
   selectedTemplateUri.value = ''
@@ -84,6 +86,7 @@ async function onTemplateChange() {
     if (data) {
       title.value = data.title
       description.value = data.description
+      rootType.value = data.rootType
       steps.value = data.steps.map(toStepFormWithIdNoUri)
       submitError.value = null
     }
@@ -96,6 +99,7 @@ async function onTemplateChange() {
 function populateFrom(data: AddWorkflowForm) {
   title.value = data.title
   description.value = data.description
+  rootType.value = data.rootType
   steps.value = data.steps.map(toStepFormWithId)
   submitError.value = null
 }
@@ -137,6 +141,8 @@ function removeStep(idx: number) {
 function validate(): string | null {
   if (!title.value.trim()) return 'Workflow title is required.'
   if (steps.value.length === 0) return 'At least one step is required.'
+  if (rootType.value === 'ParallelActivity' && steps.value.length < 2)
+    return 'A parallel workflow requires at least 2 steps.'
 
   function validateNode(s: StepFormWithId, path: string): string | null {
     if (!s.title.trim()) return `${path} title is required.`
@@ -182,6 +188,7 @@ async function submit() {
   const form: AddWorkflowForm = {
     title: title.value.trim(),
     description: description.value.trim(),
+    rootType: rootType.value,
     steps: steps.value.map(toStepForm),
   }
 
@@ -288,6 +295,27 @@ reset()
               rows="2"
               placeholder="Brief description of this workflow"
             />
+          </div>
+
+          <!-- Root behaviour type -->
+          <div v-if="!metadataOnly" class="field">
+            <label class="field-label">Behaviour <span class="required">*</span></label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input v-model="rootType" type="radio" value="SequentialActivity" />
+                <span class="radio-label">
+                  <strong>Sequential</strong>
+                  <span class="radio-hint">Steps execute one after another</span>
+                </span>
+              </label>
+              <label class="radio-option">
+                <input v-model="rootType" type="radio" value="ParallelActivity" />
+                <span class="radio-label">
+                  <strong>Parallel</strong>
+                  <span class="radio-hint">Steps execute concurrently (at least 2 required)</span>
+                </span>
+              </label>
+            </div>
           </div>
 
           <hr class="divider" />
@@ -501,6 +529,47 @@ reset()
 }
 
 .add-step-btn:hover { background: #f0fdf4; }
+
+.radio-group {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.radio-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+  flex: 1;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.radio-option:has(input:checked) {
+  border-color: var(--color-primary);
+  background: #f0fdf4;
+}
+
+.radio-option input[type='radio'] {
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+  accent-color: var(--color-primary);
+}
+
+.radio-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.875rem;
+}
+
+.radio-hint {
+  font-size: 0.78rem;
+  color: #6b7280;
+  font-weight: 400;
+}
 
 .submit-error {
   font-size: 0.875rem;
