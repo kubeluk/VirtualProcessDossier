@@ -1010,6 +1010,44 @@ ${lines.join('\n')}
 
   // ── System CRUD ──────────────────────────────────────────────────────────
 
+  async function fetchSystem(uri: string): Promise<SystemSummary | null> {
+    const query = `
+      PREFIX ssn:     <http://www.w3.org/ns/ssn/>
+      PREFIX dcterms: <http://purl.org/dc/terms/>
+
+      SELECT ?title ?identifier ?description ?actUri ?actTitle WHERE {
+        OPTIONAL { <${uri}> dcterms:title ?title }
+        OPTIONAL { <${uri}> dcterms:identifier ?identifier }
+        OPTIONAL { <${uri}> dcterms:description ?description }
+        OPTIONAL {
+          <${uri}> ssn:implements ?actUri .
+          OPTIONAL { ?actUri dcterms:title ?actTitle }
+        }
+      }
+      ORDER BY ?actTitle
+    `
+    const results = await querySparql(graphStore.endpoint, query)
+    const bindings = results.results.bindings
+    if (bindings.length === 0) return null
+    const first = bindings[0]
+    const system: SystemSummary = {
+      uri,
+      title: first.title?.value ?? null,
+      identifier: first.identifier?.value ?? null,
+      description: first.description?.value ?? null,
+      implementedActivities: [],
+    }
+    for (const b of bindings) {
+      if (b.actUri) {
+        system.implementedActivities.push({
+          uri: b.actUri.value,
+          title: b.actTitle?.value ?? null,
+        })
+      }
+    }
+    return system
+  }
+
   async function fetchSystems(): Promise<SystemSummary[]> {
     const query = `
       PREFIX ssn:     <http://www.w3.org/ns/ssn/>
@@ -1500,6 +1538,7 @@ ${lines.join('\n')}
     deleteWorkflowModel,
     addWorkflowRun,
     fetchWorkflowStepOptions,
+    fetchSystem,
     fetchSystems,
     addSystem,
     updateSystem,
