@@ -364,7 +364,6 @@ vpd:workflow-manufacturing-line
 # Root sequential activity — the four steps execute one after another.
 vpd:wfact-root
     a wild:SequentialActivity ;
-    dcterms:title            "Manufacturing Line — Sequential Root"@en ;
     wild:hasChildActivities  (
         vpd:step-material-preparation
         vpd:step-cnc-machining
@@ -376,8 +375,9 @@ vpd:wfact-root
 # the power consumption observation.
 vpd:step-material-preparation
     a wild:AtomicActivity , sosa:Procedure ;
-    dcterms:title       "Step 1: Raw Material Intake & Preparation"@en ;
+    dcterms:title       "Raw Material Intake & Preparation"@en ;
     dcterms:description "Incoming raw stock is received, inspected against material certificates, and cut to near-net-shape blanks. Transfer pallets are loaded and the production line is brought online. Power consumption monitoring begins at this point to establish the energy baseline for the full shift."@en ;
+    dcterms:issued     "2026-04-12T12:31:18.163Z"^^xsd:dateTime ;
     ssn:implementedBy   vpd:sys-intake-station ;
     ssn:hasInput        vpd:input-raw-stock .
 
@@ -385,8 +385,6 @@ vpd:step-material-preparation
 # run concurrently on the CNC machines throughout the machining phase.
 vpd:step-cnc-machining
     a wild:ParallelActivity ;
-    dcterms:title            "Step 2: CNC Precision Machining"@en ;
-    dcterms:description      "Blanks are clamped on CNC turning and milling centres for precision material removal to final dimensions. Spindle temperature is monitored to prevent thermal drift, and bearing vibration is tracked to detect developing faults before they cause scrap or unplanned downtime."@en ;
     wild:hasChildActivities  (
         vpd:wfact-cnc-temperature
         vpd:wfact-cnc-vibration
@@ -396,6 +394,7 @@ vpd:wfact-cnc-temperature
     a wild:AtomicActivity , sosa:Procedure ;
     dcterms:title       "CNC Temperature Monitoring"@en ;
     dcterms:description "Continuous acquisition of spindle motor, coolant, and enclosure temperatures to detect thermal drift during cutting operations."@en ;
+    dcterms:issued     "2026-04-12T12:31:18.163Z"^^xsd:dateTime ;
     ssn:implementedBy   vpd:sys-cnc-line-a ;
     ssn:hasInput        vpd:input-machined-blanks .
 
@@ -403,6 +402,7 @@ vpd:wfact-cnc-vibration
     a wild:AtomicActivity , sosa:Procedure ;
     dcterms:title       "CNC Vibration Condition Monitoring"@en ;
     dcterms:description "Continuous tri-axial vibration monitoring of spindle bearing housings to identify wear signatures and trigger predictive maintenance actions."@en ;
+    dcterms:issued     "2026-04-12T12:31:18.163Z"^^xsd:dateTime ;
     ssn:implementedBy   vpd:sys-cnc-line-a ;
     ssn:hasInput        vpd:input-machined-blanks .
 
@@ -410,8 +410,9 @@ vpd:wfact-cnc-vibration
 # pressure observation.
 vpd:step-hydraulic-forming
     a wild:AtomicActivity , sosa:Procedure ;
-    dcterms:title       "Step 3: Hydraulic Forming & Stamping"@en ;
+    dcterms:title       "Hydraulic Forming & Stamping"@en ;
     dcterms:description "Machined parts are transferred to Hall B where hydraulic presses perform stamping, deep drawing, and bending to achieve final geometry. Hydraulic circuit pressure is recorded for every press cycle to verify forming force and detect seal or accumulator faults in real time."@en ;
+    dcterms:issued     "2026-04-12T12:31:18.163Z"^^xsd:dateTime ;
     ssn:implementedBy   vpd:sys-hydraulic-presses-b ;
     ssn:hasInput        vpd:input-machined-parts .
 
@@ -420,8 +421,9 @@ vpd:step-hydraulic-forming
 # Steps 1–3 are used for traceability.
 vpd:step-quality-dispatch
     a wild:AtomicActivity , sosa:Procedure ;
-    dcterms:title       "Step 4: Quality Inspection & Dispatch"@en ;
+    dcterms:title       "Quality Inspection & Dispatch"@en ;
     dcterms:description "Finished parts undergo dimensional verification on a coordinate measuring machine (CMM) and visual surface inspection. Each accepted part receives a traceability label linking it to the process records from Steps 1–3. Approved batches are packaged and transferred to the dispatch area."@en ;
+    dcterms:issued     "2026-04-12T12:31:18.163Z"^^xsd:dateTime ;
     ssn:implementedBy   vpd:sys-cmm-dispatch ;
     ssn:hasInput        vpd:input-formed-parts .
 
@@ -439,10 +441,56 @@ vpd:step-quality-dispatch
 vpd:wfinst-manufacturing-line
     a wild:WorkflowInstance ;
     dcterms:title          "Manufacturing Line Process — Active Instance"@en ;
-    dcterms:description    "Running execution of the manufacturing line workflow. Sensor observations from Steps 1–3 are recorded as completed activity instances. Step 4 (quality inspection) has no associated observation dataset in this instance."@en ;
+    dcterms:description    "Completed execution of the manufacturing line workflow. Sensor observations from Steps 1–3 are recorded as completed activity instances. Step 4 (quality inspection) has no associated observation dataset in this instance."@en ;
     wild:workflowInstanceOf vpd:workflow-manufacturing-line ;
-    wild:hasState           wild:active ;
+    wild:hasState           wild:done ;
     prov:startedAtTime      "2023-01-01T00:00:00Z"^^xsd:dateTime .
+
+# Control-flow activity instances — one per model activity node.
+# These carry state and are distinguished from observation instances by the
+# absence of sosa:hasResult. The fetchRun query merges both kinds by model activity.
+
+vpd:actinst-mfg-line-root
+    a wild:ActivityInstance ;
+    wild:activityInstanceOf  vpd:wfact-root ;
+    wild:inWorkflowInstance  vpd:wfinst-manufacturing-line ;
+    wild:hasState            wild:done .
+
+vpd:actinst-mfg-line-mat-prep
+    a wild:ActivityInstance ;
+    wild:activityInstanceOf  vpd:step-material-preparation ;
+    wild:inWorkflowInstance  vpd:wfinst-manufacturing-line ;
+    wild:hasState            wild:done .
+
+vpd:actinst-mfg-line-cnc-mach
+    a wild:ActivityInstance ;
+    wild:activityInstanceOf  vpd:step-cnc-machining ;
+    wild:inWorkflowInstance  vpd:wfinst-manufacturing-line ;
+    wild:hasState            wild:done .
+
+vpd:actinst-mfg-line-cnc-temp
+    a wild:ActivityInstance ;
+    wild:activityInstanceOf  vpd:wfact-cnc-temperature ;
+    wild:inWorkflowInstance  vpd:wfinst-manufacturing-line ;
+    wild:hasState            wild:done .
+
+vpd:actinst-mfg-line-cnc-vib
+    a wild:ActivityInstance ;
+    wild:activityInstanceOf  vpd:wfact-cnc-vibration ;
+    wild:inWorkflowInstance  vpd:wfinst-manufacturing-line ;
+    wild:hasState            wild:done .
+
+vpd:actinst-mfg-line-hyd-form
+    a wild:ActivityInstance ;
+    wild:activityInstanceOf  vpd:step-hydraulic-forming ;
+    wild:inWorkflowInstance  vpd:wfinst-manufacturing-line ;
+    wild:hasState            wild:done .
+
+vpd:actinst-mfg-line-qlt-disp
+    a wild:ActivityInstance ;
+    wild:activityInstanceOf  vpd:step-quality-dispatch ;
+    wild:inWorkflowInstance  vpd:wfinst-manufacturing-line ;
+    wild:hasState            wild:done .
 
 # ---------------------------------------------------------------------------
 # Systems (ssn:System) — implement the atomic activities (sosa:Procedure)
