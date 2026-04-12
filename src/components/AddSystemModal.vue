@@ -201,7 +201,10 @@ reset()
                 <span class="check-box">
                   <span v-if="selectedActivityUris.includes(act.uri)" class="check-tick">✓</span>
                 </span>
-                <span class="check-label">{{ act.title ?? act.uri }}</span>
+                <span class="check-label">
+                  <span class="check-title">{{ act.title ?? act.uri }}</span>
+                  <span v-if="act.description" class="check-description">{{ act.description }}</span>
+                </span>
               </li>
             </ul>
           </div>
@@ -397,6 +400,21 @@ reset()
 
 .check-label {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.check-title {
+  font-size: 0.875rem;
+  color: var(--color-text);
+  line-height: 1.3;
+}
+
+.check-description {
+  font-size: 0.75rem;
+  color: #6b7280;
+  line-height: 1.3;
 }
 
 .error-msg {
