@@ -47,12 +47,7 @@ const childCount = computed(() => props.step.children.length)
           <p v-if="step.description" class="step-description">{{ step.description }}</p>
           <div v-if="step.systemTitle || step.inputTitle" class="step-meta">
             <span v-if="step.systemTitle" class="meta-item">
-              <span class="meta-label">System:</span>
-              <RouterLink
-                :to="{ name: 'system', query: { uri: step.systemUri! } }"
-                class="meta-link"
-                @click.stop
-              >{{ step.systemTitle }}</RouterLink>
+              <span class="meta-label">System:</span> {{ step.systemTitle }}
             </span>
             <span v-if="step.inputTitle" class="meta-item">
               <span class="meta-label">Input:</span> {{ step.inputTitle }}
@@ -251,12 +246,6 @@ const childCount = computed(() => props.step.children.length)
   font-weight: 600;
   color: #4b5563;
 }
-
-.meta-link {
-  color: var(--color-primary);
-  text-decoration: none;
-}
-.meta-link:hover { text-decoration: underline; }
 
 /* ── Children clusters ── */
 .step-children--sequential {

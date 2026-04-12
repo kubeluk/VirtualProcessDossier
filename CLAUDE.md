@@ -40,7 +40,6 @@ src/
     RunView.vue             # Workflow run detail: editable header, step timeline, datasets
     ActivityListView.vue    # Activity library: browse/create/edit reusable atomic activities
     SystemListView.vue      # System library: browse/create/edit ssn:System instances
-    SystemView.vue          # System detail page; route: /system?uri=<encoded-uri>
 data/
   catalog.ttl    # DCAT seed data (loaded automatically on first Docker start)
   seed.sh        # Init script run by the 'seed' Docker service
@@ -136,7 +135,6 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 | `/run?uri=` | `run` | RunView | Workflow run detail: editable header, activity instance tree with state + datasets (uri = WorkflowInstance URI) |
 | `/activities` | `activities` | ActivityListView | Activity library: browse/create/edit reusable atomic activities |
 | `/systems` | `systems` | SystemListView | System library: browse/create/edit ssn:System instances |
-| `/system?uri=` | `system` | SystemView | System detail: name, identifier, description, implemented activities; edit button opens AddSystemModal (uri = ssn:System URI) |
 
 ## Features
 
@@ -212,8 +210,7 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 - **Identifier**: stored as `dcterms:identifier`; also slugified to form the URI at create time — `<base>sys-<slugified-identifier>` (no timestamp suffix; identifier is user-assigned and expected to be unique); editable after creation (updates `dcterms:identifier` only, URI is stable)
 - **`ssn:implements`**: written on the system side (`<system> ssn:implements <activity>`); coexists with the activity-side `ssn:implementedBy` triples written by the workflow editor; `deleteSystem` also cleans up any `ssn:implementedBy <uri>` triples on activities
 - URI pattern: `<base>sys-<slugified-identifier>` (e.g. `vpd:sys-cnc-line-a`)
-- System name in `WorkflowStepNode` is a `<RouterLink>` to `/system?uri=` when present; `@click.stop` prevents the collapse toggle from firing
-- Workflow store functions: `fetchSystem(uri): Promise<SystemSummary | null>`, `fetchSystems(): Promise<SystemSummary[]>`, `addSystem(form)`, `updateSystem(uri, form)`, `deleteSystem(uri)`; interfaces `SystemSummary`, `SystemForm` exported from `src/stores/workflow.ts`
+- Workflow store functions: `fetchSystems(): Promise<SystemSummary[]>`, `addSystem(form)`, `updateSystem(uri, form)`, `deleteSystem(uri)`; interfaces `SystemSummary`, `SystemForm` exported from `src/stores/workflow.ts`
 
 ### Activity Library (implemented)
 - Reusable `wild:AtomicActivity` resources that can be referenced by workflow models instead of defining activities inline
