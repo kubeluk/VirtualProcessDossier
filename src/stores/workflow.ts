@@ -98,6 +98,25 @@ export interface ProcedureOption {
   description: string | null
 }
 
+// ---------------------------------------------------------------------------
+// System types
+// ---------------------------------------------------------------------------
+
+export interface SystemSummary {
+  uri: string
+  title: string | null
+  identifier: string | null
+  description: string | null
+  implementedActivities: Array<{ uri: string; title: string | null }>
+}
+
+export interface SystemForm {
+  title: string       // mandatory
+  identifier: string  // mandatory; used to form URI on create; stored as dcterms:identifier
+  description: string // optional
+  activityUris: string[]  // ssn:implements targets (zero or more)
+}
+
 export interface AddWorkflowForm {
   title: string
   description: string
@@ -989,6 +1008,134 @@ ${lines.join('\n')}
     return instanceUri
   }
 
+  // ── System CRUD ──────────────────────────────────────────────────────────
+
+  async function fetchSystems(): Promise<SystemSummary[]> {
+    const query = `
+      PREFIX ssn:     <http://www.w3.org/ns/ssn/>
+      PREFIX dcterms: <http://purl.org/dc/terms/>
+
+      SELECT ?uri ?title ?identifier ?description ?actUri ?actTitle WHERE {
+        ?uri a ssn:System .
+        OPTIONAL { ?uri dcterms:title ?title }
+        OPTIONAL { ?uri dcterms:identifier ?identifier }
+        OPTIONAL { ?uri dcterms:description ?description }
+        OPTIONAL {
+          ?uri ssn:implements ?actUri .
+          OPTIONAL { ?actUri dcterms:title ?actTitle }
+        }
+      }
+      ORDER BY ?title ?actTitle
+    `
+    const results = await querySparql(graphStore.endpoint, query)
+    const map = new Map<string, SystemSummary>()
+    for (const b of results.results.bindings) {
+      const uri = b.uri.value
+      if (!map.has(uri)) {
+        map.set(uri, {
+          uri,
+          title: b.title?.value ?? null,
+          identifier: b.identifier?.value ?? null,
+          description: b.description?.value ?? null,
+          implementedActivities: [],
+        })
+      }
+      if (b.actUri) {
+        map.get(uri)!.implementedActivities.push({
+          uri: b.actUri.value,
+          title: b.actTitle?.value ?? null,
+        })
+      }
+    }
+    return Array.from(map.values())
+  }
+
+  async function addSystem(form: SystemForm): Promise<string> {
+    const slug = form.identifier
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 60) || 'system'
+    const base = 'https://example.org/vpd#'
+    const uri = `${base}sys-${slug}`
+
+    function esc(s: string): string {
+      return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+    }
+
+    const lines: string[] = []
+    lines.push(`  <${uri}> a ssn:System .`)
+    lines.push(`  <${uri}> dcterms:title "${esc(form.title)}"@en .`)
+    lines.push(`  <${uri}> dcterms:identifier "${esc(form.identifier)}" .`)
+    if (form.description.trim()) {
+      lines.push(`  <${uri}> dcterms:description "${esc(form.description)}"@en .`)
+    }
+    for (const actUri of form.activityUris) {
+      lines.push(`  <${uri}> ssn:implements <${actUri}> .`)
+    }
+
+    const update = `
+      PREFIX ssn:     <http://www.w3.org/ns/ssn/>
+      PREFIX dcterms: <http://purl.org/dc/terms/>
+
+      INSERT DATA {
+${lines.join('\n')}
+      }
+    `
+    await updateSparql(graphStore.updateEndpoint, update)
+    return uri
+  }
+
+  async function updateSystem(uri: string, form: SystemForm): Promise<void> {
+    function esc(s: string): string {
+      return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+    }
+    const descInsert = form.description.trim()
+      ? `<${uri}> dcterms:description "${esc(form.description)}"@en .`
+      : ''
+    const implementsInsert = form.activityUris
+      .map((a) => `<${uri}> ssn:implements <${a}> .`)
+      .join('\n        ')
+
+    const update = `
+      PREFIX ssn:     <http://www.w3.org/ns/ssn/>
+      PREFIX dcterms: <http://purl.org/dc/terms/>
+
+      DELETE {
+        <${uri}> dcterms:title ?t .
+        <${uri}> dcterms:identifier ?id .
+        <${uri}> dcterms:description ?d .
+        <${uri}> ssn:implements ?act .
+      }
+      INSERT {
+        <${uri}> dcterms:title "${esc(form.title)}"@en .
+        <${uri}> dcterms:identifier "${esc(form.identifier)}" .
+        ${descInsert}
+        ${implementsInsert}
+      }
+      WHERE {
+        OPTIONAL { <${uri}> dcterms:title ?t }
+        OPTIONAL { <${uri}> dcterms:identifier ?id }
+        OPTIONAL { <${uri}> dcterms:description ?d }
+        OPTIONAL { <${uri}> ssn:implements ?act }
+      }
+    `
+    await updateSparql(graphStore.updateEndpoint, update)
+  }
+
+  async function deleteSystem(uri: string): Promise<void> {
+    const update = `
+      PREFIX ssn: <http://www.w3.org/ns/ssn/>
+
+      DELETE { <${uri}> ?p ?o }
+      WHERE  { <${uri}> ?p ?o } ;
+
+      DELETE { ?s ssn:implementedBy <${uri}> }
+      WHERE  { ?s ssn:implementedBy <${uri}> }
+    `
+    await updateSparql(graphStore.updateEndpoint, update)
+  }
+
   // ── System / Input option lists (for workflow authoring selects) ─────────
 
   async function fetchSystemOptions(): Promise<ProcedureOption[]> {
@@ -1353,6 +1500,10 @@ ${lines.join('\n')}
     deleteWorkflowModel,
     addWorkflowRun,
     fetchWorkflowStepOptions,
+    fetchSystems,
+    addSystem,
+    updateSystem,
+    deleteSystem,
     fetchSystemOptions,
     fetchInputOptions,
     fetchAtomicActivities,

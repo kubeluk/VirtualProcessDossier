@@ -1,23 +1,23 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useWorkflowStore, type AtomicActivitySummary } from '@/stores/workflow'
-import AddActivityModal from '@/components/AddActivityModal.vue'
+import { useWorkflowStore, type SystemSummary } from '@/stores/workflow'
+import AddSystemModal from '@/components/AddSystemModal.vue'
 
 const workflowStore = useWorkflowStore()
 
-const activities = ref<AtomicActivitySummary[]>([])
+const systems = ref<SystemSummary[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 const showModal = ref(false)
-const selectedActivity = ref<AtomicActivitySummary | null>(null)
+const selectedSystem = ref<SystemSummary | null>(null)
 
 async function load() {
   loading.value = true
   error.value = null
   try {
-    activities.value = await workflowStore.fetchAtomicActivities()
+    systems.value = await workflowStore.fetchSystems()
   } catch {
-    error.value = 'Failed to load activities. Make sure the triple store is running.'
+    error.value = 'Failed to load systems. Make sure the triple store is running.'
   } finally {
     loading.value = false
   }
@@ -26,82 +26,71 @@ async function load() {
 onMounted(load)
 
 function openCreate() {
-  selectedActivity.value = null
+  selectedSystem.value = null
   showModal.value = true
 }
 
-function openEdit(activity: AtomicActivitySummary) {
-  selectedActivity.value = activity
+function openEdit(system: SystemSummary) {
+  selectedSystem.value = system
   showModal.value = true
-}
-
-function onCreated() {
-  load()
-}
-
-function onUpdated() {
-  load()
-}
-
-function onDeleted() {
-  load()
 }
 </script>
 
 <template>
-  <main class="activity-list">
+  <main class="system-list">
     <header class="page-header">
       <div class="page-header-row">
         <div>
-          <h1>Activity Library</h1>
+          <h1>Systems</h1>
           <p class="subtitle">
-            Reusable atomic activities that can be referenced in workflow models.
+            Machines and stations that implement workflow activities.
           </p>
         </div>
-        <button class="btn btn--primary" @click="openCreate">+ Add Activity</button>
+        <button class="btn btn--primary" @click="openCreate">+ Add System</button>
       </div>
     </header>
 
-    <AddActivityModal
+    <AddSystemModal
       v-model="showModal"
-      :edit-activity="selectedActivity"
-      @created="onCreated"
-      @updated="onUpdated"
-      @deleted="onDeleted"
+      :edit-system="selectedSystem"
+      @created="load"
+      @updated="load"
+      @deleted="load"
     />
 
     <nav class="page-nav">
       <RouterLink to="/catalog" class="nav-tab">Datasets</RouterLink>
       <RouterLink to="/workflows" class="nav-tab">Workflows</RouterLink>
-      <RouterLink to="/activities" class="nav-tab nav-tab--active">Activities</RouterLink>
-      <RouterLink to="/systems" class="nav-tab">Systems</RouterLink>
+      <RouterLink to="/activities" class="nav-tab">Activities</RouterLink>
+      <RouterLink to="/systems" class="nav-tab nav-tab--active">Systems</RouterLink>
     </nav>
 
-    <div v-if="loading" class="state-message">Loading activities…</div>
+    <div v-if="loading" class="state-message">Loading systems…</div>
 
     <div v-else-if="error" class="state-message error">{{ error }}</div>
 
-    <div v-else-if="activities.length === 0" class="state-message">
-      No activities in the library yet. Create one to reuse it across workflow models.
+    <div v-else-if="systems.length === 0" class="state-message">
+      No systems yet. Add one to associate machines with workflow activities.
     </div>
 
-    <ul v-else class="activity-card-list">
+    <ul v-else class="system-card-list">
       <li
-        v-for="act in activities"
-        :key="act.uri"
-        class="activity-card"
-        @click="openEdit(act)"
+        v-for="sys in systems"
+        :key="sys.uri"
+        class="system-card"
+        @click="openEdit(sys)"
       >
         <div class="card-body">
-          <h2 class="card-title">{{ act.title ?? act.uri }}</h2>
-          <p v-if="act.description" class="card-description">{{ act.description }}</p>
+          <h2 class="card-title">{{ sys.title ?? sys.uri }}</h2>
+          <p v-if="sys.description" class="card-description">{{ sys.description }}</p>
         </div>
         <div class="card-meta">
-          <span v-if="act.systemTitle ?? act.systemUri" class="meta-item">
-            System: {{ act.systemTitle ?? act.systemUri }}
+          <span v-if="sys.identifier" class="meta-item">
+            ID: {{ sys.identifier }}
           </span>
-          <span v-if="act.inputTitle ?? act.inputUri" class="meta-item">
-            Input: {{ act.inputTitle ?? act.inputUri }}
+          <span v-if="sys.implementedActivities.length > 0" class="meta-item">
+            Implements:
+            {{ sys.implementedActivities.map((a) => a.title ?? a.uri).join(', ') }}
           </span>
           <span class="meta-item meta-link">Edit →</span>
         </div>
@@ -111,7 +100,7 @@ function onDeleted() {
 </template>
 
 <style scoped>
-.activity-list {
+.system-list {
   max-width: 800px;
   margin: 0 auto;
   padding: 2rem 1.5rem;
@@ -177,7 +166,7 @@ function onDeleted() {
   color: #dc2626;
 }
 
-.activity-card-list {
+.system-card-list {
   list-style: none;
   padding: 0;
   margin: 0;
@@ -186,7 +175,7 @@ function onDeleted() {
   gap: 0.75rem;
 }
 
-.activity-card {
+.system-card {
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 1.25rem 1.5rem;
@@ -195,7 +184,7 @@ function onDeleted() {
   background: var(--color-background);
 }
 
-.activity-card:hover {
+.system-card:hover {
   border-color: var(--color-primary);
   box-shadow: 0 2px 8px rgba(66, 184, 131, 0.15);
 }

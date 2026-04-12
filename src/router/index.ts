@@ -6,6 +6,7 @@ import WorkflowListView from '@/views/WorkflowListView.vue'
 import WorkflowView from '@/views/WorkflowView.vue'
 import RunView from '@/views/RunView.vue'
 import ActivityListView from '@/views/ActivityListView.vue'
+import SystemListView from '@/views/SystemListView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -44,6 +45,11 @@ const router = createRouter({
       path: '/activities',
       name: 'activities',
       component: ActivityListView,
+    },
+    {
+      path: '/systems',
+      name: 'systems',
+      component: SystemListView,
     },
   ],
 })

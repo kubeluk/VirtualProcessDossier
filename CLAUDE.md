@@ -27,6 +27,7 @@ src/
     AddDatasetModal.vue    # Modal for adding a new dataset to a run step
     AddWorkflowModal.vue   # Modal for creating a workflow model or editing its metadata/structure
     AddActivityModal.vue   # Modal for creating/editing a library atomic activity
+    AddSystemModal.vue     # Modal for creating/editing an ssn:System
     StepEditorNode.vue     # Recursive step-editing component used by AddWorkflowModal
     WorkflowStepNode.vue   # Recursive read-only step display used by WorkflowView
     RunActivityNode.vue    # Recursive activity instance display used by RunView (with state + datasets)
@@ -38,6 +39,7 @@ src/
     WorkflowView.vue        # Workflow model detail: step skeleton + runs list + edit button
     RunView.vue             # Workflow run detail: editable header, step timeline, datasets
     ActivityListView.vue    # Activity library: browse/create/edit reusable atomic activities
+    SystemListView.vue      # System library: browse/create/edit ssn:System instances
 data/
   catalog.ttl    # DCAT seed data (loaded automatically on first Docker start)
   seed.sh        # Init script run by the 'seed' Docker service
@@ -115,7 +117,7 @@ docker compose down -v           # Tear down including data volume (resets seed)
   - `ssn:hasInput` → `ssn:Input` — the material or data consumed by the step
 - Seeded `ssn:System` resources: `vpd:sys-intake-station`, `vpd:sys-cnc-line-a`, `vpd:sys-hydraulic-presses-b`, `vpd:sys-cmm-dispatch`
 - Seeded `ssn:Input` resources: `vpd:input-raw-stock`, `vpd:input-machined-blanks`, `vpd:input-machined-parts`, `vpd:input-formed-parts`
-- Confirmed valid SSN terms used: `ssn:System`, `ssn:Input`, `ssn:hasInput`, `ssn:implementedBy`
+- Confirmed valid SSN terms used: `ssn:System`, `ssn:Input`, `ssn:hasInput`, `ssn:implementedBy`, `ssn:implements` (inverse of `ssn:implementedBy`; written on the system side when authoring via the System library UI)
 
 ## Domain Context
 
@@ -132,6 +134,7 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 | `/workflow?uri=` | `workflow` | WorkflowView | Workflow model detail: step skeleton + list of runs (uri = WorkflowModel URI) |
 | `/run?uri=` | `run` | RunView | Workflow run detail: editable header, activity instance tree with state + datasets (uri = WorkflowInstance URI) |
 | `/activities` | `activities` | ActivityListView | Activity library: browse/create/edit reusable atomic activities |
+| `/systems` | `systems` | SystemListView | System library: browse/create/edit ssn:System instances |
 
 ## Features
 
@@ -199,6 +202,15 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 - `AddWorkflowModal` loads `fetchSystemOptions()`, `fetchInputOptions()`, and `fetchAtomicActivityOptions()` in parallel when opening (both create and edit modes); passes them down to each `StepEditorNode`
 - System/input triples are written in `addWorkflowModel`, `updateWorkflowModel` (full edit), and `updateWorkflowModelMetadata` (metadata-only, safe when runs exist — these properties are not structural); `updateWorkflowModelMetadata` only touches `AtomicActivity` nodes, so system/input updates are naturally scoped correctly
 - Workflow store: `fetchSystemOptions(): Promise<ProcedureOption[]>`, `fetchInputOptions(): Promise<ProcedureOption[]>` — query all `ssn:System` / `ssn:Input` resources ordered by title; `ProcedureOption` interface exported from `src/stores/workflow.ts`
+
+### System Library (implemented)
+- `ssn:System` resources representing machines and stations that implement workflow activities
+- **Browse**: `/systems` lists all systems with name, identifier, description, and the activities they implement; tab nav shared with Datasets, Workflows, and Activities
+- **Create / Edit / Delete**: clicking a card or "+ Add System" opens `AddSystemModal`; name and identifier are mandatory; description optional; a scrollable checklist selects zero or more `wild:AtomicActivity` library instances the system implements (`ssn:implements`)
+- **Identifier**: stored as `dcterms:identifier`; also slugified to form the URI at create time — `<base>sys-<slugified-identifier>` (no timestamp suffix; identifier is user-assigned and expected to be unique); editable after creation (updates `dcterms:identifier` only, URI is stable)
+- **`ssn:implements`**: written on the system side (`<system> ssn:implements <activity>`); coexists with the activity-side `ssn:implementedBy` triples written by the workflow editor; `deleteSystem` also cleans up any `ssn:implementedBy <uri>` triples on activities
+- URI pattern: `<base>sys-<slugified-identifier>` (e.g. `vpd:sys-cnc-line-a`)
+- Workflow store functions: `fetchSystems(): Promise<SystemSummary[]>`, `addSystem(form)`, `updateSystem(uri, form)`, `deleteSystem(uri)`; interfaces `SystemSummary`, `SystemForm` exported from `src/stores/workflow.ts`
 
 ### Activity Library (implemented)
 - Reusable `wild:AtomicActivity` resources that can be referenced by workflow models instead of defining activities inline

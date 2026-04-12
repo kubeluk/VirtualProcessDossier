@@ -53,6 +53,7 @@ function openWorkflow(uri: string) {
       <RouterLink to="/catalog" class="nav-tab">Datasets</RouterLink>
       <RouterLink to="/workflows" class="nav-tab nav-tab--active">Workflows</RouterLink>
       <RouterLink to="/activities" class="nav-tab">Activities</RouterLink>
+      <RouterLink to="/systems" class="nav-tab">Systems</RouterLink>
     </nav>
 
     <div v-if="loading" class="state-message">Loading workflows…</div>
