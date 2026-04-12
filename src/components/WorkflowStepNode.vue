@@ -33,14 +33,11 @@ const childCount = computed(() => props.step.children.length)
     <!-- ── ATOMIC ACTIVITY ── -->
     <template v-if="isAtomic">
       <div class="step-item">
-        <!-- Sequential circle marker -->
-        <div v-if="context === 'sequential'" class="step-marker">
+        <!-- Numbered circle — always shown for atomic activities regardless of parent context.
+             Connector line only drawn in sequential flow (parallel cluster border suffices there). -->
+        <div class="step-marker">
           <div class="step-circle">{{ stepNumber }}</div>
-          <div v-if="index < total - 1" class="step-connector-line"></div>
-        </div>
-        <!-- Parallel bullet marker -->
-        <div v-else class="step-parallel-marker">
-          <div class="step-parallel-dot"></div>
+          <div v-if="context === 'sequential' && index < total - 1" class="step-connector-line"></div>
         </div>
 
         <div class="step-content step-content--leaf">
@@ -63,14 +60,11 @@ const childCount = computed(() => props.step.children.length)
     <!-- ── COMPOSITE ACTIVITY (structural container, no data title) ── -->
     <template v-else>
       <div class="step-item">
-        <!-- Sequential position indicator -->
-        <div v-if="context === 'sequential'" class="step-marker">
+        <!-- Hollow numbered circle — always shown for composite nodes regardless of parent context.
+             Connector line only in sequential flow. -->
+        <div class="step-marker">
           <div class="step-circle step-circle--composite">{{ stepNumber }}</div>
-          <div v-if="index < total - 1 || expanded" class="step-connector-line"></div>
-        </div>
-        <!-- Parallel bullet -->
-        <div v-else class="step-parallel-marker">
-          <div class="step-parallel-dot step-parallel-dot--composite"></div>
+          <div v-if="context === 'sequential' && (index < total - 1 || expanded)" class="step-connector-line"></div>
         </div>
 
         <div class="step-content">
@@ -164,28 +158,6 @@ const childCount = computed(() => props.step.children.length)
   min-height: 1.5rem;
 }
 
-/* ── Parallel bullet marker ── */
-.step-parallel-marker {
-  display: flex;
-  align-items: flex-start;
-  padding-top: 0.55rem;
-  flex-shrink: 0;
-  width: 1.25rem;
-}
-
-.step-parallel-dot {
-  width: 0.55rem;
-  height: 0.55rem;
-  border-radius: 50%;
-  background: #3b82f6;
-  flex-shrink: 0;
-}
-
-.step-parallel-dot--composite {
-  background: transparent;
-  border: 1.5px solid #93c5fd;
-}
-
 /* ── Step content ── */
 .step-content {
   flex: 1;
@@ -241,9 +213,9 @@ const childCount = computed(() => props.step.children.length)
 }
 
 .step-badge--sequential {
-  background: #f9fafb;
-  color: #6b7280;
-  border: 1px solid #e5e7eb;
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
 }
 
 .step-collapsed-hint {
@@ -278,9 +250,10 @@ const childCount = computed(() => props.step.children.length)
 /* ── Children clusters ── */
 .step-children--sequential {
   margin-left: 3.25rem;
-  padding: 0.5rem 0.75rem 0 1rem;
-  border-left: 3px solid var(--color-border);
-  border-radius: 0 4px 4px 0;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid #bbf7d0;
+  border-radius: 0 6px 6px 0;
+  background: #f0fdf4;
   display: flex;
   flex-direction: column;
   margin-bottom: 1.5rem;
