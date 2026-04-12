@@ -146,7 +146,7 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 - Workflow model at `/workflow?uri=<modelUri>`: shows read-only step skeleton + a list of `wild:WorkflowInstance` run cards; clicking a run navigates to `/run`
 - Workflow run at `/run?uri=<instanceUri>`: editable title/description (SPARQL DELETE/INSERT); primary content is the **Activity Instances** tree — one node per model activity, driven by the model tree structure
   - Tree mirrors the model's `wild:hasBehaviour/(wild:hasChildActivities/rdf:rest*/rdf:first)*` hierarchy at any depth
-  - Each node shows: model activity title (from `dcterms:title` on the model activity), `wild:hasState` badge (Pending / Active / Done), and — for atomic nodes — dataset chips + "+ Add dataset"
+  - Each node shows: model activity title (from `dcterms:title` on the model activity), `wild:hasState` badge (verbatim ontology values: `initialized`, `active`, `done`), and — for atomic nodes — dataset chips + "+ Add dataset"
   - **Two kinds of activity instance**: control flow instances (created by `addWorkflowRun`, identified by `FILTER NOT EXISTS { ?actInst sosa:hasResult ?_ }`) carry state; observation instances (created by `addDataset`, typed `sosa:Observation`) carry datasets via `dcterms:isPartOf`. `fetchRun` queries them separately and merges by model activity.
   - Cross-cutting datasets (`dcterms:isPartOf <workflowInstanceUri>`) in a "Full-run Datasets" section
   - "Add dataset" per activity opens `AddDatasetModal` scoped to the current run, preselected to the model activity URI
@@ -158,7 +158,7 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 - Workflow store: `src/stores/workflow.ts` — `fetchWorkflows()`, `fetchWorkflow(uri)` (returns recursive `WorkflowStep` tree), `fetchWorkflowInstances(modelUri)`, `fetchRun(instanceUri)`, `updateWorkflowInstance(uri, title, desc)`, `fetchWorkflowStepOptions(instanceUri?)`, `addWorkflowModel(form)`, `fetchWorkflowForEdit(uri)` (returns recursive `StepForm` tree), `updateWorkflowModel(uri, form)`, `updateWorkflowModelMetadata(uri, form)`, `deleteWorkflowModel(uri)` (4 sequential SPARQL DELETEs; only call when no runs exist)
 - `WorkflowStep` interface carries `children: WorkflowStep[]`; `fetchWorkflow` uses a two-query approach (metadata + full treeQuery) with a recursive `buildStep` to populate the tree at any depth
 - `RunActivityInstance` interface is recursive (`children: RunActivityInstance[]`); carries `state`, `modelActivityTitle`, `modelActivityType`, `datasets`; `RunStep` has been removed — `RunDetail.activityInstances` holds top-level tree nodes directly
-- `RunActivityNode.vue` is a self-referencing recursive component (same pattern as `WorkflowStepNode`); atomic nodes show title + state badge + dataset chips; composite nodes show type badge + state badge + collapse toggle + child cluster (green for sequential, blue for parallel)
+- `RunActivityNode.vue` is a self-referencing recursive component (same pattern as `WorkflowStepNode`); atomic nodes show title + state badge (verbatim WiLD state: `initialized`/`active`/`done`) + dataset chips; composite nodes show type badge + state badge + collapse toggle + child cluster (green for sequential, blue for parallel)
 - Workflow context on datasets: `fetchDatasetWorkflowContext(uri)` in `src/stores/catalog.ts`
 
 ### Dataset Search & Filtering (implemented)

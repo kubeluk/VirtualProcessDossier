@@ -31,14 +31,7 @@ const structureLabel = computed(() =>
 
 const childCount = computed(() => props.inst.children.length)
 
-const stateLabel = computed(() => {
-  switch (props.inst.state) {
-    case 'initialized': return 'Pending'
-    case 'active': return 'Active'
-    case 'done': return 'Done'
-    default: return null
-  }
-})
+const stateLabel = computed(() => props.inst.state ?? null)
 </script>
 
 <template>
@@ -242,7 +235,6 @@ const stateLabel = computed(() => {
   font-weight: 600;
   padding: 0.15rem 0.55rem;
   border-radius: 20px;
-  text-transform: capitalize;
   letter-spacing: 0.02em;
 }
 
