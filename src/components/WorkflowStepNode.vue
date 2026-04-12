@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import type { WorkflowStep } from '@/stores/workflow'
 // Self-referencing recursive component — Vue resolves by filename in <script setup>
 import WorkflowStepNode from './WorkflowStepNode.vue'
@@ -13,73 +13,105 @@ const props = defineProps<{
 
 const expanded = ref(true)
 
-const isParallel = props.step.type?.endsWith('ParallelActivity') ?? false
-const isSequential = props.step.type?.endsWith('SequentialActivity') ?? false
-const hasChildren = props.step.children.length > 0
+const isAtomic = computed(
+  () => !props.step.type || props.step.type === 'AtomicActivity',
+)
+const isParallel = computed(() => props.step.type === 'ParallelActivity')
 
 const stepNumber = props.index + 1
-const stepName = props.step.title ?? 'Unnamed Step'
+
+const structureLabel = computed(() =>
+  isParallel.value ? '⟷ Parallel' : '↕ Sequential',
+)
+
+const childCount = computed(() => props.step.children.length)
 </script>
 
 <template>
   <div class="step-node" :class="{ 'step-node--parallel-child': context === 'parallel' }">
-    <!-- Step item row -->
-    <div class="step-item">
-      <!-- Marker (circle + connector) — only for sequential context -->
-      <div v-if="context === 'sequential'" class="step-marker">
-        <div class="step-circle">{{ stepNumber }}</div>
-        <div v-if="index < total - 1 || (hasChildren && expanded)" class="step-connector-line"></div>
-      </div>
 
-      <!-- Parallel bullet marker -->
-      <div v-else class="step-parallel-marker">
-        <div class="step-parallel-dot"></div>
-      </div>
-
-      <!-- Content -->
-      <div class="step-content" :class="{ 'step-content--leaf': !hasChildren }">
-        <div class="step-header">
-          <!-- Collapse toggle for composite steps -->
-          <button
-            v-if="hasChildren"
-            class="step-toggle"
-            :aria-label="expanded ? 'Collapse' : 'Expand'"
-            @click="expanded = !expanded"
-          >
-            {{ expanded ? '▼' : '▶' }}
-          </button>
-          <h3 class="step-name">{{ stepName }}</h3>
-          <span v-if="isParallel" class="step-badge step-badge--parallel">⟷ parallel</span>
-          <span v-else-if="isSequential" class="step-badge step-badge--sequential">↕ sequential</span>
+    <!-- ── ATOMIC ACTIVITY ── -->
+    <template v-if="isAtomic">
+      <div class="step-item">
+        <!-- Sequential circle marker -->
+        <div v-if="context === 'sequential'" class="step-marker">
+          <div class="step-circle">{{ stepNumber }}</div>
+          <div v-if="index < total - 1" class="step-connector-line"></div>
         </div>
-        <p v-if="step.description" class="step-description">{{ step.description }}</p>
-        <!-- System & input — only on leaf (atomic) nodes -->
-        <div v-if="!hasChildren && (step.systemTitle || step.inputTitle)" class="step-meta">
-          <span v-if="step.systemTitle" class="meta-item">
-            <span class="meta-label">System:</span> {{ step.systemTitle }}
-          </span>
-          <span v-if="step.inputTitle" class="meta-item">
-            <span class="meta-label">Input:</span> {{ step.inputTitle }}
-          </span>
+        <!-- Parallel bullet marker -->
+        <div v-else class="step-parallel-marker">
+          <div class="step-parallel-dot"></div>
+        </div>
+
+        <div class="step-content step-content--leaf">
+          <div class="step-header">
+            <h3 class="step-name">{{ step.title ?? 'Unnamed Activity' }}</h3>
+          </div>
+          <p v-if="step.description" class="step-description">{{ step.description }}</p>
+          <div v-if="step.systemTitle || step.inputTitle" class="step-meta">
+            <span v-if="step.systemTitle" class="meta-item">
+              <span class="meta-label">System:</span> {{ step.systemTitle }}
+            </span>
+            <span v-if="step.inputTitle" class="meta-item">
+              <span class="meta-label">Input:</span> {{ step.inputTitle }}
+            </span>
+          </div>
         </div>
       </div>
-    </div>
+    </template>
 
-    <!-- Children cluster (rendered below the item row) -->
-    <div
-      v-if="hasChildren && expanded"
-      class="step-children"
-      :class="isParallel ? 'step-children--parallel' : 'step-children--sequential'"
-    >
-      <WorkflowStepNode
-        v-for="(child, i) in step.children"
-        :key="child.uri"
-        :step="child"
-        :index="i"
-        :total="step.children.length"
-        :context="isParallel ? 'parallel' : 'sequential'"
-      />
-    </div>
+    <!-- ── COMPOSITE ACTIVITY (structural container, no data title) ── -->
+    <template v-else>
+      <div class="step-item">
+        <!-- Sequential position indicator -->
+        <div v-if="context === 'sequential'" class="step-marker">
+          <div class="step-circle step-circle--composite">{{ stepNumber }}</div>
+          <div v-if="index < total - 1 || expanded" class="step-connector-line"></div>
+        </div>
+        <!-- Parallel bullet -->
+        <div v-else class="step-parallel-marker">
+          <div class="step-parallel-dot step-parallel-dot--composite"></div>
+        </div>
+
+        <div class="step-content">
+          <div class="step-header">
+            <button
+              class="step-toggle"
+              :aria-label="expanded ? 'Collapse' : 'Expand'"
+              @click="expanded = !expanded"
+            >
+              {{ expanded ? '▼' : '▶' }}
+            </button>
+            <span
+              class="step-badge"
+              :class="isParallel ? 'step-badge--parallel' : 'step-badge--sequential'"
+            >
+              {{ structureLabel }}
+            </span>
+            <span v-if="!expanded" class="step-collapsed-hint">
+              {{ childCount }} {{ childCount === 1 ? 'activity' : 'activities' }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Children cluster -->
+      <div
+        v-if="expanded"
+        class="step-children"
+        :class="isParallel ? 'step-children--parallel' : 'step-children--sequential'"
+      >
+        <WorkflowStepNode
+          v-for="(child, i) in step.children"
+          :key="child.uri"
+          :step="child"
+          :index="i"
+          :total="step.children.length"
+          :context="isParallel ? 'parallel' : 'sequential'"
+        />
+      </div>
+    </template>
+
   </div>
 </template>
 
@@ -117,6 +149,13 @@ const stepName = props.step.title ?? 'Unnamed Step'
   flex-shrink: 0;
 }
 
+/* Composite steps use a subtler circle */
+.step-circle--composite {
+  background: transparent;
+  border: 2px solid var(--color-border);
+  color: #9ca3af;
+}
+
 .step-connector-line {
   flex: 1;
   width: 2px;
@@ -142,13 +181,17 @@ const stepName = props.step.title ?? 'Unnamed Step'
   flex-shrink: 0;
 }
 
+.step-parallel-dot--composite {
+  background: transparent;
+  border: 1.5px solid #93c5fd;
+}
+
 /* ── Step content ── */
 .step-content {
   flex: 1;
   padding-bottom: 0.5rem;
 }
 
-/* Leaf nodes use more bottom padding (no children cluster below) */
 .step-content--leaf {
   padding-bottom: 1.5rem;
 }
@@ -198,9 +241,14 @@ const stepName = props.step.title ?? 'Unnamed Step'
 }
 
 .step-badge--sequential {
-  background: #f0fdf4;
-  color: #166534;
-  border: 1px solid #bbf7d0;
+  background: #f9fafb;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+}
+
+.step-collapsed-hint {
+  font-size: 0.78rem;
+  color: #9ca3af;
 }
 
 .step-description {

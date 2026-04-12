@@ -152,7 +152,7 @@ function validate(): string | null {
     return 'A parallel workflow requires at least 2 steps.'
 
   function validateNode(s: StepFormWithId, path: string): string | null {
-    if (!s.isLibraryRef && !s.title.trim()) return `${path} title is required.`
+    if (s.type === 'AtomicActivity' && !s.isLibraryRef && !s.title.trim()) return `${path} title is required.`
     if (s.isLibraryRef && !s.uri) return `${path} library activity reference is missing.`
     if (s.type !== 'AtomicActivity') {
       if (s.children.length < 1) return `${path} must have at least one sub-activity.`

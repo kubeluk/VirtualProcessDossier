@@ -149,35 +149,36 @@ const minChildren = computed(() =>
       </p>
     </div>
 
-    <!-- Title -->
-    <div class="field">
-      <label :for="`st-title-${step.id}`" class="field-label">
-        Title <span v-if="!step.isLibraryRef" class="required">*</span>
-      </label>
-      <input
-        :id="`st-title-${step.id}`"
-        v-model="step.title"
-        type="text"
-        class="field-input"
-        :placeholder="stepNum !== null ? 'e.g. Material Preparation' : 'Sub-activity name'"
-        :disabled="step.isLibraryRef"
-        autocomplete="off"
-      />
-    </div>
+    <!-- Title and description — only for atomic activities -->
+    <template v-if="step.type === 'AtomicActivity'">
+      <div class="field">
+        <label :for="`st-title-${step.id}`" class="field-label">
+          Title <span v-if="!step.isLibraryRef" class="required">*</span>
+        </label>
+        <input
+          :id="`st-title-${step.id}`"
+          v-model="step.title"
+          type="text"
+          class="field-input"
+          :placeholder="stepNum !== null ? 'e.g. Material Preparation' : 'Activity name'"
+          :disabled="step.isLibraryRef"
+          autocomplete="off"
+        />
+      </div>
 
-    <!-- Description -->
-    <div class="field">
-      <label :for="`st-desc-${step.id}`" class="field-label">Description</label>
-      <input
-        :id="`st-desc-${step.id}`"
-        v-model="step.description"
-        type="text"
-        class="field-input"
-        placeholder="Optional description"
-        :disabled="step.isLibraryRef"
-        autocomplete="off"
-      />
-    </div>
+      <div class="field">
+        <label :for="`st-desc-${step.id}`" class="field-label">Description</label>
+        <input
+          :id="`st-desc-${step.id}`"
+          v-model="step.description"
+          type="text"
+          class="field-input"
+          placeholder="Optional description"
+          :disabled="step.isLibraryRef"
+          autocomplete="off"
+        />
+      </div>
+    </template>
 
     <!-- Type selection (create/edit mode only) -->
     <div v-if="!metadataOnly" class="field field--type">

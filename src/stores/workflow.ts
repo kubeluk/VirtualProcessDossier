@@ -613,14 +613,8 @@ export const useWorkflowStore = defineStore('workflow', () => {
     }
 
     function sortedChildren(parentUri: string): string[] {
-      return [...(childrenMap.get(parentUri) ?? [])].sort((a, b) => {
-        const tA = nodeMeta.get(a)?.title ?? ''
-        const tB = nodeMeta.get(b)?.title ?? ''
-        const nA = parseInt(tA.match(/^Step\s+(\d+)/i)?.[1] ?? '0')
-        const nB = parseInt(tB.match(/^Step\s+(\d+)/i)?.[1] ?? '0')
-        if (nA !== nB) return nA - nB
-        return tA.localeCompare(tB)
-      })
+      // Ordering is defined by the RDF list structure; preserve SPARQL result insertion order.
+      return childrenMap.get(parentUri) ?? []
     }
 
     function buildStepForm(nodeUri: string): StepForm {
@@ -688,13 +682,13 @@ export const useWorkflowStore = defineStore('workflow', () => {
 
     function generateNode(step: StepForm, nodeUri: string): void {
       if (step.isLibraryRef) return  // library ref: URI is in the list but triples already exist
-      const title = step.title.trim()
       insertLines.push(`  <${nodeUri}> a wild:${step.type} .`)
-      insertLines.push(`  <${nodeUri}> dcterms:title "${esc(title)}"@en .`)
-      if (step.description.trim()) {
-        insertLines.push(`  <${nodeUri}> dcterms:description "${esc(step.description)}"@en .`)
-      }
       if (step.type === 'AtomicActivity') {
+        const title = step.title.trim()
+        insertLines.push(`  <${nodeUri}> dcterms:title "${esc(title)}"@en .`)
+        if (step.description.trim()) {
+          insertLines.push(`  <${nodeUri}> dcterms:description "${esc(step.description)}"@en .`)
+        }
         insertLines.push(`  <${nodeUri}> a sosa:Procedure .`)
         insertLines.push(`  <${nodeUri}> dcterms:issued "${now}"^^xsd:dateTime .`)
         if (step.systemUri) insertLines.push(`  <${nodeUri}> ssn:implementedBy <${step.systemUri}> .`)
@@ -795,8 +789,8 @@ ${insertLines.join('\n')}
     function collectOps(step: StepForm): void {
       if (!step.uri) return
       if (step.isLibraryRef) return  // library activities are managed from the activity library
-      ops.push(metaOp(step.uri, step.title.trim(), step.description))
       if (step.type === 'AtomicActivity') {
+        ops.push(metaOp(step.uri, step.title.trim(), step.description))
         ops.push(ssnOp(step.uri, step.systemUri, step.inputUri))
       }
       step.children.forEach((child) => collectOps(child))
@@ -858,13 +852,13 @@ ${insertLines.join('\n')}
 
     function generateNode(step: StepForm, nodeUri: string): void {
       if (step.isLibraryRef) return  // library ref: URI is in the list but triples already exist
-      const title = step.title.trim()
       lines.push(`  <${nodeUri}> a wild:${step.type} .`)
-      lines.push(`  <${nodeUri}> dcterms:title "${esc(title)}"@en .`)
-      if (step.description.trim()) {
-        lines.push(`  <${nodeUri}> dcterms:description "${esc(step.description)}"@en .`)
-      }
       if (step.type === 'AtomicActivity') {
+        const title = step.title.trim()
+        lines.push(`  <${nodeUri}> dcterms:title "${esc(title)}"@en .`)
+        if (step.description.trim()) {
+          lines.push(`  <${nodeUri}> dcterms:description "${esc(step.description)}"@en .`)
+        }
         lines.push(`  <${nodeUri}> a sosa:Procedure .`)
         lines.push(`  <${nodeUri}> dcterms:issued "${now}"^^xsd:dateTime .`)
         if (step.systemUri) lines.push(`  <${nodeUri}> ssn:implementedBy <${step.systemUri}> .`)
