@@ -1,82 +1,108 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useWorkflowStore, type WorkflowSummary } from '@/stores/workflow'
-import AddWorkflowModal from '@/components/AddWorkflowModal.vue'
+import { useWorkflowStore, type AtomicActivitySummary } from '@/stores/workflow'
+import AddActivityModal from '@/components/AddActivityModal.vue'
 
-const router = useRouter()
 const workflowStore = useWorkflowStore()
 
-const workflows = ref<WorkflowSummary[]>([])
+const activities = ref<AtomicActivitySummary[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
-const showAddModal = ref(false)
+const showModal = ref(false)
+const selectedActivity = ref<AtomicActivitySummary | null>(null)
 
-onMounted(async () => {
+async function load() {
+  loading.value = true
+  error.value = null
   try {
-    workflows.value = await workflowStore.fetchWorkflows()
+    activities.value = await workflowStore.fetchAtomicActivities()
   } catch {
-    error.value = 'Failed to load workflows. Make sure the triple store is running.'
+    error.value = 'Failed to load activities. Make sure the triple store is running.'
   } finally {
     loading.value = false
   }
-})
-
-async function onWorkflowCreated(uri: string) {
-  router.push({ name: 'workflow', query: { uri } })
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' })
+onMounted(load)
+
+function openCreate() {
+  selectedActivity.value = null
+  showModal.value = true
 }
 
-function openWorkflow(uri: string) {
-  router.push({ name: 'workflow', query: { uri } })
+function openEdit(activity: AtomicActivitySummary) {
+  selectedActivity.value = activity
+  showModal.value = true
+}
+
+function onCreated() {
+  load()
+}
+
+function onUpdated() {
+  load()
+}
+
+function onDeleted() {
+  load()
 }
 </script>
 
 <template>
-  <main class="workflow-list">
+  <main class="activity-list">
     <header class="page-header">
       <div class="page-header-row">
         <div>
-          <h1>Workflows</h1>
-          <p class="subtitle">Browse manufacturing workflows and their associated datasets.</p>
+          <h1>Activity Library</h1>
+          <p class="subtitle">
+            Reusable atomic activities that can be referenced in workflow models.
+          </p>
         </div>
-        <button class="btn btn--primary" @click="showAddModal = true">+ Add Workflow</button>
+        <button class="btn btn--primary" @click="openCreate">+ Add Activity</button>
       </div>
     </header>
 
-    <AddWorkflowModal v-model="showAddModal" @created="onWorkflowCreated" />
+    <AddActivityModal
+      v-model="showModal"
+      :edit-activity="selectedActivity"
+      @created="onCreated"
+      @updated="onUpdated"
+      @deleted="onDeleted"
+    />
 
     <nav class="page-nav">
       <RouterLink to="/catalog" class="nav-tab">Datasets</RouterLink>
-      <RouterLink to="/workflows" class="nav-tab nav-tab--active">Workflows</RouterLink>
-      <RouterLink to="/activities" class="nav-tab">Activities</RouterLink>
+      <RouterLink to="/workflows" class="nav-tab">Workflows</RouterLink>
+      <RouterLink to="/activities" class="nav-tab nav-tab--active">Activities</RouterLink>
     </nav>
 
-    <div v-if="loading" class="state-message">Loading workflows…</div>
+    <div v-if="loading" class="state-message">Loading activities…</div>
 
     <div v-else-if="error" class="state-message error">{{ error }}</div>
 
-    <div v-else-if="workflows.length === 0" class="state-message">
-      No workflows found in the knowledge graph.
+    <div v-else-if="activities.length === 0" class="state-message">
+      No activities in the library yet. Create one to reuse it across workflow models.
     </div>
 
-    <ul v-else class="workflow-card-list">
+    <ul v-else class="activity-card-list">
       <li
-        v-for="wf in workflows"
-        :key="wf.uri"
-        class="workflow-card"
-        @click="openWorkflow(wf.uri)"
+        v-for="act in activities"
+        :key="act.uri"
+        class="activity-card"
+        @click="openEdit(act)"
       >
         <div class="card-body">
-          <h2 class="card-title">{{ wf.title }}</h2>
-          <p v-if="wf.description" class="card-description">{{ wf.description }}</p>
+          <h2 class="card-title">{{ act.title ?? act.uri }}</h2>
+          <p v-if="act.description" class="card-description">{{ act.description }}</p>
         </div>
         <div class="card-meta">
-          <span v-if="wf.issued" class="meta-item">Created {{ formatDate(wf.issued) }}</span>
-          <span class="meta-item meta-link">View workflow →</span>
+          <span v-if="act.systemTitle ?? act.systemUri" class="meta-item">
+            System: {{ act.systemTitle ?? act.systemUri }}
+          </span>
+          <span v-if="act.inputTitle ?? act.inputUri" class="meta-item">
+            Input: {{ act.inputTitle ?? act.inputUri }}
+          </span>
+          <span class="meta-item meta-link">Edit →</span>
         </div>
       </li>
     </ul>
@@ -84,7 +110,7 @@ function openWorkflow(uri: string) {
 </template>
 
 <style scoped>
-.workflow-list {
+.activity-list {
   max-width: 800px;
   margin: 0 auto;
   padding: 2rem 1.5rem;
@@ -150,7 +176,7 @@ function openWorkflow(uri: string) {
   color: #dc2626;
 }
 
-.workflow-card-list {
+.activity-card-list {
   list-style: none;
   padding: 0;
   margin: 0;
@@ -159,7 +185,7 @@ function openWorkflow(uri: string) {
   gap: 0.75rem;
 }
 
-.workflow-card {
+.activity-card {
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 1.25rem 1.5rem;
@@ -168,7 +194,7 @@ function openWorkflow(uri: string) {
   background: var(--color-background);
 }
 
-.workflow-card:hover {
+.activity-card:hover {
   border-color: var(--color-primary);
   box-shadow: 0 2px 8px rgba(66, 184, 131, 0.15);
 }

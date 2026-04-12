@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import { useWorkflowStore, type StepForm, type AddWorkflowForm, type WorkflowSummary, type ProcedureOption } from '@/stores/workflow'
+import { useWorkflowStore, type StepForm, type AddWorkflowForm, type WorkflowSummary, type ProcedureOption, type AtomicActivityOption } from '@/stores/workflow'
 import StepEditorNode, { type StepFormWithId, newStepWithId } from '@/components/StepEditorNode.vue'
 
 const props = defineProps<{
@@ -35,9 +35,10 @@ const templateWorkflows = ref<WorkflowSummary[]>([])
 const selectedTemplateUri = ref('')
 const templateLoading = ref(false)
 
-// System / Input options (loaded when modal opens)
+// System / Input / Activity options (loaded when modal opens)
 const systemOptions = ref<ProcedureOption[]>([])
 const inputOptions = ref<ProcedureOption[]>([])
+const activityOptions = ref<AtomicActivityOption[]>([])
 
 function close() {
   emit('update:modelValue', false)
@@ -61,6 +62,7 @@ function toStepFormWithId(s: StepForm): StepFormWithId {
     type: s.type,
     systemUri: s.systemUri ?? '',
     inputUri: s.inputUri ?? '',
+    isLibraryRef: s.isLibraryRef ?? false,
     children: s.children.map(toStepFormWithId),
   }
 }
@@ -74,6 +76,7 @@ function toStepFormWithIdNoUri(s: StepForm): StepFormWithId {
     type: s.type,
     systemUri: s.systemUri ?? '',
     inputUri: s.inputUri ?? '',
+    isLibraryRef: false,  // templates always create new resources
     children: s.children.map(toStepFormWithIdNoUri),
   }
 }
@@ -109,23 +112,27 @@ watch(
   async (open) => {
     if (!open) return
     if (props.editData) {
-      const [systems, inputs] = await Promise.all([
+      const [systems, inputs, activities] = await Promise.all([
         workflowStore.fetchSystemOptions(),
         workflowStore.fetchInputOptions(),
+        workflowStore.fetchAtomicActivityOptions(),
       ])
       systemOptions.value = systems
       inputOptions.value = inputs
+      activityOptions.value = activities
       populateFrom(props.editData)
     } else {
       reset()
-      const [workflows, systems, inputs] = await Promise.all([
+      const [workflows, systems, inputs, activities] = await Promise.all([
         workflowStore.fetchWorkflows(),
         workflowStore.fetchSystemOptions(),
         workflowStore.fetchInputOptions(),
+        workflowStore.fetchAtomicActivityOptions(),
       ])
       templateWorkflows.value = workflows
       systemOptions.value = systems
       inputOptions.value = inputs
+      activityOptions.value = activities
     }
   },
 )
@@ -145,7 +152,8 @@ function validate(): string | null {
     return 'A parallel workflow requires at least 2 steps.'
 
   function validateNode(s: StepFormWithId, path: string): string | null {
-    if (!s.title.trim()) return `${path} title is required.`
+    if (!s.isLibraryRef && !s.title.trim()) return `${path} title is required.`
+    if (s.isLibraryRef && !s.uri) return `${path} library activity reference is missing.`
     if (s.type !== 'AtomicActivity') {
       if (s.children.length < 1) return `${path} must have at least one sub-activity.`
       if (s.type === 'ParallelActivity' && s.children.length < 2)
@@ -173,6 +181,7 @@ function toStepForm(s: StepFormWithId): StepForm {
     type: s.type,
     ...(s.systemUri ? { systemUri: s.systemUri } : {}),
     ...(s.inputUri ? { inputUri: s.inputUri } : {}),
+    isLibraryRef: s.isLibraryRef,
     children: s.children.map(toStepForm),
   }
 }
@@ -345,6 +354,7 @@ reset()
               :metadata-only="!!metadataOnly"
               :system-options="systemOptions"
               :input-options="inputOptions"
+              :activity-options="activityOptions"
               @remove="removeStep(si)"
             />
 

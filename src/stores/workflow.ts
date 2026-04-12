@@ -93,6 +93,7 @@ export interface StepForm {
   type: 'AtomicActivity' | 'ParallelActivity' | 'SequentialActivity'
   systemUri?: string  // ssn:implementedBy target; only on AtomicActivity
   inputUri?: string   // ssn:hasInput target; only on AtomicActivity
+  isLibraryRef?: boolean  // true when this step reuses an existing library activity
   children: StepForm[]
 }
 
@@ -107,6 +108,35 @@ export interface AddWorkflowForm {
   description: string
   rootType: 'SequentialActivity' | 'ParallelActivity'
   steps: StepForm[]
+}
+
+// ---------------------------------------------------------------------------
+// AtomicActivity library types
+// ---------------------------------------------------------------------------
+
+export interface AtomicActivitySummary {
+  uri: string
+  title: string | null
+  description: string | null
+  systemUri: string | null
+  systemTitle: string | null
+  inputUri: string | null
+  inputTitle: string | null
+}
+
+export interface AtomicActivityOption {
+  uri: string
+  title: string | null
+  description: string | null
+  systemUri: string | null
+  inputUri: string | null
+}
+
+export interface AtomicActivityForm {
+  title: string
+  description: string
+  systemUri: string   // '' = none
+  inputUri: string    // '' = none
 }
 
 // ---------------------------------------------------------------------------
@@ -527,7 +557,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
       PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
       PREFIX ssn:     <http://www.w3.org/ns/ssn/>
 
-      SELECT DISTINCT ?parent ?child ?childTitle ?childDesc ?childType ?childSystem ?childInput WHERE {
+      SELECT DISTINCT ?parent ?child ?childTitle ?childDesc ?childType ?childSystem ?childInput ?childIssued WHERE {
         <${uri}> wild:hasBehaviour/(wild:hasChildActivities/rdf:rest*/rdf:first)* ?parent .
         ?parent wild:hasChildActivities/rdf:rest*/rdf:first ?child .
         OPTIONAL { ?child dcterms:title ?childTitle }
@@ -538,6 +568,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
         }
         OPTIONAL { ?child ssn:implementedBy ?childSystem }
         OPTIONAL { ?child ssn:hasInput ?childInput }
+        OPTIONAL { ?child dcterms:issued ?childIssued }
       }
     `
 
@@ -558,7 +589,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
       return { title: first.wfTitle.value, description: first.wfDesc?.value ?? '', rootType: 'SequentialActivity', steps: [] }
     }
 
-    type NodeMeta = { title: string | null; desc: string | null; type: string | null; systemUri: string | null; inputUri: string | null }
+    type NodeMeta = { title: string | null; desc: string | null; type: string | null; systemUri: string | null; inputUri: string | null; isLibraryRef: boolean }
     const nodeMeta = new Map<string, NodeMeta>()
     const childrenMap = new Map<string, string[]>()
 
@@ -573,6 +604,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
           type: rawType ? rawType.replace('http://purl.org/wild/vocab#', '') : null,
           systemUri: b.childSystem?.value ?? null,
           inputUri: b.childInput?.value ?? null,
+          isLibraryRef: !!b.childIssued?.value,
         })
       }
       if (!childrenMap.has(parentUri)) childrenMap.set(parentUri, [])
@@ -592,7 +624,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
     }
 
     function buildStepForm(nodeUri: string): StepForm {
-      const meta = nodeMeta.get(nodeUri) ?? { title: null, desc: null, type: null, systemUri: null, inputUri: null }
+      const meta = nodeMeta.get(nodeUri) ?? { title: null, desc: null, type: null, systemUri: null, inputUri: null, isLibraryRef: false }
       const rawType = meta.type ?? 'AtomicActivity'
       const type: StepForm['type'] =
         rawType === 'ParallelActivity' ? 'ParallelActivity' :
@@ -604,6 +636,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
         type,
         ...(meta.systemUri ? { systemUri: meta.systemUri } : {}),
         ...(meta.inputUri ? { inputUri: meta.inputUri } : {}),
+        isLibraryRef: meta.isLibraryRef,
         children: sortedChildren(nodeUri).map(buildStepForm),
       }
     }
@@ -653,6 +686,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
     insertLines.push(`  <${uri}> wild:hasBehaviour <${rootUri}> .`)
 
     function generateNode(step: StepForm, nodeUri: string): void {
+      if (step.isLibraryRef) return  // library ref: URI is in the list but triples already exist
       const title = step.title.trim()
       insertLines.push(`  <${nodeUri}> a wild:${step.type} .`)
       insertLines.push(`  <${nodeUri}> dcterms:title "${esc(title)}"@en .`)
@@ -660,11 +694,14 @@ export const useWorkflowStore = defineStore('workflow', () => {
         insertLines.push(`  <${nodeUri}> dcterms:description "${esc(step.description)}"@en .`)
       }
       if (step.type === 'AtomicActivity') {
+        insertLines.push(`  <${nodeUri}> a sosa:Procedure .`)
         if (step.systemUri) insertLines.push(`  <${nodeUri}> ssn:implementedBy <${step.systemUri}> .`)
         if (step.inputUri) insertLines.push(`  <${nodeUri}> ssn:hasInput <${step.inputUri}> .`)
       }
       if (step.type !== 'AtomicActivity' && step.children.length > 0) {
-        const childUris = step.children.map(() => `${base}wfact-${slug}-${suffix}-${nodeCounter++}`)
+        const childUris = step.children.map((child) =>
+          (child.isLibraryRef && child.uri) ? child.uri : `${base}wfact-${slug}-${suffix}-${nodeCounter++}`
+        )
         const [head, listTriples] = buildList(childUris)
         insertLines.push(`  <${nodeUri}> wild:hasChildActivities ${head} .`)
         insertLines.push(listTriples)
@@ -672,7 +709,9 @@ export const useWorkflowStore = defineStore('workflow', () => {
       }
     }
 
-    const stepUris = form.steps.map(() => `${base}step-${slug}-${suffix}-${nodeCounter++}`)
+    const stepUris = form.steps.map((step) =>
+      (step.isLibraryRef && step.uri) ? step.uri : `${base}step-${slug}-${suffix}-${nodeCounter++}`
+    )
     const [rootHead, rootListTriples] = buildList(stepUris)
     insertLines.push(`  <${rootUri}> a wild:${form.rootType} .`)
     insertLines.push(`  <${rootUri}> wild:hasChildActivities ${rootHead} .`)
@@ -684,6 +723,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
       PREFIX ssn:     <http://www.w3.org/ns/ssn/>
+      PREFIX sosa:    <http://www.w3.org/ns/sosa/>
       PREFIX xsd:     <http://www.w3.org/2001/XMLSchema#>
 
       DELETE { <${uri}> ?p ?o }
@@ -697,6 +737,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
         <${uri}> wild:hasBehaviour ?root .
         ?root (wild:hasChildActivities/rdf:rest*/rdf:first)+ ?desc .
         ?desc ?p ?o
+        FILTER NOT EXISTS { ?desc dcterms:issued ?_ }
       } ;
 
       DELETE { ?node rdf:first ?f . ?node rdf:rest ?r }
@@ -751,6 +792,7 @@ ${insertLines.join('\n')}
 
     function collectOps(step: StepForm): void {
       if (!step.uri) return
+      if (step.isLibraryRef) return  // library activities are managed from the activity library
       ops.push(metaOp(step.uri, step.title.trim(), step.description))
       if (step.type === 'AtomicActivity') {
         ops.push(ssnOp(step.uri, step.systemUri, step.inputUri))
@@ -813,6 +855,7 @@ ${insertLines.join('\n')}
     lines.push(`  <${workflowUri}> wild:hasBehaviour <${rootUri}> .`)
 
     function generateNode(step: StepForm, nodeUri: string): void {
+      if (step.isLibraryRef) return  // library ref: URI is in the list but triples already exist
       const title = step.title.trim()
       lines.push(`  <${nodeUri}> a wild:${step.type} .`)
       lines.push(`  <${nodeUri}> dcterms:title "${esc(title)}"@en .`)
@@ -820,11 +863,14 @@ ${insertLines.join('\n')}
         lines.push(`  <${nodeUri}> dcterms:description "${esc(step.description)}"@en .`)
       }
       if (step.type === 'AtomicActivity') {
+        lines.push(`  <${nodeUri}> a sosa:Procedure .`)
         if (step.systemUri) lines.push(`  <${nodeUri}> ssn:implementedBy <${step.systemUri}> .`)
         if (step.inputUri) lines.push(`  <${nodeUri}> ssn:hasInput <${step.inputUri}> .`)
       }
       if (step.type !== 'AtomicActivity' && step.children.length > 0) {
-        const childUris = step.children.map(() => `${base}wfact-${slug}-${suffix}-${nodeCounter++}`)
+        const childUris = step.children.map((child) =>
+          (child.isLibraryRef && child.uri) ? child.uri : `${base}wfact-${slug}-${suffix}-${nodeCounter++}`
+        )
         const [head, listTriples] = buildList(childUris)
         lines.push(`  <${nodeUri}> wild:hasChildActivities ${head} .`)
         lines.push(listTriples)
@@ -832,7 +878,9 @@ ${insertLines.join('\n')}
       }
     }
 
-    const stepUris = form.steps.map(() => `${base}step-${slug}-${suffix}-${nodeCounter++}`)
+    const stepUris = form.steps.map((step) =>
+      (step.isLibraryRef && step.uri) ? step.uri : `${base}step-${slug}-${suffix}-${nodeCounter++}`
+    )
     const [rootHead, rootListTriples] = buildList(stepUris)
     lines.push(`  <${rootUri}> a wild:${form.rootType} .`)
     lines.push(`  <${rootUri}> wild:hasChildActivities ${rootHead} .`)
@@ -841,6 +889,7 @@ ${insertLines.join('\n')}
 
     const update = `
       PREFIX wild:    <http://purl.org/wild/vocab#>
+      PREFIX sosa:    <http://www.w3.org/ns/sosa/>
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
       PREFIX ssn:     <http://www.w3.org/ns/ssn/>
@@ -1087,12 +1136,162 @@ ${lines.join('\n')}
     return [...fullWorkflowOptions, ...options]
   }
 
+  // ── AtomicActivity library ───────────────────────────────────────────────
+  // Library activities are wild:AtomicActivity resources created independently
+  // (not inline as part of a workflow model). They are identified by having
+  // dcterms:issued set at creation time.
+
+  async function fetchAtomicActivities(): Promise<AtomicActivitySummary[]> {
+    const query = `
+      PREFIX wild:    <http://purl.org/wild/vocab#>
+      PREFIX dcterms: <http://purl.org/dc/terms/>
+      PREFIX ssn:     <http://www.w3.org/ns/ssn/>
+
+      SELECT ?activity ?title ?description ?system ?systemTitle ?input ?inputTitle WHERE {
+        ?activity a wild:AtomicActivity ;
+                  dcterms:issued ?_ .
+        OPTIONAL { ?activity dcterms:title ?title }
+        OPTIONAL { ?activity dcterms:description ?description }
+        OPTIONAL {
+          ?activity ssn:implementedBy ?system .
+          OPTIONAL { ?system dcterms:title ?systemTitle }
+        }
+        OPTIONAL {
+          ?activity ssn:hasInput ?input .
+          OPTIONAL { ?input dcterms:title ?inputTitle }
+        }
+      }
+      ORDER BY ?title
+    `
+    const results = await querySparql(graphStore.endpoint, query)
+    return results.results.bindings.map((b) => ({
+      uri: b.activity.value,
+      title: b.title?.value ?? null,
+      description: b.description?.value ?? null,
+      systemUri: b.system?.value ?? null,
+      systemTitle: b.systemTitle?.value ?? null,
+      inputUri: b.input?.value ?? null,
+      inputTitle: b.inputTitle?.value ?? null,
+    }))
+  }
+
+  async function fetchAtomicActivityOptions(): Promise<AtomicActivityOption[]> {
+    const query = `
+      PREFIX wild:    <http://purl.org/wild/vocab#>
+      PREFIX dcterms: <http://purl.org/dc/terms/>
+      PREFIX ssn:     <http://www.w3.org/ns/ssn/>
+
+      SELECT ?activity ?title ?description ?system ?input WHERE {
+        ?activity a wild:AtomicActivity ;
+                  dcterms:issued ?_ .
+        OPTIONAL { ?activity dcterms:title ?title }
+        OPTIONAL { ?activity dcterms:description ?description }
+        OPTIONAL { ?activity ssn:implementedBy ?system }
+        OPTIONAL { ?activity ssn:hasInput ?input }
+      }
+      ORDER BY ?title
+    `
+    const results = await querySparql(graphStore.endpoint, query)
+    return results.results.bindings.map((b) => ({
+      uri: b.activity.value,
+      title: b.title?.value ?? null,
+      description: b.description?.value ?? null,
+      systemUri: b.system?.value ?? null,
+      inputUri: b.input?.value ?? null,
+    }))
+  }
+
+  async function addAtomicActivity(form: AtomicActivityForm): Promise<string> {
+    const suffix = Date.now().toString(36)
+    const slug = form.title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 40) || 'activity'
+    const base = 'https://example.org/vpd#'
+    const uri = `${base}activity-${slug}-${suffix}`
+    const now = new Date().toISOString()
+
+    function esc(s: string): string {
+      return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+    }
+
+    const lines: string[] = []
+    lines.push(`  <${uri}> a wild:AtomicActivity, sosa:Procedure .`)
+    lines.push(`  <${uri}> dcterms:title "${esc(form.title)}"@en .`)
+    if (form.description.trim()) {
+      lines.push(`  <${uri}> dcterms:description "${esc(form.description)}"@en .`)
+    }
+    lines.push(`  <${uri}> dcterms:issued "${now}"^^xsd:dateTime .`)
+    if (form.systemUri) lines.push(`  <${uri}> ssn:implementedBy <${form.systemUri}> .`)
+    if (form.inputUri) lines.push(`  <${uri}> ssn:hasInput <${form.inputUri}> .`)
+
+    const update = `
+      PREFIX wild:    <http://purl.org/wild/vocab#>
+      PREFIX sosa:    <http://www.w3.org/ns/sosa/>
+      PREFIX ssn:     <http://www.w3.org/ns/ssn/>
+      PREFIX dcterms: <http://purl.org/dc/terms/>
+      PREFIX xsd:     <http://www.w3.org/2001/XMLSchema#>
+
+      INSERT DATA {
+${lines.join('\n')}
+      }
+    `
+    await updateSparql(graphStore.updateEndpoint, update)
+    return uri
+  }
+
+  async function updateAtomicActivity(uri: string, form: AtomicActivityForm): Promise<void> {
+    function esc(s: string): string {
+      return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+    }
+    const descInsert = form.description.trim()
+      ? `<${uri}> dcterms:description "${esc(form.description)}"@en .`
+      : ''
+    const sysInsert = form.systemUri ? `<${uri}> ssn:implementedBy <${form.systemUri}> .` : ''
+    const inpInsert = form.inputUri ? `<${uri}> ssn:hasInput <${form.inputUri}> .` : ''
+
+    const update = `
+      PREFIX dcterms: <http://purl.org/dc/terms/>
+      PREFIX ssn:     <http://www.w3.org/ns/ssn/>
+
+      DELETE {
+        <${uri}> dcterms:title ?t .
+        <${uri}> dcterms:description ?d .
+        <${uri}> ssn:implementedBy ?sys .
+        <${uri}> ssn:hasInput ?inp .
+      }
+      INSERT {
+        <${uri}> dcterms:title "${esc(form.title)}"@en .
+        ${descInsert}
+        ${sysInsert}
+        ${inpInsert}
+      }
+      WHERE {
+        OPTIONAL { <${uri}> dcterms:title ?t }
+        OPTIONAL { <${uri}> dcterms:description ?d }
+        OPTIONAL { <${uri}> ssn:implementedBy ?sys }
+        OPTIONAL { <${uri}> ssn:hasInput ?inp }
+      }
+    `
+    await updateSparql(graphStore.updateEndpoint, update)
+  }
+
+  async function deleteAtomicActivity(uri: string): Promise<void> {
+    const update = `
+      DELETE { <${uri}> ?p ?o }
+      WHERE  { <${uri}> ?p ?o }
+    `
+    await updateSparql(graphStore.updateEndpoint, update)
+  }
+
   // ── Delete workflow model (only allowed when no runs exist) ─────────────
 
   async function deleteWorkflowModel(uri: string): Promise<void> {
     const update = `
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+      PREFIX dcterms: <http://purl.org/dc/terms/>
 
       DELETE { <${uri}> ?p ?o }
       WHERE  { <${uri}> ?p ?o } ;
@@ -1105,6 +1304,7 @@ ${lines.join('\n')}
         <${uri}> wild:hasBehaviour ?root .
         ?root (wild:hasChildActivities/rdf:rest*/rdf:first)+ ?desc .
         ?desc ?p ?o
+        FILTER NOT EXISTS { ?desc dcterms:issued ?_ }
       } ;
 
       DELETE { ?node rdf:first ?f . ?node rdf:rest ?r }
@@ -1133,5 +1333,10 @@ ${lines.join('\n')}
     fetchWorkflowStepOptions,
     fetchSystemOptions,
     fetchInputOptions,
+    fetchAtomicActivities,
+    fetchAtomicActivityOptions,
+    addAtomicActivity,
+    updateAtomicActivity,
+    deleteAtomicActivity,
   }
 })

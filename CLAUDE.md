@@ -26,15 +26,17 @@ src/
   components/
     AddDatasetModal.vue    # Modal for adding a new dataset to a run step
     AddWorkflowModal.vue   # Modal for creating a workflow model or editing its metadata/structure
+    AddActivityModal.vue   # Modal for creating/editing a library atomic activity
     StepEditorNode.vue     # Recursive step-editing component used by AddWorkflowModal
     WorkflowStepNode.vue   # Recursive read-only step display used by WorkflowView
   views/
-    HomeView.vue         # Landing page → links to /catalog
-    CatalogView.vue      # Browse all datasets (card list)
-    DatasetView.vue      # Dataset detail; route: /dataset?uri=<encoded-uri>
-    WorkflowListView.vue # Browse all workflow models; create new workflow
-    WorkflowView.vue     # Workflow model detail: step skeleton + runs list + edit button
-    RunView.vue          # Workflow run detail: editable header, step timeline, datasets
+    HomeView.vue            # Landing page → links to /catalog
+    CatalogView.vue         # Browse all datasets (card list)
+    DatasetView.vue         # Dataset detail; route: /dataset?uri=<encoded-uri>
+    WorkflowListView.vue    # Browse all workflow models; create new workflow
+    WorkflowView.vue        # Workflow model detail: step skeleton + runs list + edit button
+    RunView.vue             # Workflow run detail: editable header, step timeline, datasets
+    ActivityListView.vue    # Activity library: browse/create/edit reusable atomic activities
 data/
   catalog.ttl    # DCAT seed data (loaded automatically on first Docker start)
   seed.sh        # Init script run by the 'seed' Docker service
@@ -128,6 +130,7 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 | `/workflows` | `workflows` | WorkflowListView | Browse all workflow models |
 | `/workflow?uri=` | `workflow` | WorkflowView | Workflow model detail: step skeleton + list of runs (uri = WorkflowModel URI) |
 | `/run?uri=` | `run` | RunView | Workflow run detail: editable header, step timeline with activity instances + datasets (uri = WorkflowInstance URI) |
+| `/activities` | `activities` | ActivityListView | Activity library: browse/create/edit reusable atomic activities |
 
 ## Features
 
@@ -188,8 +191,19 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 ### System & Input on Atomic Activities (implemented)
 - Each `wild:AtomicActivity` (= `sosa:Procedure`) can have an optional `ssn:System` (via `ssn:implementedBy`) and `ssn:Input` (via `ssn:hasInput`) linked to it
 - **Browsing**: `WorkflowStepNode` displays "System: …" and "Input: …" as metadata rows on leaf nodes when values are present
-- **Authoring**: `StepEditorNode` shows a collapsible "▸ System & input" accordion on atomic nodes with two `<select>` dropdowns populated from the triple store; the section auto-expands when a step already has values linked
+- **Authoring**: `StepEditorNode` shows a collapsible "▸ System & input" accordion on atomic nodes with two `<select>` dropdowns populated from the triple store; the section auto-expands when a step already has values linked; the accordion is hidden for library-ref steps (their properties are managed in the Activity Library)
 - `StepFormWithId.systemUri` and `.inputUri` hold the selected URI (empty string = none); `StepForm.systemUri?` and `.inputUri?` are the optional store-layer equivalents
-- `AddWorkflowModal` loads `fetchSystemOptions()` and `fetchInputOptions()` in parallel when opening (both create and edit modes); passes them down to each `StepEditorNode`
+- `AddWorkflowModal` loads `fetchSystemOptions()`, `fetchInputOptions()`, and `fetchAtomicActivityOptions()` in parallel when opening (both create and edit modes); passes them down to each `StepEditorNode`
 - System/input triples are written in `addWorkflowModel`, `updateWorkflowModel` (full edit), and `updateWorkflowModelMetadata` (metadata-only, safe when runs exist — these properties are not structural)
 - Workflow store: `fetchSystemOptions(): Promise<ProcedureOption[]>`, `fetchInputOptions(): Promise<ProcedureOption[]>` — query all `ssn:System` / `ssn:Input` resources ordered by title; `ProcedureOption` interface exported from `src/stores/workflow.ts`
+
+### Activity Library (implemented)
+- Reusable `wild:AtomicActivity` resources that can be referenced by workflow models instead of defining activities inline
+- **Browse**: `/activities` lists all library activities with title, description, system, and input; tab nav shared with Datasets and Workflows
+- **Create / Edit / Delete**: clicking a card or "+ Add Activity" opens `AddActivityModal`; title required; system and input selects; delete button with confirmation
+- **Library activities are identified by `dcterms:issued`** set at creation time — this distinguishes them from inline workflow steps which do not get `dcterms:issued`
+- URI pattern: `<base>activity-<slug>-<suffix>`; also typed `sosa:Procedure`
+- **Reuse in workflow editor**: `StepEditorNode` shows a "From activity library" dropdown for every `AtomicActivity`-type step; selecting an existing activity sets `isLibraryRef = true`, pre-fills title/description/system/input as read-only, and writes the activity's existing URI into the `hasChildActivities` list (no new resource minted). Clearing the picker back to "— Define new activity —" switches to inline authoring.
+- **Library ref protection**: `updateWorkflowModel` and `deleteWorkflowModel` skip deleting descendant nodes that have `dcterms:issued` (`FILTER NOT EXISTS { ?desc dcterms:issued ?_ }`); `updateWorkflowModelMetadata` skips `isLibraryRef` steps — their metadata is only editable from `/activities`
+- `StepForm.isLibraryRef?` and `StepFormWithId.isLibraryRef` carry the flag through the form layer; `fetchWorkflowForEdit` detects library refs by checking for `dcterms:issued` on each child node in the tree query
+- Workflow store new functions: `fetchAtomicActivities(): Promise<AtomicActivitySummary[]>`, `fetchAtomicActivityOptions(): Promise<AtomicActivityOption[]>`, `addAtomicActivity(form)`, `updateAtomicActivity(uri, form)`, `deleteAtomicActivity(uri)`; interfaces `AtomicActivitySummary`, `AtomicActivityOption`, `AtomicActivityForm` exported from `src/stores/workflow.ts`

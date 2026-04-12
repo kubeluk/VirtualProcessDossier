@@ -5,6 +5,7 @@ import DatasetView from '@/views/DatasetView.vue'
 import WorkflowListView from '@/views/WorkflowListView.vue'
 import WorkflowView from '@/views/WorkflowView.vue'
 import RunView from '@/views/RunView.vue'
+import ActivityListView from '@/views/ActivityListView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -38,6 +39,11 @@ const router = createRouter({
       path: '/run',
       name: 'run',
       component: RunView,
+    },
+    {
+      path: '/activities',
+      name: 'activities',
+      component: ActivityListView,
     },
   ],
 })

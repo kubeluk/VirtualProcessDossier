@@ -8,6 +8,7 @@ export interface StepFormWithId {
   type: 'AtomicActivity' | 'ParallelActivity' | 'SequentialActivity'
   systemUri: string  // '' means none
   inputUri: string   // '' means none
+  isLibraryRef: boolean
   children: StepFormWithId[]
 }
 
@@ -22,6 +23,7 @@ export function newStepWithId(
     type: 'AtomicActivity',
     systemUri: '',
     inputUri: '',
+    isLibraryRef: false,
     children: [],
     ...overrides,
   }
@@ -30,7 +32,7 @@ export function newStepWithId(
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import type { ProcedureOption } from '@/stores/workflow'
+import type { ProcedureOption, AtomicActivityOption } from '@/stores/workflow'
 import StepEditorNode from './StepEditorNode.vue'
 
 const props = defineProps<{
@@ -41,6 +43,7 @@ const props = defineProps<{
   metadataOnly: boolean
   systemOptions: ProcedureOption[]
   inputOptions: ProcedureOption[]
+  activityOptions: AtomicActivityOption[]
 }>()
 
 defineEmits<{ remove: [] }>()
@@ -60,11 +63,38 @@ const childrenClass = computed(() =>
 // Auto-expand details section when the step already has a system or input linked
 const detailsOpen = ref(!!(props.step.systemUri || props.step.inputUri))
 
+// Selected library activity URI for the picker ('' = new inline activity)
+const selectedLibraryUri = computed({
+  get: () => (props.step.isLibraryRef && props.step.uri) ? props.step.uri : '',
+  set: (val: string) => {
+    if (!val) {
+      props.step.isLibraryRef = false
+      props.step.uri = undefined
+      props.step.title = ''
+      props.step.description = ''
+      props.step.systemUri = ''
+      props.step.inputUri = ''
+    } else {
+      const opt = props.activityOptions.find((a) => a.uri === val)
+      if (opt) {
+        props.step.isLibraryRef = true
+        props.step.uri = opt.uri
+        props.step.title = opt.title ?? ''
+        props.step.description = opt.description ?? ''
+        props.step.systemUri = opt.systemUri ?? ''
+        props.step.inputUri = opt.inputUri ?? ''
+      }
+    }
+  },
+})
+
 function onTypeChange() {
   if (props.step.type === 'AtomicActivity') {
     props.step.children.splice(0)
+    props.step.isLibraryRef = false
   } else if (props.step.children.length === 0) {
     props.step.children.push(newStepWithId(), newStepWithId())
+    props.step.isLibraryRef = false
   }
 }
 
@@ -101,10 +131,28 @@ const minChildren = computed(() =>
       </button>
     </div>
 
+    <!-- Library activity picker (atomic steps in create/edit mode) -->
+    <div v-if="step.type === 'AtomicActivity' && !metadataOnly" class="field">
+      <label :for="`st-lib-${step.id}`" class="field-label">From activity library</label>
+      <select
+        :id="`st-lib-${step.id}`"
+        v-model="selectedLibraryUri"
+        class="field-input"
+      >
+        <option value="">— Define new activity —</option>
+        <option v-for="act in activityOptions" :key="act.uri" :value="act.uri">
+          {{ act.title ?? act.uri }}
+        </option>
+      </select>
+      <p v-if="step.isLibraryRef" class="field-hint lib-ref-hint">
+        Linked from activity library. Edit in the Activity Library view.
+      </p>
+    </div>
+
     <!-- Title -->
     <div class="field">
       <label :for="`st-title-${step.id}`" class="field-label">
-        Title <span class="required">*</span>
+        Title <span v-if="!step.isLibraryRef" class="required">*</span>
       </label>
       <input
         :id="`st-title-${step.id}`"
@@ -112,6 +160,7 @@ const minChildren = computed(() =>
         type="text"
         class="field-input"
         :placeholder="stepNum !== null ? 'e.g. Material Preparation' : 'Sub-activity name'"
+        :disabled="step.isLibraryRef"
         autocomplete="off"
       />
     </div>
@@ -125,6 +174,7 @@ const minChildren = computed(() =>
         type="text"
         class="field-input"
         placeholder="Optional description"
+        :disabled="step.isLibraryRef"
         autocomplete="off"
       />
     </div>
@@ -148,8 +198,8 @@ const minChildren = computed(() =>
       </div>
     </div>
 
-    <!-- System & Input (atomic activities only) -->
-    <div v-if="step.type === 'AtomicActivity'" class="details-section">
+    <!-- System & Input (atomic activities only, hidden for library refs) -->
+    <div v-if="step.type === 'AtomicActivity' && !step.isLibraryRef" class="details-section">
       <button type="button" class="details-toggle" @click="detailsOpen = !detailsOpen">
         {{ detailsOpen ? '▾' : '▸' }} System &amp; input
       </button>
@@ -197,6 +247,7 @@ const minChildren = computed(() =>
         :metadata-only="metadataOnly"
         :system-options="systemOptions"
         :input-options="inputOptions"
+        :activity-options="activityOptions"
         @remove="removeChild(i)"
       />
 
@@ -303,6 +354,10 @@ const minChildren = computed(() =>
   color: #6b7280;
   margin: 0;
   line-height: 1.4;
+}
+
+.lib-ref-hint {
+  color: #7c3aed;
 }
 
 .field--type .radio-group {
