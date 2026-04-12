@@ -29,6 +29,7 @@ src/
     AddActivityModal.vue   # Modal for creating/editing a library atomic activity
     StepEditorNode.vue     # Recursive step-editing component used by AddWorkflowModal
     WorkflowStepNode.vue   # Recursive read-only step display used by WorkflowView
+    RunActivityNode.vue    # Recursive activity instance display used by RunView (with state + datasets)
   views/
     HomeView.vue            # Landing page → links to /catalog
     CatalogView.vue         # Browse all datasets (card list)
@@ -129,7 +130,7 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 | `/dataset?uri=` | `dataset` | DatasetView | Dataset detail (uri = full encoded dataset URI) |
 | `/workflows` | `workflows` | WorkflowListView | Browse all workflow models |
 | `/workflow?uri=` | `workflow` | WorkflowView | Workflow model detail: step skeleton + list of runs (uri = WorkflowModel URI) |
-| `/run?uri=` | `run` | RunView | Workflow run detail: editable header, step timeline with activity instances + datasets (uri = WorkflowInstance URI) |
+| `/run?uri=` | `run` | RunView | Workflow run detail: editable header, activity instance tree with state + datasets (uri = WorkflowInstance URI) |
 | `/activities` | `activities` | ActivityListView | Activity library: browse/create/edit reusable atomic activities |
 
 ## Features
@@ -143,12 +144,12 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 ### Workflow & Provenance Browsing (implemented)
 - Workflow list at `/workflows`: queries all `wild:WorkflowModel` resources, shows title and description
 - Workflow model at `/workflow?uri=<modelUri>`: shows read-only step skeleton + a list of `wild:WorkflowInstance` run cards; clicking a run navigates to `/run`
-- Workflow run at `/run?uri=<instanceUri>`: editable title/description (SPARQL DELETE/INSERT), step timeline driven by `wild:ActivityInstance` resources linked via `wild:inWorkflowInstance`
-  - Steps retrieved by traversing the model's `wild:hasBehaviour / wild:hasChildActivities / rdf:rest* / rdf:first`
-  - Activity instances attached to steps via `wild:activityInstanceOf` (direct or via leaf of parallel step)
-  - Datasets shown per activity instance via `dcterms:isPartOf <activityInstanceUri>`
+- Workflow run at `/run?uri=<instanceUri>`: editable title/description (SPARQL DELETE/INSERT); primary content is the **Activity Instances** tree — one node per model activity, driven by the model tree structure
+  - Tree mirrors the model's `wild:hasBehaviour/(wild:hasChildActivities/rdf:rest*/rdf:first)*` hierarchy at any depth
+  - Each node shows: model activity title (from `dcterms:title` on the model activity), `wild:hasState` badge (Pending / Active / Done), and — for atomic nodes — dataset chips + "+ Add dataset"
+  - **Two kinds of activity instance**: control flow instances (created by `addWorkflowRun`, identified by `FILTER NOT EXISTS { ?actInst sosa:hasResult ?_ }`) carry state; observation instances (created by `addDataset`, typed `sosa:Observation`) carry datasets via `dcterms:isPartOf`. `fetchRun` queries them separately and merges by model activity.
   - Cross-cutting datasets (`dcterms:isPartOf <workflowInstanceUri>`) in a "Full-run Datasets" section
-  - "Add dataset" per step/activity instance opens `AddDatasetModal` scoped to the current run
+  - "Add dataset" per activity opens `AddDatasetModal` scoped to the current run, preselected to the model activity URI
 - `dcterms:isPartOf` on a dataset points to a `wild:ActivityInstance` (step-level) or `wild:WorkflowInstance` (cross-cutting) — never to a model activity
 - Dataset detail at `/dataset?uri=` **Workflow Context** section:
   - Shows the model activity title (via `activityInstanceOf`) as "Collected during"
@@ -156,6 +157,8 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
   - "Part of run: [name] →" navigates to the run detail page
 - Workflow store: `src/stores/workflow.ts` — `fetchWorkflows()`, `fetchWorkflow(uri)` (returns recursive `WorkflowStep` tree), `fetchWorkflowInstances(modelUri)`, `fetchRun(instanceUri)`, `updateWorkflowInstance(uri, title, desc)`, `fetchWorkflowStepOptions(instanceUri?)`, `addWorkflowModel(form)`, `fetchWorkflowForEdit(uri)` (returns recursive `StepForm` tree), `updateWorkflowModel(uri, form)`, `updateWorkflowModelMetadata(uri, form)`, `deleteWorkflowModel(uri)` (4 sequential SPARQL DELETEs; only call when no runs exist)
 - `WorkflowStep` interface carries `children: WorkflowStep[]`; `fetchWorkflow` uses a two-query approach (metadata + full treeQuery) with a recursive `buildStep` to populate the tree at any depth
+- `RunActivityInstance` interface is recursive (`children: RunActivityInstance[]`); carries `state`, `modelActivityTitle`, `modelActivityType`, `datasets`; `RunStep` has been removed — `RunDetail.activityInstances` holds top-level tree nodes directly
+- `RunActivityNode.vue` is a self-referencing recursive component (same pattern as `WorkflowStepNode`); atomic nodes show title + state badge + dataset chips; composite nodes show type badge + state badge + collapse toggle + child cluster (green for sequential, blue for parallel)
 - Workflow context on datasets: `fetchDatasetWorkflowContext(uri)` in `src/stores/catalog.ts`
 
 ### Dataset Search & Filtering (implemented)
@@ -186,7 +189,7 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 - Activity instance URIs use the pattern `vpd:actinst-<slug>-<suffix>-<n>`; workflow instance URI uses `vpd:wfinst-<slug>-<suffix>`
 - `AddRunModal.vue` — simple modal (title + description); emits `created(instanceUri)` on success
 - Workflow store: `addWorkflowRun(modelUri, title, description): Promise<string>` — queries all model activities, builds and executes a single `INSERT DATA`; returns the new instance URI
-- `fetchRun` bug fix: `parentStep` is now only used as the attachment target when it is itself present in `stepsMap` (i.e. a parallel step); previously top-level atomic steps were silently dropped because their `parentStep` was the root behaviour (not in `stepsMap`)
+- `fetchRun` uses 5 queries: (1) run metadata + modelUri + rootUri; then in parallel: (2) model activity tree (parent→child pairs + title + type), (3) control flow instances (`FILTER NOT EXISTS { ?actInst sosa:hasResult ?_ }`), (4) datasets grouped by model activity (via observation instances), (5) cross-cutting datasets. Builds `RunActivityInstance` tree recursively from model structure.
 
 ### System & Input on Atomic Activities (implemented)
 - Each `wild:AtomicActivity` (= `sosa:Procedure`) can have an optional `ssn:System` (via `ssn:implementedBy`) and `ssn:Input` (via `ssn:hasInput`) linked to it

@@ -56,29 +56,24 @@ export interface WorkflowInstanceSummary {
 }
 
 export interface RunActivityInstance {
-  uri: string
-  title: string | null
+  uri: string                       // control flow activity instance URI (fallback = modelActivityUri)
+  state: string | null              // 'initialized' | 'active' | 'done' | null
   modelActivityUri: string
+  modelActivityTitle: string | null // from model activity's dcterms:title
+  modelActivityType: string | null  // 'AtomicActivity' | 'ParallelActivity' | 'SequentialActivity'
   datasets: WorkflowStepDataset[]
-}
-
-export interface RunStep {
-  uri: string           // model step URI (for title, type, step number)
-  title: string | null
-  description: string | null
-  type: string | null
-  activityInstances: RunActivityInstance[]
+  children: RunActivityInstance[]
 }
 
 export interface RunDetail {
-  uri: string           // workflow instance URI
+  uri: string
   title: string | null
   description: string | null
   state: string | null
   started: string | null
   modelUri: string
   modelTitle: string | null
-  steps: RunStep[]
+  activityInstances: RunActivityInstance[]  // top-level (root's direct children)
   crossCuttingDatasets: WorkflowStepDataset[]
 }
 
@@ -344,17 +339,13 @@ export const useWorkflowStore = defineStore('workflow', () => {
   }
 
   async function fetchRun(uri: string): Promise<RunDetail | null> {
-    // Query 1: run metadata + model step skeleton
-    const mainQuery = `
+    // Query 1: run metadata + model URI + root behaviour URI
+    const metaQuery = `
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
-      PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
       PREFIX prov:    <http://www.w3.org/ns/prov#>
 
-      SELECT ?instTitle ?instDesc ?instState ?instStarted
-             ?modelUri ?modelTitle
-             ?step ?stepTitle ?stepDesc ?stepType
-      WHERE {
+      SELECT ?instTitle ?instDesc ?instState ?instStarted ?modelUri ?modelTitle ?root WHERE {
         BIND(<${uri}> AS ?instance)
         ?instance a wild:WorkflowInstance ;
                   wild:workflowInstanceOf ?modelUri .
@@ -363,44 +354,65 @@ export const useWorkflowStore = defineStore('workflow', () => {
         OPTIONAL { ?instance wild:hasState ?instState }
         OPTIONAL { ?instance prov:startedAtTime ?instStarted }
         OPTIONAL { ?modelUri dcterms:title ?modelTitle }
-        OPTIONAL {
-          ?modelUri wild:hasBehaviour ?root .
-          ?root wild:hasChildActivities/rdf:rest*/rdf:first ?step .
-          OPTIONAL { ?step dcterms:title ?stepTitle }
-          OPTIONAL { ?step dcterms:description ?stepDesc }
-          OPTIONAL {
-            ?step a ?stepType .
-            FILTER(STRSTARTS(STR(?stepType), 'http://purl.org/wild/vocab#'))
-          }
-        }
+        OPTIONAL { ?modelUri wild:hasBehaviour ?root }
       }
     `
+    const metaResults = await querySparql(graphStore.endpoint, metaQuery)
+    if (!metaResults.results.bindings.length) return null
+    const first = metaResults.results.bindings[0]
+    const modelUri = first.modelUri.value
+    const rootUri = first.root?.value ?? null
 
-    // Query 2: activity instances + datasets for this run.
-    // Uses a literal URI (not BIND) to avoid the Jena BIND-in-UNION issue.
-    // Also resolves parent step for leaf activities under parallel steps.
-    const activitiesQuery = `
+    // Queries 2–4 in parallel (all depend on run URI; Q2 also needs modelUri)
+    // Query 2: model activity tree — all parent→child pairs with title and type.
+    // Uses a literal modelUri to avoid the Jena BIND+UNION issue.
+    const treeQuery = `
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
-      SELECT ?actInst ?actInstTitle ?modelActivity ?parentStep ?dataset ?datasetTitle ?datasetDesc
-      WHERE {
-        ?actInst wild:inWorkflowInstance <${uri}> ;
-                 wild:activityInstanceOf ?modelActivity .
-        OPTIONAL { ?actInst dcterms:title ?actInstTitle }
+      SELECT DISTINCT ?parent ?child ?childTitle ?childType WHERE {
+        <${modelUri}> wild:hasBehaviour/(wild:hasChildActivities/rdf:rest*/rdf:first)* ?parent .
+        ?parent wild:hasChildActivities/rdf:rest*/rdf:first ?child .
+        OPTIONAL { ?child dcterms:title ?childTitle }
         OPTIONAL {
-          ?parentStep wild:hasChildActivities/rdf:rest*/rdf:first ?modelActivity .
-        }
-        OPTIONAL {
-          ?dataset dcterms:isPartOf ?actInst .
-          OPTIONAL { ?dataset dcterms:title ?datasetTitle }
-          OPTIONAL { ?dataset dcterms:description ?datasetDesc }
+          ?child a ?childType .
+          FILTER(STRSTARTS(STR(?childType), 'http://purl.org/wild/vocab#'))
         }
       }
     `
 
-    // Query 3: cross-cutting datasets linked directly to this run
+    // Query 3: control flow activity instances for this run (not observations).
+    // Observations carry sosa:hasResult; control flow instances do not.
+    const actInstQuery = `
+      PREFIX wild:    <http://purl.org/wild/vocab#>
+      PREFIX sosa:    <http://www.w3.org/ns/sosa/>
+
+      SELECT ?actInst ?modelAct ?actInstState WHERE {
+        ?actInst wild:inWorkflowInstance <${uri}> ;
+                 wild:activityInstanceOf ?modelAct .
+        FILTER NOT EXISTS { ?actInst sosa:hasResult ?_ }
+        OPTIONAL { ?actInst wild:hasState ?actInstState }
+      }
+    `
+
+    // Query 4: datasets per model activity — via observation instances in this run.
+    // Works for both seeded data (obs instances have isPartOf on the dataset) and
+    // new observations created by addDataset.
+    const datasetsQuery = `
+      PREFIX wild:    <http://purl.org/wild/vocab#>
+      PREFIX dcterms: <http://purl.org/dc/terms/>
+
+      SELECT ?modelAct ?dataset ?datasetTitle ?datasetDesc WHERE {
+        ?obsInst wild:inWorkflowInstance <${uri}> ;
+                 wild:activityInstanceOf ?modelAct .
+        ?dataset dcterms:isPartOf ?obsInst .
+        OPTIONAL { ?dataset dcterms:title ?datasetTitle }
+        OPTIONAL { ?dataset dcterms:description ?datasetDesc }
+      }
+    `
+
+    // Query 5: cross-cutting datasets linked directly to the run instance
     const crossCuttingQuery = `
       PREFIX dcterms: <http://purl.org/dc/terms/>
 
@@ -411,80 +423,80 @@ export const useWorkflowStore = defineStore('workflow', () => {
       }
     `
 
-    const [mainResults, activitiesResults, crossResults] = await Promise.all([
-      querySparql(graphStore.endpoint, mainQuery),
-      querySparql(graphStore.endpoint, activitiesQuery),
+    const [treeResults, actInstResults, datasetsResults, crossResults] = await Promise.all([
+      querySparql(graphStore.endpoint, treeQuery),
+      querySparql(graphStore.endpoint, actInstQuery),
+      querySparql(graphStore.endpoint, datasetsQuery),
       querySparql(graphStore.endpoint, crossCuttingQuery),
     ])
 
-    if (mainResults.results.bindings.length === 0) return null
-    const first = mainResults.results.bindings[0]
+    // Build model activity tree maps
+    type NodeMeta = { title: string | null; type: string | null }
+    const nodeMeta = new Map<string, NodeMeta>()
+    // childrenMap: parentUri → ordered child URIs (insertion = SPARQL result order)
+    const childrenMap = new Map<string, string[]>()
 
-    // Build step skeleton from main query
-    const stepsMap = new Map<string, RunStep>()
-    for (const b of mainResults.results.bindings) {
-      if (!b.step) continue
-      const stepUri = b.step.value
-      if (!stepsMap.has(stepUri)) {
-        const rawType = b.stepType?.value ?? null
-        stepsMap.set(stepUri, {
-          uri: stepUri,
-          title: b.stepTitle?.value ?? null,
-          description: b.stepDesc?.value ?? null,
+    for (const b of treeResults.results.bindings) {
+      const parentUri = b.parent.value
+      const childUri = b.child.value
+      const rawType = b.childType?.value ?? null
+
+      if (!nodeMeta.has(childUri)) {
+        nodeMeta.set(childUri, {
+          title: b.childTitle?.value ?? null,
           type: rawType ? rawType.replace('http://purl.org/wild/vocab#', '') : null,
-          activityInstances: [],
+        })
+      }
+      if (!childrenMap.has(parentUri)) childrenMap.set(parentUri, [])
+      const siblings = childrenMap.get(parentUri)!
+      if (!siblings.includes(childUri)) siblings.push(childUri)
+    }
+
+    // Build control flow instance map: modelActUri → { uri, state }
+    const actInstByModelAct = new Map<string, { uri: string; state: string | null }>()
+    for (const b of actInstResults.results.bindings) {
+      const modelActUri = b.modelAct.value
+      if (!actInstByModelAct.has(modelActUri)) {
+        actInstByModelAct.set(modelActUri, {
+          uri: b.actInst.value,
+          state: b.actInstState?.value?.replace('http://purl.org/wild/vocab#', '') ?? null,
         })
       }
     }
 
-    // Build activity instance map (deduplicate datasets per instance)
-    const actInstMap = new Map<string, RunActivityInstance>()
-    for (const b of activitiesResults.results.bindings) {
-      const actUri = b.actInst.value
-      if (!actInstMap.has(actUri)) {
-        actInstMap.set(actUri, {
-          uri: actUri,
-          title: b.actInstTitle?.value ?? null,
-          modelActivityUri: b.modelActivity.value,
-          datasets: [],
+    // Build datasets map: modelActUri → datasets[]
+    const datasetsByModelAct = new Map<string, WorkflowStepDataset[]>()
+    for (const b of datasetsResults.results.bindings) {
+      const modelActUri = b.modelAct.value
+      if (!datasetsByModelAct.has(modelActUri)) datasetsByModelAct.set(modelActUri, [])
+      const datasets = datasetsByModelAct.get(modelActUri)!
+      if (!datasets.some((d) => d.uri === b.dataset.value)) {
+        datasets.push({
+          uri: b.dataset.value,
+          title: b.datasetTitle?.value ?? null,
+          description: b.datasetDesc?.value ?? null,
         })
       }
-      if (b.dataset) {
-        const act = actInstMap.get(actUri)!
-        if (!act.datasets.some((d) => d.uri === b.dataset!.value)) {
-          act.datasets.push({
-            uri: b.dataset.value,
-            title: b.datasetTitle?.value ?? null,
-            description: b.datasetDesc?.value ?? null,
-          })
-        }
+    }
+
+    // Build RunActivityInstance tree recursively from model tree structure
+    function buildInstTree(modelActUri: string): RunActivityInstance {
+      const meta = nodeMeta.get(modelActUri) ?? { title: null, type: null }
+      const actInst = actInstByModelAct.get(modelActUri)
+      const childModelActUris = childrenMap.get(modelActUri) ?? []
+      return {
+        uri: actInst?.uri ?? modelActUri,
+        state: actInst?.state ?? null,
+        modelActivityUri: modelActUri,
+        modelActivityTitle: meta.title,
+        modelActivityType: meta.type,
+        datasets: datasetsByModelAct.get(modelActUri) ?? [],
+        children: childModelActUris.map(buildInstTree),
       }
     }
 
-    // Attach activity instances to their parent step (deduplicating per step)
-    const attachedActInsts = new Set<string>()
-    for (const b of activitiesResults.results.bindings) {
-      const actUri = b.actInst.value
-      if (attachedActInsts.has(actUri)) continue
-      attachedActInsts.add(actUri)
-
-      const actInst = actInstMap.get(actUri)!
-      // Use parentStep only when it is itself a top-level step (parallel leaf case).
-      // For top-level atomic steps the parentStep is the root behaviour, which is
-      // not in stepsMap, so we fall back to the model activity URI directly.
-      const parentStepUri = b.parentStep?.value ?? null
-      const targetStepUri =
-        parentStepUri && stepsMap.has(parentStepUri) ? parentStepUri : b.modelActivity.value
-      if (stepsMap.has(targetStepUri)) {
-        stepsMap.get(targetStepUri)!.activityInstances.push(actInst)
-      }
-    }
-
-    const steps = [...stepsMap.values()].sort((a, b) => {
-      const nA = parseInt(a.title?.match(/^Step (\d+)/)?.[1] ?? '99')
-      const nB = parseInt(b.title?.match(/^Step (\d+)/)?.[1] ?? '99')
-      return nA - nB
-    })
+    const topLevelModelActUris = rootUri ? (childrenMap.get(rootUri) ?? []) : []
+    const activityInstances = topLevelModelActUris.map(buildInstTree)
 
     const crossCuttingDatasets = crossResults.results.bindings.map((b) => ({
       uri: b.dataset.value,
@@ -498,9 +510,9 @@ export const useWorkflowStore = defineStore('workflow', () => {
       description: first.instDesc?.value ?? null,
       state: first.instState?.value?.replace('http://purl.org/wild/vocab#', '') ?? null,
       started: first.instStarted?.value ?? null,
-      modelUri: first.modelUri.value,
+      modelUri,
       modelTitle: first.modelTitle?.value ?? null,
-      steps,
+      activityInstances,
       crossCuttingDatasets,
     }
   }

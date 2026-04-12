@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useWorkflowStore, type RunDetail } from '@/stores/workflow'
 import AddDatasetModal from '@/components/AddDatasetModal.vue'
+import RunActivityNode from '@/components/RunActivityNode.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -43,19 +44,12 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
-function parseStepTitle(title: string | null): { number: string; name: string } {
-  if (!title) return { number: '?', name: 'Unnamed Step' }
-  const match = title.match(/^Step (\d+):\s*(.+)$/)
-  if (match) return { number: match[1], name: match[2] }
-  return { number: '?', name: title }
-}
-
 function openDataset(uri: string) {
   router.push({ name: 'dataset', query: { uri } })
 }
 
-function openAddModal(stepUri: string) {
-  addToStepUri.value = stepUri
+function openAddModal(modelActivityUri: string) {
+  addToStepUri.value = modelActivityUri
   showAddModal.value = true
 }
 
@@ -172,11 +166,33 @@ async function saveRun() {
         </template>
       </div>
 
+      <!-- Activity instances tree -->
+      <section class="instances-section">
+        <h2>Activity Instances</h2>
+
+        <div v-if="run.activityInstances.length === 0" class="state-message">
+          No activity instances found for this run.
+        </div>
+
+        <div v-else class="instances-list">
+          <RunActivityNode
+            v-for="(inst, i) in run.activityInstances"
+            :key="inst.uri"
+            :inst="inst"
+            :index="i"
+            :total="run.activityInstances.length"
+            context="sequential"
+            @open-dataset="openDataset"
+            @add-dataset="openAddModal"
+          />
+        </div>
+      </section>
+
       <!-- Cross-cutting datasets -->
       <section class="cross-cutting-section">
         <h2>Full-run Datasets</h2>
         <p class="section-note">
-          These datasets cover the entire run and are not tied to a single step.
+          These datasets cover the entire run and are not tied to a single activity.
         </p>
         <div class="dataset-chips">
           <button
@@ -192,72 +208,6 @@ async function saveRun() {
             + Add dataset
           </button>
         </div>
-      </section>
-
-      <!-- Step timeline -->
-      <section class="steps-section">
-        <h2>Workflow Steps</h2>
-
-        <div v-if="run.steps.length === 0" class="state-message">No steps found.</div>
-
-        <ol v-else class="step-list">
-          <li
-            v-for="(step, idx) in run.steps"
-            :key="step.uri"
-            class="step-item"
-          >
-            <!-- Left: circle + connector -->
-            <div class="step-marker">
-              <div class="step-circle">{{ parseStepTitle(step.title).number }}</div>
-              <div v-if="idx < run.steps.length - 1" class="step-connector-line"></div>
-            </div>
-
-            <!-- Right: step content -->
-            <div class="step-content">
-              <div class="step-header">
-                <h3 class="step-name">{{ parseStepTitle(step.title).name }}</h3>
-                <span v-if="step.type === 'ParallelActivity'" class="step-badge step-badge--parallel">
-                  ⟷ parallel
-                </span>
-              </div>
-              <p v-if="step.description" class="step-description">{{ step.description }}</p>
-
-              <!-- Activity instances for this step -->
-              <div
-                v-for="actInst in step.activityInstances"
-                :key="actInst.uri"
-                class="activity-instance"
-              >
-                <p class="activity-instance-title">{{ actInst.title ?? actInst.uri }}</p>
-                <div class="dataset-chips">
-                  <button
-                    v-for="ds in actInst.datasets"
-                    :key="ds.uri"
-                    class="dataset-chip"
-                    :title="ds.description ?? undefined"
-                    @click="openDataset(ds.uri)"
-                  >
-                    {{ ds.title ?? ds.uri }}
-                  </button>
-                  <button
-                    class="dataset-chip dataset-chip--add"
-                    @click="openAddModal(actInst.modelActivityUri)"
-                  >
-                    + Add dataset
-                  </button>
-                </div>
-              </div>
-
-              <!-- Step has no activity instances yet -->
-              <div v-if="step.activityInstances.length === 0" class="no-instances">
-                <span class="no-instances-note">No observations recorded for this step.</span>
-                <button class="dataset-chip dataset-chip--add" @click="openAddModal(step.uri)">
-                  + Add dataset
-                </button>
-              </div>
-            </div>
-          </li>
-        </ol>
       </section>
     </template>
   </main>
@@ -481,7 +431,7 @@ section h2 {
   font-size: 1.1rem;
   font-weight: 600;
   color: var(--color-text);
-  margin: 0 0 0.5rem;
+  margin: 0 0 1rem;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid var(--color-border);
 }
@@ -492,7 +442,12 @@ section h2 {
   margin: 0 0 0.75rem;
 }
 
-/* Dataset chips */
+.instances-list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Dataset chips (cross-cutting section) */
 .dataset-chips {
   display: flex;
   flex-wrap: wrap;
@@ -527,119 +482,5 @@ section h2 {
 .dataset-chip--add:hover {
   background: #f0fdf4;
   border-color: var(--color-primary);
-}
-
-/* Step timeline */
-.step-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.step-item {
-  display: flex;
-  gap: 1.25rem;
-}
-
-.step-marker {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex-shrink: 0;
-  width: 2rem;
-}
-
-.step-circle {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  background: var(--color-primary);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.875rem;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.step-connector-line {
-  flex: 1;
-  width: 2px;
-  background: var(--color-border);
-  margin: 0.3rem 0;
-  min-height: 1.5rem;
-}
-
-.step-content {
-  flex: 1;
-  padding-bottom: 2rem;
-}
-
-.step-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.35rem;
-  flex-wrap: wrap;
-}
-
-.step-name {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--color-text);
-  margin: 0;
-}
-
-.step-badge {
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 0.15rem 0.55rem;
-  border-radius: 20px;
-  letter-spacing: 0.02em;
-}
-
-.step-badge--parallel {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
-}
-
-.step-description {
-  font-size: 0.875rem;
-  color: #4b5563;
-  line-height: 1.55;
-  margin: 0 0 0.75rem;
-}
-
-/* Activity instances within a step */
-.activity-instance {
-  margin-top: 0.6rem;
-  padding: 0.65rem 0.85rem;
-  background: #f9fafb;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-}
-
-.activity-instance-title {
-  font-size: 0.825rem;
-  font-weight: 600;
-  color: #374151;
-  margin: 0 0 0.35rem;
-}
-
-/* Steps with no activity instances */
-.no-instances {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  margin-top: 0.5rem;
-}
-
-.no-instances-note {
-  font-size: 0.8rem;
-  color: #9ca3af;
-  font-style: italic;
 }
 </style>
