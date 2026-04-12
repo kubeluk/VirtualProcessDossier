@@ -26,6 +26,7 @@ const inputOptions = ref<ProcedureOption[]>([])
 
 const submitting = ref(false)
 const deleting = ref(false)
+const activityInUse = ref(false)
 const submitError = ref<string | null>(null)
 
 const isEditMode = ref(false)
@@ -43,6 +44,7 @@ function reset() {
   submitError.value = null
   isEditMode.value = false
   editUri.value = null
+  activityInUse.value = false
 }
 
 watch(
@@ -64,6 +66,7 @@ watch(
       systemUri.value = props.editActivity.systemUri ?? ''
       inputUri.value = props.editActivity.inputUri ?? ''
       submitError.value = null
+      activityInUse.value = await workflowStore.isAtomicActivityInUse(props.editActivity.uri)
     } else {
       reset()
     }
@@ -106,6 +109,7 @@ async function submit() {
 
 async function deleteActivity() {
   if (!editUri.value) return
+  if (activityInUse.value) return
   if (!confirm(`Delete "${title.value}"? This cannot be undone.`)) return
   deleting.value = true
   try {
@@ -189,15 +193,18 @@ reset()
           <p v-if="submitError" class="error-msg">{{ submitError }}</p>
 
           <div class="modal-footer">
-            <button
-              v-if="isEditMode"
-              type="button"
-              class="btn btn--danger"
-              :disabled="deleting || submitting"
-              @click="deleteActivity"
-            >
-              {{ deleting ? 'Deleting…' : 'Delete' }}
-            </button>
+            <div v-if="isEditMode" class="delete-wrap">
+              <button
+                type="button"
+                class="btn btn--danger"
+                :disabled="deleting || submitting || activityInUse"
+                :title="activityInUse ? 'Cannot delete: activity is used in a workflow model' : undefined"
+                @click="deleteActivity"
+              >
+                {{ deleting ? 'Deleting…' : 'Delete' }}
+              </button>
+              <p v-if="activityInUse" class="in-use-msg">Used in a workflow — cannot delete</p>
+            </div>
             <div class="footer-right">
               <button type="button" class="btn btn--secondary" @click="close">Cancel</button>
               <button type="submit" class="btn btn--primary" :disabled="submitting || deleting">
@@ -370,5 +377,18 @@ reset()
 .btn--danger:not(:disabled):hover {
   background: #fee2e2;
   border-color: #dc2626;
+}
+
+.delete-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.in-use-msg {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin: 0;
 }
 </style>

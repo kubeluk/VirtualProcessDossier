@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { querySparql, updateSparql } from '@/services/sparql'
+import { querySparql, askSparql, updateSparql } from '@/services/sparql'
 import { useGraphStore } from '@/stores/graph'
 
 // ---------------------------------------------------------------------------
@@ -657,6 +657,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
 
     const base = 'https://example.org/vpd#'
     const rootUri = `${base}wfbeh-${slug}-${suffix}`
+    const now = new Date().toISOString()
     let nodeCounter = 0
     let listCounter = 0
 
@@ -695,6 +696,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
       }
       if (step.type === 'AtomicActivity') {
         insertLines.push(`  <${nodeUri}> a sosa:Procedure .`)
+        insertLines.push(`  <${nodeUri}> dcterms:issued "${now}"^^xsd:dateTime .`)
         if (step.systemUri) insertLines.push(`  <${nodeUri}> ssn:implementedBy <${step.systemUri}> .`)
         if (step.inputUri) insertLines.push(`  <${nodeUri}> ssn:hasInput <${step.inputUri}> .`)
       }
@@ -864,6 +866,7 @@ ${insertLines.join('\n')}
       }
       if (step.type === 'AtomicActivity') {
         lines.push(`  <${nodeUri}> a sosa:Procedure .`)
+        lines.push(`  <${nodeUri}> dcterms:issued "${now}"^^xsd:dateTime .`)
         if (step.systemUri) lines.push(`  <${nodeUri}> ssn:implementedBy <${step.systemUri}> .`)
         if (step.inputUri) lines.push(`  <${nodeUri}> ssn:hasInput <${step.inputUri}> .`)
       }
@@ -1277,6 +1280,19 @@ ${lines.join('\n')}
     await updateSparql(graphStore.updateEndpoint, update)
   }
 
+  async function isAtomicActivityInUse(uri: string): Promise<boolean> {
+    const query = `
+      PREFIX wild: <http://purl.org/wild/vocab#>
+      PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+      ASK {
+        ?wf a wild:WorkflowModel .
+        ?wf wild:hasBehaviour/(wild:hasChildActivities/rdf:rest*/rdf:first)+ <${uri}> .
+      }
+    `
+    return askSparql(graphStore.endpoint, query)
+  }
+
   async function deleteAtomicActivity(uri: string): Promise<void> {
     const update = `
       DELETE { <${uri}> ?p ?o }
@@ -1337,6 +1353,7 @@ ${lines.join('\n')}
     fetchAtomicActivityOptions,
     addAtomicActivity,
     updateAtomicActivity,
+    isAtomicActivityInUse,
     deleteAtomicActivity,
   }
 })

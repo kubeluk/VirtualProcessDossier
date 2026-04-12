@@ -22,6 +22,14 @@ export async function querySparql(endpoint: string, query: string): Promise<Spar
   return response.data
 }
 
+export async function askSparql(endpoint: string, query: string): Promise<boolean> {
+  const response = await axios.get<{ boolean: boolean }>(endpoint, {
+    params: { query },
+    headers: { Accept: 'application/sparql-results+json' },
+  })
+  return response.data.boolean === true
+}
+
 export async function updateSparql(endpoint: string, update: string): Promise<void> {
   await axios.post(
     endpoint,
