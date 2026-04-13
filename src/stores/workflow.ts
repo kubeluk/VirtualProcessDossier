@@ -63,6 +63,8 @@ export interface RunActivityInstance {
   modelActivityType: string | null  // 'AtomicActivity' | 'ParallelActivity' | 'SequentialActivity'
   datasets: WorkflowStepDataset[]
   children: RunActivityInstance[]
+  parameterShape: ParameterShape | null
+  parameterValues: Record<string, string>  // sh:path URI → raw literal value
 }
 
 export interface RunDetail {
@@ -151,7 +153,64 @@ export interface AtomicActivityForm {
   description: string
   systemUri: string   // '' = none
   inputUri: string    // '' = none
+  parameterShapeForms: ParameterPropertyShapeForm[]
 }
+
+// ---------------------------------------------------------------------------
+// SHACL parameter shape types
+// ---------------------------------------------------------------------------
+
+export interface ParameterPropertyShape {
+  propShapeUri: string
+  path: string          // full URI, e.g. 'https://example.org/vpd#closingSpeed'
+  name: string | null
+  description: string | null
+  datatype: string | null   // full XSD URI
+  minCount: number | null
+  maxCount: number | null
+  minInclusive: number | null
+  maxInclusive: number | null
+  order: number | null
+  unitUri: string | null
+  unitLabel: string | null  // derived from QUDT_UNIT_LABELS
+}
+
+export interface ParameterShape {
+  shapeUri: string
+  properties: ParameterPropertyShape[]
+}
+
+export interface ParameterPropertyShapeForm {
+  propShapeUri: string | null   // null = new row (not yet persisted)
+  pathLocalName: string         // user enters local name; store expands to vpd: URI
+  name: string
+  description: string
+  datatype: 'xsd:decimal' | 'xsd:integer' | 'xsd:string'
+  minCount: 0 | 1
+  maxCount: number | null
+  minInclusive: string          // empty = no constraint
+  maxInclusive: string
+  order: number
+  unitUri: string               // '' = no unit
+}
+
+export const QUDT_UNIT_LABELS: Record<string, string> = {
+  'http://qudt.org/vocab/unit/MilliM-PER-SEC': 'mm/s',
+  'http://qudt.org/vocab/unit/M-PER-SEC': 'm/s',
+  'http://qudt.org/vocab/unit/DEG_C': '°C',
+  'http://qudt.org/vocab/unit/DEG_F': '°F',
+  'http://qudt.org/vocab/unit/K': 'K',
+  'http://qudt.org/vocab/unit/BAR': 'bar',
+  'http://qudt.org/vocab/unit/PA': 'Pa',
+  'http://qudt.org/vocab/unit/M': 'm',
+  'http://qudt.org/vocab/unit/MilliM': 'mm',
+  'http://qudt.org/vocab/unit/N': 'N',
+  'http://qudt.org/vocab/unit/SEC': 's',
+  'http://qudt.org/vocab/unit/MIN': 'min',
+  'http://qudt.org/vocab/unit/RPM': 'rpm',
+}
+
+export const QUDT_UNIT_OPTIONS: [string, string][] = Object.entries(QUDT_UNIT_LABELS)
 
 // ---------------------------------------------------------------------------
 // Step-picker option (used by AddDatasetModal)
@@ -511,6 +570,8 @@ export const useWorkflowStore = defineStore('workflow', () => {
         modelActivityType: meta.type,
         datasets: datasetsByModelAct.get(modelActUri) ?? [],
         children: childModelActUris.map(buildInstTree),
+        parameterShape: null,
+        parameterValues: {},
       }
     }
 
@@ -1454,6 +1515,196 @@ ${lines.join('\n')}
     await updateSparql(graphStore.updateEndpoint, update)
   }
 
+  // ── Parameter shapes (SHACL) ─────────────────────────────────────────────
+
+  const VPD_BASE = 'https://example.org/vpd#'
+
+  function activitySlug(uri: string): string {
+    const local = uri.includes('#') ? uri.split('#').pop()! : uri.split('/').pop()!
+    return local.replace(/[^a-z0-9-]/gi, '-').toLowerCase().slice(0, 40)
+  }
+
+  async function fetchParameterShape(activityUri: string): Promise<ParameterShape | null> {
+    const query = `
+      PREFIX sh:   <http://www.w3.org/ns/shacl#>
+      PREFIX qudt: <http://qudt.org/schema/qudt/>
+      PREFIX vpd:  <${VPD_BASE}>
+
+      SELECT ?shape ?propShape ?path ?name ?description ?datatype
+             ?minCount ?maxCount ?minInclusive ?maxInclusive ?order ?unit
+      WHERE {
+        <${activityUri}> vpd:hasParameterShape ?shape .
+        ?shape a sh:NodeShape ;
+               sh:property ?propShape .
+        ?propShape sh:path ?path .
+        OPTIONAL { ?propShape sh:name ?name }
+        OPTIONAL { ?propShape sh:description ?description }
+        OPTIONAL { ?propShape sh:datatype ?datatype }
+        OPTIONAL { ?propShape sh:minCount ?minCount }
+        OPTIONAL { ?propShape sh:maxCount ?maxCount }
+        OPTIONAL { ?propShape sh:minInclusive ?minInclusive }
+        OPTIONAL { ?propShape sh:maxInclusive ?maxInclusive }
+        OPTIONAL { ?propShape sh:order ?order }
+        OPTIONAL { ?propShape qudt:unit ?unit }
+      }
+      ORDER BY ?order ?name
+    `
+    const result = await querySparql(graphStore.endpoint, query)
+    if (!result.results.bindings.length) return null
+
+    const shapeUri = result.results.bindings[0].shape.value
+    const properties: ParameterPropertyShape[] = result.results.bindings.map((b) => ({
+      propShapeUri: b.propShape.value,
+      path: b.path.value,
+      name: b.name?.value ?? null,
+      description: b.description?.value ?? null,
+      datatype: b.datatype?.value ?? null,
+      minCount: b.minCount ? Number(b.minCount.value) : null,
+      maxCount: b.maxCount ? Number(b.maxCount.value) : null,
+      minInclusive: b.minInclusive ? Number(b.minInclusive.value) : null,
+      maxInclusive: b.maxInclusive ? Number(b.maxInclusive.value) : null,
+      order: b.order ? Number(b.order.value) : null,
+      unitUri: b.unit?.value ?? null,
+      unitLabel: b.unit ? (QUDT_UNIT_LABELS[b.unit.value] ?? null) : null,
+    }))
+    return { shapeUri, properties }
+  }
+
+  async function upsertParameterShape(
+    activityUri: string,
+    forms: ParameterPropertyShapeForm[],
+  ): Promise<void> {
+    function esc(s: string): string {
+      return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+    }
+    const slug = activitySlug(activityUri)
+    const shapeUri = `${VPD_BASE}shape-${slug}-params`
+    const now = Date.now()
+
+    // Build INSERT triples for all property shapes
+    const propInserts = forms
+      .map((f, i) => {
+        const psUri = f.propShapeUri ?? `${VPD_BASE}propshape-${slug}-${now}-${i + 1}`
+        const pathUri = `${VPD_BASE}${f.pathLocalName}`
+        const xsd = 'http://www.w3.org/2001/XMLSchema#'
+        const sh = 'http://www.w3.org/ns/shacl#'
+        const qudt = 'http://qudt.org/schema/qudt/'
+        let triples = `<${psUri}> <${sh}path> <${pathUri}> .`
+        if (f.name) triples += `\n  <${psUri}> <${sh}name> "${esc(f.name)}"@en .`
+        if (f.description) triples += `\n  <${psUri}> <${sh}description> "${esc(f.description)}"@en .`
+        const dtMap: Record<string, string> = {
+          'xsd:decimal': `${xsd}decimal`,
+          'xsd:integer': `${xsd}integer`,
+          'xsd:string': `${xsd}string`,
+        }
+        if (dtMap[f.datatype])
+          triples += `\n  <${psUri}> <${sh}datatype> <${dtMap[f.datatype]}> .`
+        triples += `\n  <${psUri}> <${sh}minCount> "${f.minCount}"^^<${xsd}integer> .`
+        if (f.maxCount !== null)
+          triples += `\n  <${psUri}> <${sh}maxCount> "${f.maxCount}"^^<${xsd}integer> .`
+        if (f.minInclusive !== '')
+          triples += `\n  <${psUri}> <${sh}minInclusive> "${f.minInclusive}"^^<${xsd}decimal> .`
+        if (f.maxInclusive !== '')
+          triples += `\n  <${psUri}> <${sh}maxInclusive> "${f.maxInclusive}"^^<${xsd}decimal> .`
+        triples += `\n  <${psUri}> <${sh}order> "${f.order}"^^<${xsd}integer> .`
+        if (f.unitUri) triples += `\n  <${psUri}> <${qudt}unit> <${f.unitUri}> .`
+        triples += `\n  <${shapeUri}> <${sh}property> <${psUri}> .`
+        return triples
+      })
+      .join('\n  ')
+
+    const sh = 'http://www.w3.org/ns/shacl#'
+    const update = `
+      DELETE { ?ps ?p ?o }
+      WHERE  { <${shapeUri}> <${sh}property> ?ps . ?ps ?p ?o } ;
+
+      DELETE { <${shapeUri}> <${sh}property> ?ps }
+      WHERE  { <${shapeUri}> <${sh}property> ?ps } ;
+
+      DELETE { <${activityUri}> <${VPD_BASE}hasParameterShape> ?s }
+      WHERE  { <${activityUri}> <${VPD_BASE}hasParameterShape> ?s } ;
+
+      INSERT DATA {
+        <${activityUri}> <${VPD_BASE}hasParameterShape> <${shapeUri}> .
+        <${shapeUri}> a <${sh}NodeShape> .
+        ${propInserts}
+      }
+    `
+    await updateSparql(graphStore.updateEndpoint, update)
+  }
+
+  async function deleteParameterShape(activityUri: string): Promise<void> {
+    const slug = activitySlug(activityUri)
+    const shapeUri = `${VPD_BASE}shape-${slug}-params`
+    const sh = 'http://www.w3.org/ns/shacl#'
+    const update = `
+      DELETE { ?ps ?p ?o }
+      WHERE  { <${shapeUri}> <${sh}property> ?ps . ?ps ?p ?o } ;
+
+      DELETE { <${shapeUri}> ?p ?o }
+      WHERE  { <${shapeUri}> ?p ?o } ;
+
+      DELETE { <${activityUri}> <${VPD_BASE}hasParameterShape> ?s }
+      WHERE  { <${activityUri}> <${VPD_BASE}hasParameterShape> ?s }
+    `
+    await updateSparql(graphStore.updateEndpoint, update)
+  }
+
+  async function fetchParameterValues(
+    instanceUri: string,
+    shape: ParameterShape,
+  ): Promise<Record<string, string>> {
+    if (!shape.properties.length) return {}
+    const pathValues = shape.properties.map((p) => `<${p.path}>`).join(' ')
+    const query = `
+      SELECT ?path ?value WHERE {
+        VALUES ?path { ${pathValues} }
+        OPTIONAL { <${instanceUri}> ?path ?value }
+      }
+    `
+    const result = await querySparql(graphStore.endpoint, query)
+    const map: Record<string, string> = {}
+    for (const b of result.results.bindings) {
+      if (b.value) map[b.path.value] = b.value.value
+    }
+    return map
+  }
+
+  async function saveParameterValues(
+    instanceUri: string,
+    shape: ParameterShape,
+    values: Record<string, string>,
+  ): Promise<void> {
+    function esc(s: string): string {
+      return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+    }
+    const xsd = 'http://www.w3.org/2001/XMLSchema#'
+    const dtMap: Record<string, string> = {
+      [`${xsd}decimal`]: `${xsd}decimal`,
+      [`${xsd}integer`]: `${xsd}integer`,
+    }
+
+    const operations: string[] = []
+    for (const prop of shape.properties) {
+      const val = values[prop.path]
+      // DELETE existing value regardless
+      operations.push(
+        `DELETE { <${instanceUri}> <${prop.path}> ?v }
+       WHERE  { OPTIONAL { <${instanceUri}> <${prop.path}> ?v } }`,
+      )
+      if (val !== undefined && val !== '') {
+        const dt = prop.datatype ? (dtMap[prop.datatype] ?? null) : null
+        const literal = dt
+          ? `"${esc(val)}"^^<${dt}>`
+          : `"${esc(val)}"`
+        operations.push(`INSERT DATA { <${instanceUri}> <${prop.path}> ${literal} }`)
+      }
+    }
+    if (!operations.length) return
+    const update = operations.join(' ;\n')
+    await updateSparql(graphStore.updateEndpoint, update)
+  }
+
   // ── Delete workflow model (only allowed when no runs exist) ─────────────
 
   async function deleteWorkflowModel(uri: string): Promise<void> {
@@ -1512,5 +1763,10 @@ ${lines.join('\n')}
     updateAtomicActivity,
     isAtomicActivityInUse,
     deleteAtomicActivity,
+    fetchParameterShape,
+    upsertParameterShape,
+    deleteParameterShape,
+    fetchParameterValues,
+    saveParameterValues,
   }
 })

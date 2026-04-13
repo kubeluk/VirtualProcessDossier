@@ -1,0 +1,106 @@
+@prefix sh:      <http://www.w3.org/ns/shacl#> .
+@prefix qudt:    <http://qudt.org/schema/qudt/> .
+@prefix unit:    <http://qudt.org/vocab/unit/> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix vpd:     <https://example.org/vpd#> .
+
+# ── Hydraulic Forming & Stamping ────────────────────────────────────────────
+
+vpd:step-hydraulic-forming  vpd:hasParameterShape  vpd:shape-step-hydraulic-forming-params .
+
+vpd:shape-step-hydraulic-forming-params
+    a sh:NodeShape .
+
+vpd:propshape-hf-1
+    sh:path         vpd:closingSpeed ;
+    sh:name         "Closing Speed"@en ;
+    sh:description  "Rate at which the upper die descends onto the workpiece."@en ;
+    sh:datatype     xsd:decimal ;
+    sh:minCount     1 ;
+    sh:maxCount     1 ;
+    sh:minInclusive "0"^^xsd:decimal ;
+    sh:order        1 ;
+    qudt:unit       unit:MilliM-PER-SEC .
+
+vpd:propshape-hf-2
+    sh:path         vpd:toolTemperature ;
+    sh:name         "Tool Temperature"@en ;
+    sh:description  "Temperature of the forming die at process start."@en ;
+    sh:datatype     xsd:decimal ;
+    sh:minCount     1 ;
+    sh:maxCount     1 ;
+    sh:minInclusive "0"^^xsd:decimal ;
+    sh:maxInclusive "500"^^xsd:decimal ;
+    sh:order        2 ;
+    qudt:unit       unit:DEG_C .
+
+vpd:propshape-hf-3
+    sh:path         vpd:formingPressure ;
+    sh:name         "Forming Pressure"@en ;
+    sh:description  "Hydraulic pressure applied during the forming stroke."@en ;
+    sh:datatype     xsd:decimal ;
+    sh:minCount     0 ;
+    sh:maxCount     1 ;
+    sh:minInclusive "0"^^xsd:decimal ;
+    sh:order        3 ;
+    qudt:unit       unit:BAR .
+
+vpd:shape-step-hydraulic-forming-params
+    sh:property  vpd:propshape-hf-1 ,
+                 vpd:propshape-hf-2 ,
+                 vpd:propshape-hf-3 .
+
+# ── CNC Temperature Monitoring ───────────────────────────────────────────────
+
+vpd:wfact-cnc-temperature  vpd:hasParameterShape  vpd:shape-wfact-cnc-temperature-params .
+
+vpd:shape-wfact-cnc-temperature-params
+    a sh:NodeShape .
+
+vpd:propshape-cnc-t-1
+    sh:path         vpd:spindleSpeed ;
+    sh:name         "Spindle Speed"@en ;
+    sh:description  "Rotational speed of the main CNC spindle."@en ;
+    sh:datatype     xsd:integer ;
+    sh:minCount     1 ;
+    sh:maxCount     1 ;
+    sh:minInclusive "0"^^xsd:decimal ;
+    sh:maxInclusive "24000"^^xsd:decimal ;
+    sh:order        1 ;
+    qudt:unit       unit:RPM .
+
+vpd:propshape-cnc-t-2
+    sh:path         vpd:coolantTemperature ;
+    sh:name         "Coolant Temperature"@en ;
+    sh:description  "Temperature of the cutting fluid at the inlet."@en ;
+    sh:datatype     xsd:decimal ;
+    sh:minCount     0 ;
+    sh:maxCount     1 ;
+    sh:minInclusive "0"^^xsd:decimal ;
+    sh:maxInclusive "60"^^xsd:decimal ;
+    sh:order        2 ;
+    qudt:unit       unit:DEG_C .
+
+vpd:shape-wfact-cnc-temperature-params
+    sh:property  vpd:propshape-cnc-t-1 ,
+                 vpd:propshape-cnc-t-2 .
+
+# ── CNC Vibration Condition Monitoring ───────────────────────────────────────
+
+vpd:wfact-cnc-vibration  vpd:hasParameterShape  vpd:shape-wfact-cnc-vibration-params .
+
+vpd:shape-wfact-cnc-vibration-params
+    a sh:NodeShape .
+
+vpd:propshape-cnc-v-1
+    sh:path         vpd:vibrationThreshold ;
+    sh:name         "Vibration Threshold"@en ;
+    sh:description  "Maximum acceptable peak vibration amplitude before alerting."@en ;
+    sh:datatype     xsd:decimal ;
+    sh:minCount     0 ;
+    sh:maxCount     1 ;
+    sh:minInclusive "0"^^xsd:decimal ;
+    sh:order        1 .
+
+vpd:shape-wfact-cnc-vibration-params
+    sh:property  vpd:propshape-cnc-v-1 .

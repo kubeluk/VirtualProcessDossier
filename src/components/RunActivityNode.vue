@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import type { RunActivityInstance } from '@/stores/workflow'
+import { ref, computed, onMounted } from 'vue'
+import { useWorkflowStore, type RunActivityInstance, type ParameterShape } from '@/stores/workflow'
 // Self-referencing recursive component — Vue resolves by filename in <script setup>
 import RunActivityNode from './RunActivityNode.vue'
+import ActivityParameterForm from './ActivityParameterForm.vue'
 
 const props = defineProps<{
   inst: RunActivityInstance
@@ -16,11 +17,31 @@ const emit = defineEmits<{
   'add-dataset': [modelActivityUri: string]
 }>()
 
+const workflowStore = useWorkflowStore()
+
 const expanded = ref(true)
 
 const isAtomic = computed(
   () => !props.inst.modelActivityType || props.inst.modelActivityType === 'AtomicActivity',
 )
+
+const parameterShape = ref<ParameterShape | null>(null)
+const parameterValues = ref<Record<string, string>>({})
+const parameterLoading = ref(false)
+
+onMounted(async () => {
+  if (!isAtomic.value) return
+  parameterLoading.value = true
+  try {
+    const shape = await workflowStore.fetchParameterShape(props.inst.modelActivityUri)
+    if (shape) {
+      parameterShape.value = shape
+      parameterValues.value = await workflowStore.fetchParameterValues(props.inst.uri, shape)
+    }
+  } finally {
+    parameterLoading.value = false
+  }
+})
 const isParallel = computed(() => props.inst.modelActivityType === 'ParallelActivity')
 
 const stepNumber = props.index + 1
@@ -75,6 +96,16 @@ const stateLabel = computed(() => props.inst.state ?? null)
               + Add dataset
             </button>
           </div>
+
+          <!-- Process parameter form -->
+          <p v-if="parameterLoading" class="param-loading">Loading parameters…</p>
+          <ActivityParameterForm
+            v-else-if="parameterShape"
+            :inst="inst"
+            :shape="parameterShape"
+            :initial-values="parameterValues"
+            @saved="parameterValues = $event"
+          />
         </div>
       </div>
     </template>
@@ -339,5 +370,11 @@ const stateLabel = computed(() => props.inst.state ?? null)
   display: flex;
   flex-direction: column;
   margin-bottom: 1.5rem;
+}
+
+.param-loading {
+  font-size: 0.78rem;
+  color: #9ca3af;
+  margin: 0.5rem 0 0;
 }
 </style>

@@ -24,13 +24,14 @@ src/
     catalog.ts   # Dataset list + detail fetching/adding (fetchDatasets, fetchDataset, addDataset)
     workflow.ts  # Workflow model + run queries and mutations
   components/
-    AddDatasetModal.vue    # Modal for adding a new dataset to a run step
-    AddWorkflowModal.vue   # Modal for creating a workflow model or editing its metadata/structure
-    AddActivityModal.vue   # Modal for creating/editing a library atomic activity
-    AddSystemModal.vue     # Modal for creating/editing an ssn:System
-    StepEditorNode.vue     # Recursive step-editing component used by AddWorkflowModal
-    WorkflowStepNode.vue   # Recursive read-only step display used by WorkflowView
-    RunActivityNode.vue    # Recursive activity instance display used by RunView (with state + datasets)
+    AddDatasetModal.vue       # Modal for adding a new dataset to a run step
+    AddWorkflowModal.vue      # Modal for creating a workflow model or editing its metadata/structure
+    AddActivityModal.vue      # Modal for creating/editing a library atomic activity (incl. parameter shapes)
+    AddSystemModal.vue        # Modal for creating/editing an ssn:System
+    StepEditorNode.vue        # Recursive step-editing component used by AddWorkflowModal
+    WorkflowStepNode.vue      # Recursive read-only step display used by WorkflowView
+    RunActivityNode.vue       # Recursive activity instance display used by RunView (with state + datasets)
+    ActivityParameterForm.vue # Dynamic form rendered from a SHACL parameter shape; used by RunActivityNode
   views/
     HomeView.vue            # Landing page → links to /catalog
     CatalogView.vue         # Browse all datasets (card list)
@@ -41,8 +42,9 @@ src/
     ActivityListView.vue    # Activity library: browse/create/edit reusable atomic activities
     SystemListView.vue      # System library: browse/create/edit ssn:System instances
 data/
-  catalog.ttl    # DCAT seed data (loaded automatically on first Docker start)
-  seed.sh        # Init script run by the 'seed' Docker service
+  catalog.ttl           # DCAT seed data (loaded automatically on first Docker start)
+  parameter-shapes.ttl  # SHACL parameter shape seed data for seeded atomic activities
+  seed.sh               # Init script run by the 'seed' Docker service
 ```
 
 ## Commands
@@ -60,7 +62,7 @@ docker compose up --build        # UI on :8080, Jena Fuseki on :3030
 docker compose down -v           # Tear down including data volume (resets seed)
 ```
 
-- The `seed` service auto-creates the `vpd` dataset and loads `data/catalog.ttl` on first start.
+- The `seed` service auto-creates the `vpd` dataset and loads `data/catalog.ttl` then `data/parameter-shapes.ttl` on first start.
 - Seeding is skipped on subsequent starts if the graph already contains triples.
 - Fuseki admin UI: `http://localhost:3030` (credentials: `admin` / `admin`)
 
@@ -78,7 +80,7 @@ docker compose down -v           # Tear down including data volume (resets seed)
 - **Resource URIs**: Hash URIs under a single base — `https://example.org/vpd#<resource>`
   - e.g. `vpd:catalog`, `vpd:dataset-air-quality`, `vpd:dist-air-quality-csv`
   - Rationale: all catalog resources belong to one document; hash URIs are appropriate per the [Cool URIs](https://www.w3.org/TR/cooluris/#hashuri) recommendation
-- **Supporting vocabularies**: `dcterms`, `foaf`, `xsd`, `prov`, `sosa`, `ssn`, `geo`, `wild`
+- **Supporting vocabularies**: `dcterms`, `foaf`, `xsd`, `prov`, `sosa`, `ssn`, `geo`, `wild`, `sh` (SHACL), `qudt`, `unit` (QUDT)
 - Ontologies for new features are provided incrementally and documented here as they are added
 
 ### Provenance (seeded)
@@ -224,3 +226,17 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 - **Delete guard**: an activity cannot be deleted while it appears in any `wild:WorkflowModel`'s behaviour tree; `AddActivityModal` checks `isAtomicActivityInUse(uri)` on open and disables the Delete button with a "Used in a workflow — cannot delete" hint when true; `askSparql` (new helper in `src/services/sparql.ts`) handles SPARQL ASK queries returning `boolean`
 - `StepForm.isLibraryRef?` and `StepFormWithId.isLibraryRef` carry the flag through the form layer; `fetchWorkflowForEdit` detects library refs by checking for `dcterms:issued` on each child node in the tree query
 - Workflow store functions: `fetchAtomicActivities(): Promise<AtomicActivitySummary[]>`, `fetchAtomicActivityOptions(): Promise<AtomicActivityOption[]>`, `addAtomicActivity(form)`, `updateAtomicActivity(uri, form)`, `isAtomicActivityInUse(uri): Promise<boolean>`, `deleteAtomicActivity(uri)`; interfaces `AtomicActivitySummary`, `AtomicActivityOption`, `AtomicActivityForm` exported from `src/stores/workflow.ts`
+
+### Process Parameter Shapes (implemented)
+- Each `wild:AtomicActivity` (= `sosa:Procedure`) can have a SHACL parameter schema that defines the typed process parameters an operator must supply when executing a run (e.g. closing speed, tool temperature, forming pressure)
+- **Ontologies**: SHACL (`sh: <http://www.w3.org/ns/shacl#>`) for the constraint vocabulary; QUDT (`qudt: <http://qudt.org/schema/qudt/>`, `unit: <http://qudt.org/vocab/unit/>`) for physical units
+- **Linking predicate**: `vpd:hasParameterShape` — custom predicate connecting a `wild:AtomicActivity` to its `sh:NodeShape`
+- **Shape storage**: `sh:NodeShape` and `sh:PropertyShape` resources use **named URIs** (not blank nodes) to allow SPARQL CRUD; NodeShape pattern `vpd:shape-{slug}-params`, PropertyShape pattern `vpd:propshape-{slug}-{timestamp}-{n}`
+- **PropertyShape terms used**: `sh:path` (full URI; doubles as the RDF predicate for storing values), `sh:name`, `sh:description`, `sh:datatype` (XSD URI), `sh:minCount`, `sh:maxCount`, `sh:minInclusive`, `sh:maxInclusive`, `sh:order`, `qudt:unit`
+- **Run-time value storage**: parameter values are written directly on the control-flow `wild:ActivityInstance` using `sh:path` as the predicate — e.g. `<actInst> vpd:closingSpeed "150.0"^^xsd:decimal`; this is standard SHACL semantics
+- **Authoring** (Activity Library): `AddActivityModal` has a "Process Parameters" section; each parameter row lets the user define label, path local name (expanded to `vpd:` URI internally), datatype (decimal/integer/string), QUDT unit, required flag, min/max, and display order; shapes are persisted via `upsertParameterShape`; shapes are cleaned up before activity deletion via `deleteParameterShape`
+- **Run-time form** (Run view): `RunActivityNode` lazy-loads the parameter shape for each atomic node on mount via `fetchParameterShape(modelActivityUri)`; if a shape exists, `ActivityParameterForm` renders a dynamic form with one field per property shape; values are loaded via `fetchParameterValues` and saved via `saveParameterValues`; client-side validation enforces required fields and numeric ranges before the SPARQL update is sent
+- **v-model / number type caveat**: Vue 3's `v-model` on `<input type="number">` coerces values to `number` at runtime; `fieldValues` in `ActivityParameterForm` is typed `Record<string, string | number>` and values are stringified via `String()` before SPARQL insertion
+- `QUDT_UNIT_LABELS` and `QUDT_UNIT_OPTIONS` are module-level exports from `src/stores/workflow.ts`; used by both `AddActivityModal` and `ActivityParameterForm`
+- Workflow store functions: `fetchParameterShape(activityUri)`, `upsertParameterShape(activityUri, forms)`, `deleteParameterShape(activityUri)`, `fetchParameterValues(instanceUri, shape)`, `saveParameterValues(instanceUri, shape, values)`; interfaces `ParameterPropertyShape`, `ParameterShape`, `ParameterPropertyShapeForm` exported from `src/stores/workflow.ts`
+- Seed shapes in `data/parameter-shapes.ttl`: `vpd:step-hydraulic-forming` (3 params), `vpd:wfact-cnc-temperature` (2 params), `vpd:wfact-cnc-vibration` (1 param)

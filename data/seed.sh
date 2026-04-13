@@ -32,10 +32,15 @@ COUNT=$(curl -sf -G "${FUSEKI}/${DATASET}/sparql" \
 
 if [ "${COUNT}" = "0" ]; then
   echo "Loading seed data..."
-  curl -sf -u admin:${ADMIN_PASSWORD} \
-    -X POST "${FUSEKI}/${DATASET}/data?default" \
-    -H "Content-Type: text/turtle" \
-    --data-binary @"${TTL}"
+  for ttl in /data/catalog.ttl /data/parameter-shapes.ttl; do
+    if [ -f "${ttl}" ]; then
+      echo "  Loading ${ttl}..."
+      curl -sf -u admin:${ADMIN_PASSWORD} \
+        -X POST "${FUSEKI}/${DATASET}/data?default" \
+        -H "Content-Type: text/turtle" \
+        --data-binary @"${ttl}"
+    fi
+  done
   echo "Seed data loaded."
 else
   echo "Dataset already contains ${COUNT} triples, skipping seed."

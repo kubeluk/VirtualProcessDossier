@@ -1,6 +1,16 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { useWorkflowStore, type AtomicActivityForm, type AtomicActivitySummary, type ProcedureOption } from '@/stores/workflow'
+import {
+  useWorkflowStore,
+  QUDT_UNIT_OPTIONS,
+  type AtomicActivityForm,
+  type AtomicActivitySummary,
+  type ParameterPropertyShape,
+  type ParameterPropertyShapeForm,
+  type ProcedureOption,
+} from '@/stores/workflow'
+
+const VPD_BASE = 'https://example.org/vpd#'
 
 const props = defineProps<{
   modelValue: boolean
@@ -24,6 +34,10 @@ const inputUri = ref('')
 const systemOptions = ref<ProcedureOption[]>([])
 const inputOptions = ref<ProcedureOption[]>([])
 
+const paramForms = ref<ParameterPropertyShapeForm[]>([])
+const loadingShape = ref(false)
+const hadShape = ref(false)  // tracks whether the activity had a shape when opened
+
 const submitting = ref(false)
 const deleting = ref(false)
 const activityInUse = ref(false)
@@ -41,10 +55,54 @@ function reset() {
   description.value = ''
   systemUri.value = ''
   inputUri.value = ''
+  paramForms.value = []
+  hadShape.value = false
   submitError.value = null
   isEditMode.value = false
   editUri.value = null
   activityInUse.value = false
+}
+
+function propShapeToForm(p: ParameterPropertyShape): ParameterPropertyShapeForm {
+  const localName = p.path.startsWith(VPD_BASE) ? p.path.slice(VPD_BASE.length) : p.path
+  const dtMap: Record<string, ParameterPropertyShapeForm['datatype']> = {
+    'http://www.w3.org/2001/XMLSchema#decimal': 'xsd:decimal',
+    'http://www.w3.org/2001/XMLSchema#integer': 'xsd:integer',
+    'http://www.w3.org/2001/XMLSchema#string': 'xsd:string',
+  }
+  return {
+    propShapeUri: p.propShapeUri,
+    pathLocalName: localName,
+    name: p.name ?? '',
+    description: p.description ?? '',
+    datatype: (p.datatype ? (dtMap[p.datatype] ?? 'xsd:decimal') : 'xsd:decimal'),
+    minCount: (p.minCount ?? 0) >= 1 ? 1 : 0,
+    maxCount: p.maxCount,
+    minInclusive: p.minInclusive !== null ? String(p.minInclusive) : '',
+    maxInclusive: p.maxInclusive !== null ? String(p.maxInclusive) : '',
+    order: p.order ?? paramForms.value.length + 1,
+    unitUri: p.unitUri ?? '',
+  }
+}
+
+function addParameterRow() {
+  paramForms.value.push({
+    propShapeUri: null,
+    pathLocalName: '',
+    name: '',
+    description: '',
+    datatype: 'xsd:decimal',
+    minCount: 0,
+    maxCount: 1,
+    minInclusive: '',
+    maxInclusive: '',
+    order: paramForms.value.length + 1,
+    unitUri: '',
+  })
+}
+
+function removeParameterRow(index: number) {
+  paramForms.value.splice(index, 1)
 }
 
 watch(
@@ -67,6 +125,12 @@ watch(
       inputUri.value = props.editActivity.inputUri ?? ''
       submitError.value = null
       activityInUse.value = await workflowStore.isAtomicActivityInUse(props.editActivity.uri)
+
+      loadingShape.value = true
+      const shape = await workflowStore.fetchParameterShape(props.editActivity.uri)
+      paramForms.value = shape ? shape.properties.map(propShapeToForm) : []
+      hadShape.value = shape !== null
+      loadingShape.value = false
     } else {
       reset()
     }
@@ -79,24 +143,49 @@ async function submit() {
     submitError.value = 'Activity title is required.'
     return
   }
+  // Validate parameter rows
+  const seenPaths = new Set<string>()
+  for (const pf of paramForms.value) {
+    if (!pf.name.trim() || !pf.pathLocalName.trim()) {
+      submitError.value = 'Each parameter must have a label and a path local name.'
+      return
+    }
+    if (seenPaths.has(pf.pathLocalName.trim())) {
+      submitError.value = `Duplicate parameter path "${pf.pathLocalName.trim()}".`
+      return
+    }
+    seenPaths.add(pf.pathLocalName.trim())
+  }
+
   const form: AtomicActivityForm = {
     title: title.value.trim(),
     description: description.value.trim(),
     systemUri: systemUri.value,
     inputUri: inputUri.value,
+    parameterShapeForms: paramForms.value,
   }
   submitting.value = true
   try {
+    let uri: string
     if (isEditMode.value && editUri.value) {
       await workflowStore.updateAtomicActivity(editUri.value, form)
-      const uri = editUri.value
-      reset()
-      close()
+      uri = editUri.value
+    } else {
+      uri = await workflowStore.addAtomicActivity(form)
+    }
+
+    // Manage parameter shape
+    if (paramForms.value.length > 0) {
+      await workflowStore.upsertParameterShape(uri, paramForms.value)
+    } else if (hadShape.value && isEditMode.value) {
+      await workflowStore.deleteParameterShape(uri)
+    }
+
+    reset()
+    close()
+    if (isEditMode.value) {
       emit('updated', uri)
     } else {
-      const uri = await workflowStore.addAtomicActivity(form)
-      reset()
-      close()
       emit('created', uri)
     }
   } catch (e) {
@@ -113,6 +202,10 @@ async function deleteActivity() {
   if (!confirm(`Delete "${title.value}"? This cannot be undone.`)) return
   deleting.value = true
   try {
+    // Clean up parameter shape before deleting the activity
+    if (hadShape.value) {
+      await workflowStore.deleteParameterShape(editUri.value)
+    }
     await workflowStore.deleteAtomicActivity(editUri.value)
     const uri = editUri.value
     reset()
@@ -190,6 +283,83 @@ reset()
             </p>
           </div>
 
+          <!-- Process Parameters -->
+          <div class="field">
+            <div class="param-section-header">
+              <label class="field-label">Process Parameters</label>
+              <button type="button" class="btn btn--secondary btn--small" @click="addParameterRow">
+                + Add parameter
+              </button>
+            </div>
+            <p v-if="loadingShape" class="field-hint">Loading…</p>
+            <p v-else-if="paramForms.length === 0" class="field-hint">No parameters defined.</p>
+            <div v-for="(pf, idx) in paramForms" :key="idx" class="param-row">
+              <div class="param-row-main">
+                <input
+                  v-model="pf.name"
+                  type="text"
+                  class="field-input"
+                  placeholder="Label (e.g. Closing Speed)"
+                />
+                <input
+                  v-model="pf.pathLocalName"
+                  type="text"
+                  class="field-input field-input--mono"
+                  placeholder="Path name (e.g. closingSpeed)"
+                />
+                <select v-model="pf.datatype" class="field-input field-input--narrow">
+                  <option value="xsd:decimal">Decimal</option>
+                  <option value="xsd:integer">Integer</option>
+                  <option value="xsd:string">Text</option>
+                </select>
+                <select v-model="pf.unitUri" class="field-input field-input--narrow">
+                  <option value="">— No unit —</option>
+                  <option v-for="[uri, label] in QUDT_UNIT_OPTIONS" :key="uri" :value="uri">
+                    {{ label }}
+                  </option>
+                </select>
+                <button
+                  type="button"
+                  class="btn btn--danger btn--small param-remove"
+                  :aria-label="`Remove parameter ${idx + 1}`"
+                  @click="removeParameterRow(idx)"
+                >
+                  ✕
+                </button>
+              </div>
+              <div class="param-row-extra">
+                <label class="param-check-label">
+                  <input
+                    type="checkbox"
+                    :checked="pf.minCount === 1"
+                    @change="pf.minCount = ($event.target as HTMLInputElement).checked ? 1 : 0"
+                  />
+                  Required
+                </label>
+                <template v-if="pf.datatype !== 'xsd:string'">
+                  <input
+                    v-model="pf.minInclusive"
+                    type="number"
+                    class="field-input field-input--tiny"
+                    placeholder="Min"
+                  />
+                  <input
+                    v-model="pf.maxInclusive"
+                    type="number"
+                    class="field-input field-input--tiny"
+                    placeholder="Max"
+                  />
+                </template>
+                <input
+                  v-model.number="pf.order"
+                  type="number"
+                  class="field-input field-input--tiny"
+                  placeholder="Order"
+                />
+              </div>
+            </div>
+          </div>
+
           <p v-if="submitError" class="error-msg">{{ submitError }}</p>
 
           <div class="modal-footer">
@@ -233,7 +403,7 @@ reset()
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: 12px;
-  width: min(480px, 94vw);
+  width: min(640px, 94vw);
   max-height: 90vh;
   display: flex;
   flex-direction: column;
@@ -390,5 +560,72 @@ reset()
   font-size: 0.75rem;
   color: #9ca3af;
   margin: 0;
+}
+
+.btn--small {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+}
+
+.param-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.param-row {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+  background: #fafafa;
+}
+
+.param-row-main {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.param-row-extra {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.field-input--narrow {
+  width: auto;
+  flex: 0 1 120px;
+}
+
+.field-input--tiny {
+  width: 5rem;
+  flex: 0 0 auto;
+}
+
+.field-input--mono {
+  font-family: monospace;
+  font-size: 0.8rem;
+}
+
+.param-check-label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--color-text);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.param-remove {
+  flex-shrink: 0;
+  margin-left: auto;
 }
 </style>
