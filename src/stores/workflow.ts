@@ -74,6 +74,7 @@ export interface RunDetail {
   started: string | null
   modelUri: string
   modelTitle: string | null
+  rootType: 'SequentialActivity' | 'ParallelActivity' | null
   activityInstances: RunActivityInstance[]  // top-level (root's direct children)
   crossCuttingDatasets: WorkflowStepDataset[]
 }
@@ -374,7 +375,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX prov:    <http://www.w3.org/ns/prov#>
 
-      SELECT ?instTitle ?instDesc ?instState ?instStarted ?modelUri ?modelTitle ?root WHERE {
+      SELECT ?instTitle ?instDesc ?instState ?instStarted ?modelUri ?modelTitle ?root ?rootType WHERE {
         BIND(<${uri}> AS ?instance)
         ?instance a wild:WorkflowInstance ;
                   wild:workflowInstanceOf ?modelUri .
@@ -383,7 +384,10 @@ export const useWorkflowStore = defineStore('workflow', () => {
         OPTIONAL { ?instance wild:hasState ?instState }
         OPTIONAL { ?instance prov:startedAtTime ?instStarted }
         OPTIONAL { ?modelUri dcterms:title ?modelTitle }
-        OPTIONAL { ?modelUri wild:hasBehaviour ?root }
+        OPTIONAL {
+          ?modelUri wild:hasBehaviour ?root .
+          OPTIONAL { ?root a ?rootType . FILTER(STRSTARTS(STR(?rootType), 'http://purl.org/wild/vocab#')) }
+        }
       }
     `
     const metaResults = await querySparql(graphStore.endpoint, metaQuery)
@@ -391,6 +395,9 @@ export const useWorkflowStore = defineStore('workflow', () => {
     const first = metaResults.results.bindings[0]
     const modelUri = first.modelUri.value
     const rootUri = first.root?.value ?? null
+    const rawRootType = first.rootType?.value?.replace('http://purl.org/wild/vocab#', '') ?? null
+    const rootType: RunDetail['rootType'] =
+      rawRootType === 'ParallelActivity' ? 'ParallelActivity' : rawRootType ? 'SequentialActivity' : null
 
     // Queries 2–4 in parallel (all depend on run URI; Q2 also needs modelUri)
     // Query 2: model activity tree — all parent→child pairs with title and type.
@@ -541,6 +548,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
       started: first.instStarted?.value ?? null,
       modelUri,
       modelTitle: first.modelTitle?.value ?? null,
+      rootType,
       activityInstances,
       crossCuttingDatasets,
     }

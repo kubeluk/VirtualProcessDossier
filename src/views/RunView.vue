@@ -12,6 +12,7 @@ const workflowStore = useWorkflowStore()
 const run = ref<RunDetail | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
+const rootExpanded = ref(true)
 
 // Inline edit
 const editingRun = ref(false)
@@ -174,18 +175,45 @@ async function saveRun() {
           No activity instances found for this run.
         </div>
 
-        <div v-else class="instances-list">
-          <RunActivityNode
-            v-for="(inst, i) in run.activityInstances"
-            :key="inst.uri"
-            :inst="inst"
-            :index="i"
-            :total="run.activityInstances.length"
-            context="sequential"
-            @open-dataset="openDataset"
-            @add-dataset="openAddModal"
-          />
-        </div>
+        <template v-else>
+          <!-- Root behaviour badge — mirrors WorkflowView for consistency -->
+          <div class="root-behaviour-header">
+            <button
+              class="root-toggle"
+              :aria-label="rootExpanded ? 'Collapse' : 'Expand'"
+              @click="rootExpanded = !rootExpanded"
+            >
+              {{ rootExpanded ? '▼' : '▶' }}
+            </button>
+            <span
+              class="step-badge"
+              :class="run.rootType === 'ParallelActivity' ? 'step-badge--parallel' : 'step-badge--sequential'"
+            >
+              {{ run.rootType === 'ParallelActivity' ? '⟷ Parallel' : '↕ Sequential' }}
+            </span>
+            <span v-if="!rootExpanded" class="root-collapsed-hint">
+              {{ run.activityInstances.length }}
+              {{ run.activityInstances.length === 1 ? 'activity' : 'activities' }}
+            </span>
+          </div>
+
+          <div
+            v-if="rootExpanded"
+            class="instances-list"
+            :class="run.rootType === 'ParallelActivity' ? 'instances-list--parallel' : 'instances-list--sequential'"
+          >
+            <RunActivityNode
+              v-for="(inst, i) in run.activityInstances"
+              :key="inst.uri"
+              :inst="inst"
+              :index="i"
+              :total="run.activityInstances.length"
+              :context="run.rootType === 'ParallelActivity' ? 'parallel' : 'sequential'"
+              @open-dataset="openDataset"
+              @add-dataset="openAddModal"
+            />
+          </div>
+        </template>
       </section>
 
       <!-- Cross-cutting datasets -->
@@ -442,9 +470,71 @@ section h2 {
   margin: 0 0 0.75rem;
 }
 
+/* Root behaviour header (mirrors WorkflowView) */
+.root-behaviour-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.root-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.65rem;
+  color: #6b7280;
+  cursor: pointer;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.root-toggle:hover {
+  color: var(--color-text);
+}
+
+.step-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.55rem;
+  border-radius: 20px;
+  letter-spacing: 0.02em;
+}
+
+.step-badge--parallel {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.step-badge--sequential {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.root-collapsed-hint {
+  font-size: 0.78rem;
+  color: #9ca3af;
+}
+
 .instances-list {
   display: flex;
   flex-direction: column;
+}
+
+.instances-list--sequential {
+  padding: 0.75rem 1rem;
+  border-left: 3px solid #bbf7d0;
+  border-radius: 0 6px 6px 0;
+  background: #f0fdf4;
+}
+
+.instances-list--parallel {
+  padding: 0.75rem 1rem;
+  border-left: 3px solid #bfdbfe;
+  border-radius: 0 6px 6px 0;
+  background: #f8faff;
 }
 
 /* Dataset chips (cross-cutting section) */
