@@ -40,6 +40,7 @@ export interface WorkflowDetail {
   title: string
   description: string | null
   issued: string | null
+  rootType: 'SequentialActivity' | 'ParallelActivity' | null
   steps: WorkflowStep[]
 }
 
@@ -204,12 +205,15 @@ export const useWorkflowStore = defineStore('workflow', () => {
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
 
-      SELECT ?wfTitle ?wfDesc ?wfIssued ?root WHERE {
+      SELECT ?wfTitle ?wfDesc ?wfIssued ?root ?rootType WHERE {
         BIND(<${uri}> AS ?wf)
         ?wf dcterms:title ?wfTitle .
         OPTIONAL { ?wf dcterms:description ?wfDesc }
         OPTIONAL { ?wf dcterms:issued ?wfIssued }
-        OPTIONAL { ?wf wild:hasBehaviour ?root }
+        OPTIONAL {
+          ?wf wild:hasBehaviour ?root .
+          OPTIONAL { ?root a ?rootType . FILTER(STRSTARTS(STR(?rootType), 'http://purl.org/wild/vocab#')) }
+        }
       }
     `
 
@@ -253,12 +257,17 @@ export const useWorkflowStore = defineStore('workflow', () => {
     const first = metaResults.results.bindings[0]
     const rootUri = first.root?.value ?? null
 
+    const rawRootType = first.rootType?.value?.replace('http://purl.org/wild/vocab#', '') ?? null
+    const rootType: WorkflowDetail['rootType'] =
+      rawRootType === 'ParallelActivity' ? 'ParallelActivity' : rawRootType ? 'SequentialActivity' : null
+
     if (!rootUri) {
       return {
         uri,
         title: first.wfTitle.value,
         description: first.wfDesc?.value ?? null,
         issued: first.wfIssued?.value ?? null,
+        rootType: null,
         steps: [],
       }
     }
@@ -325,6 +334,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
       title: first.wfTitle.value,
       description: first.wfDesc?.value ?? null,
       issued: first.wfIssued?.value ?? null,
+      rootType,
       steps,
     }
   }
