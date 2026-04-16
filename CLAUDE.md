@@ -207,13 +207,17 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 - Workflow store: `fetchSystemOptions(): Promise<ProcedureOption[]>`, `fetchInputOptions(): Promise<ProcedureOption[]>` — query all `ssn:System` / `ssn:Input` resources ordered by title; `ProcedureOption` interface exported from `src/stores/workflow.ts`
 
 ### System Library (implemented)
-- `ssn:System` resources representing machines and stations that implement workflow activities
-- **Browse**: `/systems` lists all systems with name, identifier, description, and the activities they implement; tab nav shared with Datasets, Workflows, and Activities
-- **Create / Edit / Delete**: clicking a card or "+ Add System" opens `AddSystemModal`; name and identifier are mandatory; description optional; a scrollable checklist selects zero or more `wild:AtomicActivity` library instances the system implements (`ssn:implements`)
-- **Identifier**: stored as `dcterms:identifier`; also slugified to form the URI at create time — `<base>sys-<slugified-identifier>` (no timestamp suffix; identifier is user-assigned and expected to be unique); editable after creation (updates `dcterms:identifier` only, URI is stable)
-- **`ssn:implements`**: written on the system side (`<system> ssn:implements <activity>`); coexists with the activity-side `ssn:implementedBy` triples written by the workflow editor; `deleteSystem` also cleans up any `ssn:implementedBy <uri>` triples on activities
-- URI pattern: `<base>sys-<slugified-identifier>` (e.g. `vpd:sys-cnc-line-a`)
-- Workflow store functions: `fetchSystems(): Promise<SystemSummary[]>`, `addSystem(form)`, `updateSystem(uri, form)`, `deleteSystem(uri)`; interfaces `SystemSummary`, `SystemForm` exported from `src/stores/workflow.ts`
+- `ssn:System`, `sosa:Sensor`, and `sosa:Actuator` resources representing machines, stations, and their components
+- **Browse**: `/systems` lists all top-level systems with a type badge (System / Sensor / Actuator); each card with sub-systems shows a "▶ N sub-systems" disclosure toggle that expands a `SystemSubTree` tree view with `├─`/`└─` connectors, per-node collapse, and type-coloured badges; tab nav shared with Datasets, Workflows, and Activities
+- **Sub-system hierarchy**: each system node can have zero or more sub-systems via `ssn:hasSubSystem`; sub-systems can themselves have sub-systems (arbitrary depth); each node independently chooses its type (System / Sensor / Actuator)
+- **Create / Edit / Delete**: clicking a card or "+ Add System" opens `AddSystemModal` (600 px); root node has a type radio group; a purple-tinted "Sub-systems" cluster uses the recursive `SystemNodeEditor` component to author the tree; name and identifier are mandatory on every node; activity checklist (`ssn:implements`) is on the root only
+- **Identifier**: stored as `dcterms:identifier`; slugified to form the root URI at create time — `<base>sys-<slugified-identifier>`; sub-system URIs use `<base>sys-<child-slug>-<n>` and are regenerated on each update (sub-systems are not referenced externally)
+- **`ssn:implements`**: written on the system side (`<system> ssn:implements <activity>`); coexists with the activity-side `ssn:implementedBy` triples written by the workflow editor; `deleteSystem` also cleans up any `ssn:implementedBy <uri>` triples on activities and uses `(ssn:hasSubSystem)*` property path to delete all descendant nodes
+- **`updateSystem`**: performs a full delete of root + all descendants via `<root> (ssn:hasSubSystem)* ?node`, then inserts fresh triples; root URI is stable, sub-system URIs are regenerated
+- **`fetchSystemOptions`**: returns all `ssn:System`, `sosa:Sensor`, and `sosa:Actuator` instances (for the workflow step editor's "implemented by" dropdown)
+- Components: `SystemNodeEditor.vue` (recursive editor, exports `SystemNodeFormWithId` and `newSystemNodeWithId`), `SystemSubTree.vue` (recursive read-only tree browser)
+- Interfaces exported from `src/stores/workflow.ts`: `SystemNodeType`, `SystemNodeSummary`, `SystemSummary`, `SystemNodeForm`, `SystemForm`
+- Workflow store functions: `fetchSystems(): Promise<SystemSummary[]>`, `addSystem(form)`, `updateSystem(uri, form)`, `deleteSystem(uri)`
 
 ### Activity Library (implemented)
 - Reusable `wild:AtomicActivity` resources that can be referenced by workflow models instead of defining activities inline
