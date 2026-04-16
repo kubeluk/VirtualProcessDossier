@@ -2,8 +2,6 @@
 set -e
 
 FUSEKI="http://jena:3030"
-DATASET="vpd"
-TTL="/data/catalog.ttl"
 
 echo "Waiting for Jena Fuseki..."
 until curl -sf -u admin:${ADMIN_PASSWORD} "${FUSEKI}/$/ping" > /dev/null; do
@@ -11,32 +9,70 @@ until curl -sf -u admin:${ADMIN_PASSWORD} "${FUSEKI}/$/ping" > /dev/null; do
 done
 echo "Jena is up."
 
-# Create dataset if it doesn't exist
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" -u admin:${ADMIN_PASSWORD} "${FUSEKI}/${DATASET}")
+# ── vpd dataset ────────────────────────────────────────────────────────────────
+
+VPD_DATASET="vpd"
+VPD_TTL="/data/catalog.ttl"
+
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" -u admin:${ADMIN_PASSWORD} "${FUSEKI}/${VPD_DATASET}")
 if [ "$STATUS" = "404" ]; then
-  echo "Creating dataset '${DATASET}'..."
+  echo "Creating dataset '${VPD_DATASET}'..."
   curl -sf -u admin:${ADMIN_PASSWORD} \
     -X POST "${FUSEKI}/$/datasets" \
     -H "Content-Type: application/x-www-form-urlencoded" \
-    -d "dbName=${DATASET}&dbType=tdb2"
-  echo "Dataset created."
+    -d "dbName=${VPD_DATASET}&dbType=tdb2"
+  echo "Dataset '${VPD_DATASET}' created."
 else
-  echo "Dataset '${DATASET}' already exists."
+  echo "Dataset '${VPD_DATASET}' already exists."
 fi
 
-# Seed data only if the default graph is empty
-COUNT=$(curl -sf -G "${FUSEKI}/${DATASET}/sparql" \
+COUNT=$(curl -sf -G "${FUSEKI}/${VPD_DATASET}/sparql" \
   --data-urlencode "query=SELECT (COUNT(*) AS ?n) WHERE { ?s ?p ?o }" \
   -H "Accept: application/sparql-results+json" \
   | tr -d ' \t' | grep -o '"value":"[0-9]*"' | grep -o '[0-9]*' || echo "0")
 
 if [ "${COUNT}" = "0" ]; then
-  echo "Loading seed data..."
+  echo "Loading seed data into '${VPD_DATASET}'..."
   curl -sf -u admin:${ADMIN_PASSWORD} \
-    -X POST "${FUSEKI}/${DATASET}/data?default" \
+    -X POST "${FUSEKI}/${VPD_DATASET}/data?default" \
     -H "Content-Type: text/turtle" \
-    --data-binary @"${TTL}"
-  echo "Seed data loaded."
+    --data-binary @"${VPD_TTL}"
+  echo "Seed data loaded into '${VPD_DATASET}'."
 else
-  echo "Dataset already contains ${COUNT} triples, skipping seed."
+  echo "Dataset '${VPD_DATASET}' already contains ${COUNT} triples, skipping seed."
+fi
+
+# ── qudt dataset (static — never modified by the UI) ──────────────────────────
+
+QUDT_DATASET="qudt"
+QUDT_FILES="/data/unit.ttl /data/quantitykind.ttl"
+
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" -u admin:${ADMIN_PASSWORD} "${FUSEKI}/${QUDT_DATASET}")
+if [ "$STATUS" = "404" ]; then
+  echo "Creating dataset '${QUDT_DATASET}'..."
+  curl -sf -u admin:${ADMIN_PASSWORD} \
+    -X POST "${FUSEKI}/$/datasets" \
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    -d "dbName=${QUDT_DATASET}&dbType=tdb2"
+  echo "Dataset '${QUDT_DATASET}' created."
+else
+  echo "Dataset '${QUDT_DATASET}' already exists."
+fi
+
+COUNT=$(curl -sf -G "${FUSEKI}/${QUDT_DATASET}/sparql" \
+  --data-urlencode "query=SELECT (COUNT(*) AS ?n) WHERE { ?s ?p ?o }" \
+  -H "Accept: application/sparql-results+json" \
+  | tr -d ' \t' | grep -o '"value":"[0-9]*"' | grep -o '[0-9]*' || echo "0")
+
+if [ "${COUNT}" = "0" ]; then
+  echo "Loading seed data into '${QUDT_DATASET}'..."
+  for TTL in ${QUDT_FILES}; do
+    curl -sf -u admin:${ADMIN_PASSWORD} \
+      -X POST "${FUSEKI}/${QUDT_DATASET}/data?default" \
+      -H "Content-Type: text/turtle" \
+      --data-binary @"${TTL}"
+    echo "Loaded ${TTL} into '${QUDT_DATASET}'."
+  done
+else
+  echo "Dataset '${QUDT_DATASET}' already contains ${COUNT} triples, skipping seed."
 fi

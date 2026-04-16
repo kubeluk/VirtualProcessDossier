@@ -41,8 +41,10 @@ src/
     ActivityListView.vue    # Activity library: browse/create/edit reusable atomic activities
     SystemListView.vue      # System library: browse/create/edit ssn:System instances
 data/
-  catalog.ttl    # DCAT seed data (loaded automatically on first Docker start)
-  seed.sh        # Init script run by the 'seed' Docker service
+  catalog.ttl       # DCAT seed data → loaded into the 'vpd' dataset on first Docker start
+  unit.ttl          # QUDT unit definitions → loaded into the 'qudt' dataset on first Docker start
+  quantitykind.ttl  # QUDT quantity-kind definitions → loaded into the 'qudt' dataset on first Docker start
+  seed.sh           # Init script run by the 'seed' Docker service
 ```
 
 ## Commands
@@ -60,8 +62,10 @@ docker compose up --build        # UI on :8080, Jena Fuseki on :3030
 docker compose down -v           # Tear down including data volume (resets seed)
 ```
 
-- The `seed` service auto-creates the `vpd` dataset and loads `data/catalog.ttl` on first start.
-- Seeding is skipped on subsequent starts if the graph already contains triples.
+- The `seed` service manages two Fuseki datasets:
+  - **`vpd`** — application data; auto-created and seeded from `data/catalog.ttl` on first start; the UI reads from and writes to this dataset
+  - **`qudt`** — static reference data (QUDT units + quantity kinds); auto-created and seeded from `data/unit.ttl` + `data/quantitykind.ttl` on first start; the UI reads from this dataset but never writes to it
+- Seeding is skipped on subsequent starts if the target dataset already contains triples.
 - Fuseki admin UI: `http://localhost:3030` (credentials: `admin` / `admin`)
 
 ## SPARQL / Jena
