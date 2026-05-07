@@ -1,6 +1,16 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { useWorkflowStore, type AtomicActivityOption, type SystemSummary } from '@/stores/workflow'
+import {
+  useWorkflowStore,
+  type AtomicActivityOption,
+  type SystemSummary,
+  type SystemNodeType,
+  type SystemNodeForm,
+} from '@/stores/workflow'
+import SystemNodeEditor, {
+  type SystemNodeFormWithId,
+  newSystemNodeWithId,
+} from './SystemNodeEditor.vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -16,10 +26,13 @@ const emit = defineEmits<{
 
 const workflowStore = useWorkflowStore()
 
+// Root-level fields
+const type = ref<SystemNodeType>('ssn:System')
 const title = ref('')
 const identifier = ref('')
 const description = ref('')
 const selectedActivityUris = ref<string[]>([])
+const children = ref<SystemNodeFormWithId[]>([])
 
 const activityOptions = ref<AtomicActivityOption[]>([])
 
@@ -35,13 +48,25 @@ function close() {
 }
 
 function reset() {
+  type.value = 'ssn:System'
   title.value = ''
   identifier.value = ''
   description.value = ''
   selectedActivityUris.value = []
+  children.value = []
   submitError.value = null
   isEditMode.value = false
   editUri.value = null
+}
+
+function fromNodeSummary(node: { type: SystemNodeType; title: string | null; identifier: string | null; description: string | null; children: typeof node[] }): SystemNodeFormWithId {
+  return newSystemNodeWithId({
+    type: node.type,
+    title: node.title ?? '',
+    identifier: node.identifier ?? '',
+    description: node.description ?? '',
+    children: node.children.map(fromNodeSummary),
+  })
 }
 
 watch(
@@ -53,10 +78,12 @@ watch(
     if (props.editSystem) {
       isEditMode.value = true
       editUri.value = props.editSystem.uri
+      type.value = props.editSystem.type
       title.value = props.editSystem.title ?? ''
       identifier.value = props.editSystem.identifier ?? ''
       description.value = props.editSystem.description ?? ''
       selectedActivityUris.value = props.editSystem.implementedActivities.map((a) => a.uri)
+      children.value = props.editSystem.children.map(fromNodeSummary)
       submitError.value = null
     } else {
       reset()
@@ -73,21 +100,55 @@ function toggleActivity(uri: string) {
   }
 }
 
+function addChild() {
+  children.value.push(newSystemNodeWithId())
+}
+
+function removeChild(idx: number) {
+  children.value.splice(idx, 1)
+}
+
+function toNodeForm(node: SystemNodeFormWithId): SystemNodeForm {
+  return {
+    type: node.type,
+    title: node.title,
+    identifier: node.identifier,
+    description: node.description,
+    children: node.children.map(toNodeForm),
+  }
+}
+
+function validate(): string | null {
+  if (!title.value.trim()) return 'Name is required.'
+  if (!identifier.value.trim()) return 'Identifier is required.'
+  for (const child of children.value) {
+    const err = validateNode(child)
+    if (err) return err
+  }
+  return null
+}
+
+function validateNode(node: SystemNodeFormWithId): string | null {
+  if (!node.title.trim()) return `A sub-system is missing a name.`
+  if (!node.identifier.trim()) return `A sub-system is missing an identifier.`
+  for (const child of node.children) {
+    const err = validateNode(child)
+    if (err) return err
+  }
+  return null
+}
+
 async function submit() {
-  submitError.value = null
-  if (!title.value.trim()) {
-    submitError.value = 'Name is required.'
-    return
-  }
-  if (!identifier.value.trim()) {
-    submitError.value = 'Identifier is required.'
-    return
-  }
+  submitError.value = validate()
+  if (submitError.value) return
+
   const form = {
+    type: type.value,
     title: title.value.trim(),
     identifier: identifier.value.trim(),
     description: description.value.trim(),
     activityUris: selectedActivityUris.value,
+    children: children.value.map(toNodeForm),
   }
   submitting.value = true
   try {
@@ -142,6 +203,26 @@ reset()
         </div>
 
         <form class="modal-body" @submit.prevent="submit">
+
+          <!-- Type selector for root -->
+          <div class="field field--type">
+            <span class="field-label">Type</span>
+            <div class="radio-group">
+              <label class="radio-label">
+                <input v-model="type" type="radio" value="ssn:System" />
+                System
+              </label>
+              <label class="radio-label">
+                <input v-model="type" type="radio" value="sosa:Sensor" />
+                Sensor
+              </label>
+              <label class="radio-label">
+                <input v-model="type" type="radio" value="sosa:Actuator" />
+                Actuator
+              </label>
+            </div>
+          </div>
+
           <div class="field">
             <label for="sys-title" class="field-label">
               Name <span class="required">*</span>
@@ -184,6 +265,30 @@ reset()
             />
           </div>
 
+          <!-- Sub-systems tree -->
+          <div class="field">
+            <span class="field-label">Sub-systems</span>
+            <p class="field-hint">
+              Describe the physical composition of this system using
+              <code>ssn:hasSubSystem</code>. Each node can be a System, Sensor, or Actuator.
+            </p>
+            <div class="children-section">
+              <SystemNodeEditor
+                v-for="(child, i) in children"
+                :key="child._id"
+                :node="child"
+                :depth="1"
+                :label="`Sub-system ${i + 1}`"
+                :can-remove="true"
+                @remove="removeChild(i)"
+              />
+              <button type="button" class="add-child-btn" @click="addChild">
+                + Add sub-system
+              </button>
+            </div>
+          </div>
+
+          <!-- Implements activities -->
           <div class="field">
             <span class="field-label">Implements activities</span>
             <p class="field-hint">Select the workflow activities this system executes.</p>
@@ -250,7 +355,7 @@ reset()
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: 12px;
-  width: min(500px, 94vw);
+  width: min(600px, 94vw);
   max-height: 90vh;
   display: flex;
   flex-direction: column;
@@ -341,6 +446,48 @@ reset()
   border-radius: 3px;
 }
 
+.field--type .radio-group {
+  display: flex;
+  gap: 1.1rem;
+  flex-wrap: wrap;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+/* Sub-system children section */
+.children-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-radius: 8px;
+  padding: 0.75rem;
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  margin-top: 0.25rem;
+}
+
+.add-child-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--color-primary);
+  cursor: pointer;
+  font-family: inherit;
+  align-self: flex-start;
+}
+
+.add-child-btn:hover { color: var(--color-primary-dark); }
+
+/* Activity checklist */
 .activity-checklist {
   list-style: none;
   padding: 0;
@@ -348,7 +495,7 @@ reset()
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  max-height: 180px;
+  max-height: 160px;
   overflow-y: auto;
   border: 1px solid var(--color-border);
   border-radius: 6px;
@@ -366,13 +513,8 @@ reset()
   user-select: none;
 }
 
-.activity-check-item:hover {
-  background: #f9fafb;
-}
-
-.activity-check-item--selected {
-  background: #f0fdf4;
-}
+.activity-check-item:hover { background: #f9fafb; }
+.activity-check-item--selected { background: #f0fdf4; }
 
 .check-box {
   width: 16px;

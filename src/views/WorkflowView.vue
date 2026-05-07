@@ -19,6 +19,7 @@ const workflow = ref<WorkflowDetail | null>(null)
 const instances = ref<WorkflowInstanceSummary[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
+const rootExpanded = ref(true)
 
 // Start run
 const showAddRunModal = ref(false)
@@ -132,16 +133,42 @@ function openRun(uri: string) {
 
         <div v-if="workflow.steps.length === 0" class="state-message">No steps defined.</div>
 
-        <div v-else class="step-list">
-          <WorkflowStepNode
-            v-for="(step, idx) in workflow.steps"
-            :key="step.uri"
-            :step="step"
-            :index="idx"
-            :total="workflow.steps.length"
-            context="sequential"
-          />
-        </div>
+        <template v-else>
+          <!-- Root behaviour badge — makes Sequential vs Parallel visible at the top level -->
+          <div class="root-behaviour-header">
+            <button
+              class="step-toggle"
+              :aria-label="rootExpanded ? 'Collapse' : 'Expand'"
+              @click="rootExpanded = !rootExpanded"
+            >
+              {{ rootExpanded ? '▼' : '▶' }}
+            </button>
+            <span
+              class="step-badge"
+              :class="workflow.rootType === 'ParallelActivity' ? 'step-badge--parallel' : 'step-badge--sequential'"
+            >
+              {{ workflow.rootType === 'ParallelActivity' ? '⟷ Parallel' : '↕ Sequential' }}
+            </span>
+            <span v-if="!rootExpanded" class="step-collapsed-hint">
+              {{ workflow.steps.length }} {{ workflow.steps.length === 1 ? 'activity' : 'activities' }}
+            </span>
+          </div>
+
+          <div
+            v-if="rootExpanded"
+            class="step-list"
+            :class="workflow.rootType === 'ParallelActivity' ? 'step-list--parallel' : 'step-list--sequential'"
+          >
+            <WorkflowStepNode
+              v-for="(step, idx) in workflow.steps"
+              :key="step.uri"
+              :step="step"
+              :index="idx"
+              :total="workflow.steps.length"
+              :context="workflow.rootType === 'ParallelActivity' ? 'parallel' : 'sequential'"
+            />
+          </div>
+        </template>
       </section>
 
       <!-- Workflow runs -->
@@ -316,10 +343,72 @@ section h2 {
   margin: 0 0 1rem;
 }
 
+/* Root behaviour header — badge row above the step cluster */
+.root-behaviour-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.step-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.65rem;
+  color: #6b7280;
+  cursor: pointer;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.step-toggle:hover {
+  color: var(--color-text);
+}
+
+.step-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.55rem;
+  border-radius: 20px;
+  letter-spacing: 0.02em;
+}
+
+.step-badge--parallel {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.step-badge--sequential {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.step-collapsed-hint {
+  font-size: 0.78rem;
+  color: #9ca3af;
+}
+
 /* Step list container */
 .step-list {
   padding: 0;
   margin: 0;
+}
+
+.step-list--sequential {
+  padding: 0.75rem 1rem;
+  border-left: 3px solid #bbf7d0;
+  border-radius: 0 6px 6px 0;
+  background: #f0fdf4;
+}
+
+.step-list--parallel {
+  padding: 0.75rem 1rem;
+  border-left: 3px solid #bfdbfe;
+  border-radius: 0 6px 6px 0;
+  background: #f8faff;
 }
 
 /* Runs header */

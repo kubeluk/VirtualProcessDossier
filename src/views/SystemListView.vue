@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useWorkflowStore, type SystemSummary } from '@/stores/workflow'
+import { useWorkflowStore, type SystemSummary, type SystemNodeType } from '@/stores/workflow'
 import AddSystemModal from '@/components/AddSystemModal.vue'
+import SystemSubTree from '@/components/SystemSubTree.vue'
 
 const workflowStore = useWorkflowStore()
 
@@ -33,6 +34,23 @@ function openCreate() {
 function openEdit(system: SystemSummary) {
   selectedSystem.value = system
   showModal.value = true
+}
+
+function typeLabel(t: SystemNodeType): string {
+  if (t === 'sosa:Sensor') return 'Sensor'
+  if (t === 'sosa:Actuator') return 'Actuator'
+  return 'System'
+}
+
+const expanded = ref<Set<string>>(new Set())
+
+function toggleExpand(uri: string) {
+  if (expanded.value.has(uri)) {
+    expanded.value.delete(uri)
+  } else {
+    expanded.value.add(uri)
+  }
+  expanded.value = new Set(expanded.value)
 }
 </script>
 
@@ -78,13 +96,19 @@ function openEdit(system: SystemSummary) {
         v-for="sys in systems"
         :key="sys.uri"
         class="system-card"
-        @click="openEdit(sys)"
       >
-        <div class="card-body">
-          <h2 class="card-title">{{ sys.title ?? sys.uri }}</h2>
+        <!-- Card header (clickable to edit) -->
+        <div class="card-body" @click="openEdit(sys)">
+          <div class="card-title-row">
+            <h2 class="card-title">{{ sys.title ?? sys.uri }}</h2>
+            <span class="type-badge" :class="`type-badge--${sys.type.split(':')[1].toLowerCase()}`">
+              {{ typeLabel(sys.type) }}
+            </span>
+          </div>
           <p v-if="sys.description" class="card-description">{{ sys.description }}</p>
         </div>
-        <div class="card-meta">
+
+        <div class="card-meta" @click="openEdit(sys)">
           <span v-if="sys.identifier" class="meta-item">
             ID: {{ sys.identifier }}
           </span>
@@ -93,6 +117,24 @@ function openEdit(system: SystemSummary) {
             {{ sys.implementedActivities.map((a) => a.title ?? a.uri).join(', ') }}
           </span>
           <span class="meta-item meta-link">Edit →</span>
+        </div>
+
+        <!-- Sub-system tree (progressive disclosure) -->
+        <div v-if="sys.children.length > 0" class="subsystem-section">
+          <button
+            type="button"
+            class="subsystem-toggle"
+            @click="toggleExpand(sys.uri)"
+          >
+            <span class="toggle-arrow">{{ expanded.has(sys.uri) ? '▼' : '▶' }}</span>
+            {{ sys.children.length }}
+            {{ sys.children.length === 1 ? 'sub-system' : 'sub-systems' }}
+          </button>
+          <SystemSubTree
+            v-if="expanded.has(sys.uri)"
+            :nodes="sys.children"
+            :depth="0"
+          />
         </div>
       </li>
     </ul>
@@ -147,9 +189,7 @@ function openEdit(system: SystemSummary) {
   transition: color 0.15s, border-color 0.15s;
 }
 
-.nav-tab:hover {
-  color: var(--color-text);
-}
+.nav-tab:hover { color: var(--color-text); }
 
 .nav-tab--active {
   color: var(--color-primary);
@@ -162,9 +202,7 @@ function openEdit(system: SystemSummary) {
   color: #6b7280;
 }
 
-.state-message.error {
-  color: #dc2626;
-}
+.state-message.error { color: #dc2626; }
 
 .system-card-list {
   list-style: none;
@@ -178,10 +216,9 @@ function openEdit(system: SystemSummary) {
 .system-card {
   border: 1px solid var(--color-border);
   border-radius: 8px;
-  padding: 1.25rem 1.5rem;
-  cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s;
   background: var(--color-background);
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .system-card:hover {
@@ -189,17 +226,56 @@ function openEdit(system: SystemSummary) {
   box-shadow: 0 2px 8px rgba(66, 184, 131, 0.15);
 }
 
+.card-body {
+  padding: 1.25rem 1.5rem 0.5rem;
+  cursor: pointer;
+}
+
+.card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
+  flex-wrap: wrap;
+}
+
 .card-title {
   font-size: 1.05rem;
   font-weight: 600;
   color: var(--color-text);
-  margin: 0 0 0.4rem;
+  margin: 0;
+}
+
+.type-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.1rem 0.45rem;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+
+.type-badge--system {
+  background: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
+}
+
+.type-badge--sensor {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.type-badge--actuator {
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
 }
 
 .card-description {
   font-size: 0.9rem;
   color: #4b5563;
-  margin: 0 0 0.75rem;
+  margin: 0;
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -213,6 +289,8 @@ function openEdit(system: SystemSummary) {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  padding: 0.5rem 1.5rem 1rem;
+  cursor: pointer;
 }
 
 .meta-item {
@@ -223,6 +301,34 @@ function openEdit(system: SystemSummary) {
 .meta-link {
   color: var(--color-primary);
   font-weight: 500;
+}
+
+/* Sub-system tree disclosure */
+.subsystem-section {
+  border-top: 1px solid var(--color-border);
+  padding: 0.6rem 1.5rem 0.75rem;
+  background: #fafafa;
+}
+
+.subsystem-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.subsystem-toggle:hover { color: var(--color-text); }
+
+.toggle-arrow {
+  font-size: 0.6rem;
+  color: #9ca3af;
 }
 
 .btn {

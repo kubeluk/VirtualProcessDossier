@@ -41,6 +41,7 @@ export interface WorkflowDetail {
   title: string
   description: string | null
   issued: string | null
+  rootType: 'SequentialActivity' | 'ParallelActivity' | null
   steps: WorkflowStep[]
 }
 
@@ -76,6 +77,7 @@ export interface RunDetail {
   started: string | null
   modelUri: string
   modelTitle: string | null
+  rootType: 'SequentialActivity' | 'ParallelActivity' | null
   activityInstances: RunActivityInstance[]  // top-level (root's direct children)
   crossCuttingDatasets: WorkflowStepDataset[]
 }
@@ -105,19 +107,43 @@ export interface ProcedureOption {
 // System types
 // ---------------------------------------------------------------------------
 
+export type SystemNodeType = 'ssn:System' | 'sosa:Sensor' | 'sosa:Actuator'
+
+export interface SystemNodeSummary {
+  uri: string
+  type: SystemNodeType
+  title: string | null
+  identifier: string | null
+  description: string | null
+  children: SystemNodeSummary[]
+}
+
 export interface SystemSummary {
   uri: string
+  type: SystemNodeType
   title: string | null
   identifier: string | null
   description: string | null
   implementedActivities: Array<{ uri: string; title: string | null }>
+  children: SystemNodeSummary[]
+}
+
+export interface SystemNodeForm {
+  uri?: string           // existing URI (edit mode); undefined means generate on save
+  type: SystemNodeType
+  title: string
+  identifier: string
+  description: string
+  children: SystemNodeForm[]
 }
 
 export interface SystemForm {
+  type: SystemNodeType
   title: string       // mandatory
   identifier: string  // mandatory; used to form URI on create; stored as dcterms:identifier
   description: string // optional
   activityUris: string[]  // ssn:implements targets (zero or more)
+  children: SystemNodeForm[]
 }
 
 export interface AddWorkflowForm {
@@ -264,12 +290,15 @@ export const useWorkflowStore = defineStore('workflow', () => {
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
 
-      SELECT ?wfTitle ?wfDesc ?wfIssued ?root WHERE {
+      SELECT ?wfTitle ?wfDesc ?wfIssued ?root ?rootType WHERE {
         BIND(<${uri}> AS ?wf)
         ?wf dcterms:title ?wfTitle .
         OPTIONAL { ?wf dcterms:description ?wfDesc }
         OPTIONAL { ?wf dcterms:issued ?wfIssued }
-        OPTIONAL { ?wf wild:hasBehaviour ?root }
+        OPTIONAL {
+          ?wf wild:hasBehaviour ?root .
+          OPTIONAL { ?root a ?rootType . FILTER(STRSTARTS(STR(?rootType), 'http://purl.org/wild/vocab#')) }
+        }
       }
     `
 
@@ -313,12 +342,17 @@ export const useWorkflowStore = defineStore('workflow', () => {
     const first = metaResults.results.bindings[0]
     const rootUri = first.root?.value ?? null
 
+    const rawRootType = first.rootType?.value?.replace('http://purl.org/wild/vocab#', '') ?? null
+    const rootType: WorkflowDetail['rootType'] =
+      rawRootType === 'ParallelActivity' ? 'ParallelActivity' : rawRootType ? 'SequentialActivity' : null
+
     if (!rootUri) {
       return {
         uri,
         title: first.wfTitle.value,
         description: first.wfDesc?.value ?? null,
         issued: first.wfIssued?.value ?? null,
+        rootType: null,
         steps: [],
       }
     }
@@ -385,6 +419,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
       title: first.wfTitle.value,
       description: first.wfDesc?.value ?? null,
       issued: first.wfIssued?.value ?? null,
+      rootType,
       steps,
     }
   }
@@ -424,7 +459,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX prov:    <http://www.w3.org/ns/prov#>
 
-      SELECT ?instTitle ?instDesc ?instState ?instStarted ?modelUri ?modelTitle ?root WHERE {
+      SELECT ?instTitle ?instDesc ?instState ?instStarted ?modelUri ?modelTitle ?root ?rootType WHERE {
         BIND(<${uri}> AS ?instance)
         ?instance a wild:WorkflowInstance ;
                   wild:workflowInstanceOf ?modelUri .
@@ -433,7 +468,10 @@ export const useWorkflowStore = defineStore('workflow', () => {
         OPTIONAL { ?instance wild:hasState ?instState }
         OPTIONAL { ?instance prov:startedAtTime ?instStarted }
         OPTIONAL { ?modelUri dcterms:title ?modelTitle }
-        OPTIONAL { ?modelUri wild:hasBehaviour ?root }
+        OPTIONAL {
+          ?modelUri wild:hasBehaviour ?root .
+          OPTIONAL { ?root a ?rootType . FILTER(STRSTARTS(STR(?rootType), 'http://purl.org/wild/vocab#')) }
+        }
       }
     `
     const metaResults = await querySparql(graphStore.endpoint, metaQuery)
@@ -441,6 +479,9 @@ export const useWorkflowStore = defineStore('workflow', () => {
     const first = metaResults.results.bindings[0]
     const modelUri = first.modelUri.value
     const rootUri = first.root?.value ?? null
+    const rawRootType = first.rootType?.value?.replace('http://purl.org/wild/vocab#', '') ?? null
+    const rootType: RunDetail['rootType'] =
+      rawRootType === 'ParallelActivity' ? 'ParallelActivity' : rawRootType ? 'SequentialActivity' : null
 
     // Queries 2–4 in parallel (all depend on run URI; Q2 also needs modelUri)
     // Query 2: model activity tree — all parent→child pairs with title and type.
@@ -593,6 +634,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
       started: first.instStarted?.value ?? null,
       modelUri,
       modelTitle: first.modelTitle?.value ?? null,
+      rootType,
       activityInstances,
       crossCuttingDatasets,
     }
@@ -1072,13 +1114,16 @@ ${lines.join('\n')}
   async function fetchSystems(): Promise<SystemSummary[]> {
     const query = `
       PREFIX ssn:     <http://www.w3.org/ns/ssn/>
+      PREFIX sosa:    <http://www.w3.org/ns/sosa/>
       PREFIX dcterms: <http://purl.org/dc/terms/>
 
-      SELECT ?uri ?title ?identifier ?description ?actUri ?actTitle WHERE {
-        ?uri a ssn:System .
+      SELECT ?uri ?type ?title ?identifier ?description ?parent ?actUri ?actTitle WHERE {
+        ?uri a ?type .
+        FILTER(?type IN (ssn:System, sosa:Sensor, sosa:Actuator))
         OPTIONAL { ?uri dcterms:title ?title }
         OPTIONAL { ?uri dcterms:identifier ?identifier }
         OPTIONAL { ?uri dcterms:description ?description }
+        OPTIONAL { ?parent ssn:hasSubSystem ?uri }
         OPTIONAL {
           ?uri ssn:implements ?actUri .
           OPTIONAL { ?actUri dcterms:title ?actTitle }
@@ -1087,54 +1132,138 @@ ${lines.join('\n')}
       ORDER BY ?title ?actTitle
     `
     const results = await querySparql(graphStore.endpoint, query)
-    const map = new Map<string, SystemSummary>()
+
+    function resolveType(rawType: string): SystemNodeType {
+      if (rawType.endsWith('Sensor')) return 'sosa:Sensor'
+      if (rawType.endsWith('Actuator')) return 'sosa:Actuator'
+      return 'ssn:System'
+    }
+
+    type NodeEntry = {
+      uri: string
+      type: SystemNodeType
+      title: string | null
+      identifier: string | null
+      description: string | null
+      parentUri: string | null
+      implementedActivities: Array<{ uri: string; title: string | null }>
+      childUris: string[]
+    }
+
+    const nodeMap = new Map<string, NodeEntry>()
+
     for (const b of results.results.bindings) {
       const uri = b.uri.value
-      if (!map.has(uri)) {
-        map.set(uri, {
+      if (!nodeMap.has(uri)) {
+        nodeMap.set(uri, {
           uri,
+          type: resolveType(b.type?.value ?? ''),
           title: b.title?.value ?? null,
           identifier: b.identifier?.value ?? null,
           description: b.description?.value ?? null,
+          parentUri: b.parent?.value ?? null,
           implementedActivities: [],
+          childUris: [],
         })
       }
+      const entry = nodeMap.get(uri)!
+      // Update parent (in case first row lacked it)
+      if (b.parent?.value && !entry.parentUri) entry.parentUri = b.parent.value
       if (b.actUri) {
-        map.get(uri)!.implementedActivities.push({
-          uri: b.actUri.value,
-          title: b.actTitle?.value ?? null,
+        const actUri = b.actUri.value
+        if (!entry.implementedActivities.some((a) => a.uri === actUri)) {
+          entry.implementedActivities.push({ uri: actUri, title: b.actTitle?.value ?? null })
+        }
+      }
+    }
+
+    // Wire up parent→child lists
+    for (const entry of nodeMap.values()) {
+      if (entry.parentUri) {
+        const parent = nodeMap.get(entry.parentUri)
+        if (parent && !parent.childUris.includes(entry.uri)) {
+          parent.childUris.push(entry.uri)
+        }
+      }
+    }
+
+    function buildNodeSummary(uri: string): SystemNodeSummary {
+      const e = nodeMap.get(uri)!
+      return {
+        uri: e.uri,
+        type: e.type,
+        title: e.title,
+        identifier: e.identifier,
+        description: e.description,
+        children: e.childUris.map(buildNodeSummary),
+      }
+    }
+
+    // Return root nodes (no parent)
+    const roots: SystemSummary[] = []
+    for (const entry of nodeMap.values()) {
+      if (!entry.parentUri) {
+        roots.push({
+          uri: entry.uri,
+          type: entry.type,
+          title: entry.title,
+          identifier: entry.identifier,
+          description: entry.description,
+          implementedActivities: entry.implementedActivities,
+          children: entry.childUris.map(buildNodeSummary),
         })
       }
     }
-    return Array.from(map.values())
+    return roots
   }
 
   async function addSystem(form: SystemForm): Promise<string> {
-    const slug = form.identifier
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '')
-      .slice(0, 60) || 'system'
     const base = 'https://example.org/vpd#'
-    const uri = `${base}sys-${slug}`
 
     function esc(s: string): string {
       return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
     }
 
-    const lines: string[] = []
-    lines.push(`  <${uri}> a ssn:System .`)
-    lines.push(`  <${uri}> dcterms:title "${esc(form.title)}"@en .`)
-    lines.push(`  <${uri}> dcterms:identifier "${esc(form.identifier)}" .`)
-    if (form.description.trim()) {
-      lines.push(`  <${uri}> dcterms:description "${esc(form.description)}"@en .`)
+    function slugify(id: string): string {
+      return id.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'system'
     }
+
+    function typeClass(t: SystemNodeType): string {
+      if (t === 'sosa:Sensor') return 'sosa:Sensor'
+      if (t === 'sosa:Actuator') return 'sosa:Actuator'
+      return 'ssn:System'
+    }
+
+    const rootSlug = slugify(form.identifier)
+    const rootUri = `${base}sys-${rootSlug}`
+
+    const lines: string[] = []
+
+    function writeNode(nodeUri: string, node: { type: SystemNodeType; title: string; identifier: string; description: string; children: SystemNodeForm[] }, parentUri: string | null, counter: { n: number }) {
+      lines.push(`  <${nodeUri}> a ${typeClass(node.type)} .`)
+      lines.push(`  <${nodeUri}> dcterms:title "${esc(node.title)}"@en .`)
+      lines.push(`  <${nodeUri}> dcterms:identifier "${esc(node.identifier)}" .`)
+      if (node.description.trim()) {
+        lines.push(`  <${nodeUri}> dcterms:description "${esc(node.description)}"@en .`)
+      }
+      if (parentUri) {
+        lines.push(`  <${parentUri}> ssn:hasSubSystem <${nodeUri}> .`)
+      }
+      for (const child of node.children) {
+        const childSlug = slugify(child.identifier || `sub-${counter.n}`)
+        const childUri = `${base}sys-${childSlug}-${counter.n++}`
+        writeNode(childUri, child, nodeUri, counter)
+      }
+    }
+
+    writeNode(rootUri, form, null, { n: 1 })
     for (const actUri of form.activityUris) {
-      lines.push(`  <${uri}> ssn:implements <${actUri}> .`)
+      lines.push(`  <${rootUri}> ssn:implements <${actUri}> .`)
     }
 
     const update = `
       PREFIX ssn:     <http://www.w3.org/ns/ssn/>
+      PREFIX sosa:    <http://www.w3.org/ns/sosa/>
       PREFIX dcterms: <http://purl.org/dc/terms/>
 
       INSERT DATA {
@@ -1142,41 +1271,64 @@ ${lines.join('\n')}
       }
     `
     await updateSparql(graphStore.updateEndpoint, update)
-    return uri
+    return rootUri
   }
 
   async function updateSystem(uri: string, form: SystemForm): Promise<void> {
+    const base = 'https://example.org/vpd#'
+
     function esc(s: string): string {
       return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
     }
-    const descInsert = form.description.trim()
-      ? `<${uri}> dcterms:description "${esc(form.description)}"@en .`
-      : ''
-    const implementsInsert = form.activityUris
-      .map((a) => `<${uri}> ssn:implements <${a}> .`)
-      .join('\n        ')
+
+    function slugify(id: string): string {
+      return id.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'system'
+    }
+
+    function typeClass(t: SystemNodeType): string {
+      if (t === 'sosa:Sensor') return 'sosa:Sensor'
+      if (t === 'sosa:Actuator') return 'sosa:Actuator'
+      return 'ssn:System'
+    }
+
+    // Build new triples for root (preserving URI) and fresh sub-system URIs
+    const insertLines: string[] = []
+
+    function writeNode(nodeUri: string, node: { type: SystemNodeType; title: string; identifier: string; description: string; children: SystemNodeForm[] }, parentUri: string | null, counter: { n: number }) {
+      insertLines.push(`  <${nodeUri}> a ${typeClass(node.type)} .`)
+      insertLines.push(`  <${nodeUri}> dcterms:title "${esc(node.title)}"@en .`)
+      insertLines.push(`  <${nodeUri}> dcterms:identifier "${esc(node.identifier)}" .`)
+      if (node.description.trim()) {
+        insertLines.push(`  <${nodeUri}> dcterms:description "${esc(node.description)}"@en .`)
+      }
+      if (parentUri) {
+        insertLines.push(`  <${parentUri}> ssn:hasSubSystem <${nodeUri}> .`)
+      }
+      for (const child of node.children) {
+        const childSlug = slugify(child.identifier || `sub-${counter.n}`)
+        const childUri = `${base}sys-${childSlug}-${counter.n++}`
+        writeNode(childUri, child, nodeUri, counter)
+      }
+    }
+
+    writeNode(uri, form, null, { n: 1 })
+    for (const actUri of form.activityUris) {
+      insertLines.push(`  <${uri}> ssn:implements <${actUri}> .`)
+    }
 
     const update = `
       PREFIX ssn:     <http://www.w3.org/ns/ssn/>
+      PREFIX sosa:    <http://www.w3.org/ns/sosa/>
       PREFIX dcterms: <http://purl.org/dc/terms/>
 
-      DELETE {
-        <${uri}> dcterms:title ?t .
-        <${uri}> dcterms:identifier ?id .
-        <${uri}> dcterms:description ?d .
-        <${uri}> ssn:implements ?act .
-      }
-      INSERT {
-        <${uri}> dcterms:title "${esc(form.title)}"@en .
-        <${uri}> dcterms:identifier "${esc(form.identifier)}" .
-        ${descInsert}
-        ${implementsInsert}
-      }
+      DELETE { ?node ?p ?o }
       WHERE {
-        OPTIONAL { <${uri}> dcterms:title ?t }
-        OPTIONAL { <${uri}> dcterms:identifier ?id }
-        OPTIONAL { <${uri}> dcterms:description ?d }
-        OPTIONAL { <${uri}> ssn:implements ?act }
+        ?node ?p ?o .
+        <${uri}> (ssn:hasSubSystem)* ?node .
+      } ;
+
+      INSERT DATA {
+${insertLines.join('\n')}
       }
     `
     await updateSparql(graphStore.updateEndpoint, update)
@@ -1186,8 +1338,11 @@ ${lines.join('\n')}
     const update = `
       PREFIX ssn: <http://www.w3.org/ns/ssn/>
 
-      DELETE { <${uri}> ?p ?o }
-      WHERE  { <${uri}> ?p ?o } ;
+      DELETE { ?node ?p ?o }
+      WHERE {
+        ?node ?p ?o .
+        <${uri}> (ssn:hasSubSystem)* ?node .
+      } ;
 
       DELETE { ?s ssn:implementedBy <${uri}> }
       WHERE  { ?s ssn:implementedBy <${uri}> }
@@ -1200,10 +1355,12 @@ ${lines.join('\n')}
   async function fetchSystemOptions(): Promise<ProcedureOption[]> {
     const query = `
       PREFIX ssn:     <http://www.w3.org/ns/ssn/>
+      PREFIX sosa:    <http://www.w3.org/ns/sosa/>
       PREFIX dcterms: <http://purl.org/dc/terms/>
 
-      SELECT ?uri ?title ?description WHERE {
-        ?uri a ssn:System .
+      SELECT DISTINCT ?uri ?title ?description WHERE {
+        ?uri a ?type .
+        FILTER(?type IN (ssn:System, sosa:Sensor, sosa:Actuator))
         OPTIONAL { ?uri dcterms:title ?title }
         OPTIONAL { ?uri dcterms:description ?description }
       }

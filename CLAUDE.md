@@ -42,8 +42,10 @@ src/
     ActivityListView.vue    # Activity library: browse/create/edit reusable atomic activities
     SystemListView.vue      # System library: browse/create/edit ssn:System instances
 data/
-  catalog.ttl           # DCAT seed data (loaded automatically on first Docker start)
-  parameter-shapes.ttl  # SHACL parameter shape seed data for seeded atomic activities
+  catalog.ttl           # DCAT seed data → loaded into the 'vpd' dataset on first Docker start
+  parameter-shapes.ttl  # SHACL parameter shape seed data → loaded into the 'vpd' dataset on first Docker start
+  unit.ttl              # QUDT unit definitions → loaded into the 'qudt' dataset on first Docker start
+  quantitykind.ttl      # QUDT quantity-kind definitions → loaded into the 'qudt' dataset on first Docker start
   seed.sh               # Init script run by the 'seed' Docker service
 ```
 
@@ -62,8 +64,10 @@ docker compose up --build        # UI on :8080, Jena Fuseki on :3030
 docker compose down -v           # Tear down including data volume (resets seed)
 ```
 
-- The `seed` service auto-creates the `vpd` dataset and loads `data/catalog.ttl` then `data/parameter-shapes.ttl` on first start.
-- Seeding is skipped on subsequent starts if the graph already contains triples.
+- The `seed` service manages two Fuseki datasets:
+  - **`vpd`** — application data; auto-created and seeded from `data/catalog.ttl` and `data/parameter-shapes.ttl` on first start; the UI reads from and writes to this dataset
+  - **`qudt`** — static reference data (QUDT units + quantity kinds); auto-created and seeded from `data/unit.ttl` + `data/quantitykind.ttl` on first start; the UI reads from this dataset but never writes to it
+- Seeding is skipped on subsequent starts if the target dataset already contains triples.
 - Fuseki admin UI: `http://localhost:3030` (credentials: `admin` / `admin`)
 
 ## SPARQL / Jena
@@ -162,7 +166,10 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
   - Shows parent step if the model activity is a leaf (e.g. under `ParallelActivity`)
   - "Part of run: [name] →" navigates to the run detail page
 - Workflow store: `src/stores/workflow.ts` — `fetchWorkflows()`, `fetchWorkflow(uri)` (returns recursive `WorkflowStep` tree), `fetchWorkflowInstances(modelUri)`, `fetchRun(instanceUri)`, `updateWorkflowInstance(uri, title, desc)`, `fetchWorkflowStepOptions(instanceUri?)`, `addWorkflowModel(form)`, `fetchWorkflowForEdit(uri)` (returns recursive `StepForm` tree), `updateWorkflowModel(uri, form)`, `updateWorkflowModelMetadata(uri, form)`, `deleteWorkflowModel(uri)` (4 sequential SPARQL DELETEs; only call when no runs exist)
+- `WorkflowDetail` carries `rootType: 'SequentialActivity' | 'ParallelActivity' | null` — the type of the root `wild:hasBehaviour` node; fetched alongside the workflow metadata in `fetchWorkflow` by querying `?root a ?rootType`
 - `WorkflowStep` interface carries `children: WorkflowStep[]`; `fetchWorkflow` uses a two-query approach (metadata + full treeQuery) with a recursive `buildStep` to populate the tree at any depth
+- `WorkflowView` renders a **root behaviour badge** (`⟷ Parallel` / `↕ Sequential`) with a collapse toggle above the step cluster; the step cluster uses `.step-list--parallel` (blue-tinted left border) or `.step-list--sequential` (green-tinted left border) matching the inner composite node styling in `WorkflowStepNode`; top-level `WorkflowStepNode` instances receive `context="parallel"` or `context="sequential"` based on `rootType`
+- `RunDetail` carries `rootType: 'SequentialActivity' | 'ParallelActivity' | null` — fetched in `fetchRun` from the model's root behaviour node type; `RunView` uses it to render the same root behaviour badge + tinted cluster as `WorkflowView`, and passes the correct `context` prop to top-level `RunActivityNode` instances
 - `RunActivityInstance` interface is recursive (`children: RunActivityInstance[]`); carries `state`, `modelActivityTitle`, `modelActivityType`, `datasets`; `RunStep` has been removed — `RunDetail.activityInstances` holds top-level tree nodes directly
 - `RunActivityNode.vue` is a self-referencing recursive component (same pattern as `WorkflowStepNode`); atomic nodes show title + state badge (verbatim WiLD state: `initialized`/`active`/`done`) + dataset chips; composite nodes show type badge + state badge + collapse toggle + child cluster (green for sequential, blue for parallel)
 - Workflow context on datasets: `fetchDatasetWorkflowContext(uri)` in `src/stores/catalog.ts`
@@ -195,7 +202,7 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 - Activity instance URIs use the pattern `vpd:actinst-<slug>-<suffix>-<n>`; workflow instance URI uses `vpd:wfinst-<slug>-<suffix>`
 - `AddRunModal.vue` — simple modal (title + description); emits `created(instanceUri)` on success
 - Workflow store: `addWorkflowRun(modelUri, title, description): Promise<string>` — queries all model activities, builds and executes a single `INSERT DATA`; returns the new instance URI
-- `fetchRun` uses 5 queries: (1) run metadata + modelUri + rootUri; then in parallel: (2) model activity tree (parent→child pairs + title + type), (3) control flow instances (`FILTER NOT EXISTS { ?actInst sosa:hasResult ?_ }`), (4) datasets grouped by model activity (via observation instances), (5) cross-cutting datasets. Builds `RunActivityInstance` tree recursively from model structure.
+- `fetchRun` uses 5 queries: (1) run metadata + modelUri + rootUri + rootType; then in parallel: (2) model activity tree (parent→child pairs + title + type), (3) control flow instances (`FILTER NOT EXISTS { ?actInst sosa:hasResult ?_ }`), (4) datasets grouped by model activity (via observation instances), (5) cross-cutting datasets. Builds `RunActivityInstance` tree recursively from model structure.
 
 ### System & Input on Atomic Activities (implemented)
 - Each `wild:AtomicActivity` (= `sosa:Procedure`) can have an optional `ssn:System` (via `ssn:implementedBy`) and `ssn:Input` (via `ssn:hasInput`) linked to it
@@ -207,13 +214,17 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 - Workflow store: `fetchSystemOptions(): Promise<ProcedureOption[]>`, `fetchInputOptions(): Promise<ProcedureOption[]>` — query all `ssn:System` / `ssn:Input` resources ordered by title; `ProcedureOption` interface exported from `src/stores/workflow.ts`
 
 ### System Library (implemented)
-- `ssn:System` resources representing machines and stations that implement workflow activities
-- **Browse**: `/systems` lists all systems with name, identifier, description, and the activities they implement; tab nav shared with Datasets, Workflows, and Activities
-- **Create / Edit / Delete**: clicking a card or "+ Add System" opens `AddSystemModal`; name and identifier are mandatory; description optional; a scrollable checklist selects zero or more `wild:AtomicActivity` library instances the system implements (`ssn:implements`)
-- **Identifier**: stored as `dcterms:identifier`; also slugified to form the URI at create time — `<base>sys-<slugified-identifier>` (no timestamp suffix; identifier is user-assigned and expected to be unique); editable after creation (updates `dcterms:identifier` only, URI is stable)
-- **`ssn:implements`**: written on the system side (`<system> ssn:implements <activity>`); coexists with the activity-side `ssn:implementedBy` triples written by the workflow editor; `deleteSystem` also cleans up any `ssn:implementedBy <uri>` triples on activities
-- URI pattern: `<base>sys-<slugified-identifier>` (e.g. `vpd:sys-cnc-line-a`)
-- Workflow store functions: `fetchSystems(): Promise<SystemSummary[]>`, `addSystem(form)`, `updateSystem(uri, form)`, `deleteSystem(uri)`; interfaces `SystemSummary`, `SystemForm` exported from `src/stores/workflow.ts`
+- `ssn:System`, `sosa:Sensor`, and `sosa:Actuator` resources representing machines, stations, and their components
+- **Browse**: `/systems` lists all top-level systems with a type badge (System / Sensor / Actuator); each card with sub-systems shows a "▶ N sub-systems" disclosure toggle that expands a `SystemSubTree` tree view with `├─`/`└─` connectors, per-node collapse, and type-coloured badges; tab nav shared with Datasets, Workflows, and Activities
+- **Sub-system hierarchy**: each system node can have zero or more sub-systems via `ssn:hasSubSystem`; sub-systems can themselves have sub-systems (arbitrary depth); each node independently chooses its type (System / Sensor / Actuator)
+- **Create / Edit / Delete**: clicking a card or "+ Add System" opens `AddSystemModal` (600 px); root node has a type radio group; a purple-tinted "Sub-systems" cluster uses the recursive `SystemNodeEditor` component to author the tree; name and identifier are mandatory on every node; activity checklist (`ssn:implements`) is on the root only
+- **Identifier**: stored as `dcterms:identifier`; slugified to form the root URI at create time — `<base>sys-<slugified-identifier>`; sub-system URIs use `<base>sys-<child-slug>-<n>` and are regenerated on each update (sub-systems are not referenced externally)
+- **`ssn:implements`**: written on the system side (`<system> ssn:implements <activity>`); coexists with the activity-side `ssn:implementedBy` triples written by the workflow editor; `deleteSystem` also cleans up any `ssn:implementedBy <uri>` triples on activities and uses `(ssn:hasSubSystem)*` property path to delete all descendant nodes
+- **`updateSystem`**: performs a full delete of root + all descendants via `<root> (ssn:hasSubSystem)* ?node`, then inserts fresh triples; root URI is stable, sub-system URIs are regenerated
+- **`fetchSystemOptions`**: returns all `ssn:System`, `sosa:Sensor`, and `sosa:Actuator` instances (for the workflow step editor's "implemented by" dropdown)
+- Components: `SystemNodeEditor.vue` (recursive editor, exports `SystemNodeFormWithId` and `newSystemNodeWithId`), `SystemSubTree.vue` (recursive read-only tree browser)
+- Interfaces exported from `src/stores/workflow.ts`: `SystemNodeType`, `SystemNodeSummary`, `SystemSummary`, `SystemNodeForm`, `SystemForm`
+- Workflow store functions: `fetchSystems(): Promise<SystemSummary[]>`, `addSystem(form)`, `updateSystem(uri, form)`, `deleteSystem(uri)`
 
 ### Activity Library (implemented)
 - Reusable `wild:AtomicActivity` resources that can be referenced by workflow models instead of defining activities inline
