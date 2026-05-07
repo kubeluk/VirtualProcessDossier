@@ -31,7 +31,7 @@ src/
     StepEditorNode.vue        # Recursive step-editing component used by AddWorkflowModal
     WorkflowStepNode.vue      # Recursive read-only step display used by WorkflowView
     RunActivityNode.vue       # Recursive activity instance display used by RunView (with state + datasets)
-    ActivityParameterForm.vue # Dynamic form rendered from a SHACL parameter shape; used by RunActivityNode
+    ShaclFormWrapper.vue      # Reusable Vue wrapper for <shacl-form> custom element; used by RunActivityNode
   views/
     HomeView.vue            # Landing page → links to /catalog
     CatalogView.vue         # Browse all datasets (card list)
@@ -107,8 +107,9 @@ docker compose down -v           # Tear down including data volume (resets seed)
 - Each `sosa:Observation` is also typed `wild:ActivityInstance` and carries:
   - `wild:activityInstanceOf` → the corresponding leaf `wild:Activity` in the model
   - `wild:inWorkflowInstance` → `vpd:wfinst-manufacturing-line`
-  - `wild:hasState wild:done` — semantically equivalent to `prov:Activity` (completed)
-- `wild:WorkflowInstance` state is `wild:active` while any step lacks a completed activity instance
+  - `wild:hasState wild:done`
+- Each `sosa:Observation` that is a `wild:ActivityInstance` is also typed `prov:Activity`
+- `wild:WorkflowInstance` state is `wild:done` once all activity instances are completed
 - Dataset-to-step context is also expressed directly via `dcterms:isPartOf` on each `dcat:Dataset` (pointing to the relevant step or the workflow model for cross-cutting datasets)
 - Confirmed valid WiLD terms: `WorkflowModel`, `WorkflowInstance`, `ActivityInstance`, `SequentialActivity`, `ParallelActivity`, `AtomicActivity`, `hasBehaviour`, `hasChildActivities`, `workflowInstanceOf`, `activityInstanceOf`, `inWorkflowInstance`, `hasState`, `done`, `active`
 
@@ -190,7 +191,7 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 
 ### Workflow Run Registration (implemented)
 - **Start Run**: "+ Start Run" button in the Runs section of `/workflow?uri=` opens `AddRunModal`; user provides a title (required) and optional description; navigates directly to the new run on success
-- **What gets created**: a `wild:WorkflowInstance` with `workflowInstanceOf <modelUri>`, `dcterms:title`, optional `dcterms:description`, `prov:startedAtTime`, and `wild:hasState wild:initialized`; plus one `wild:ActivityInstance` per activity node in the model (root behaviour + all descendants via `(wild:hasChildActivities/rdf:rest*/rdf:first)*`); the root behaviour's activity instance gets `wild:hasState wild:active`, all others get `wild:hasState wild:initialized`
+- **What gets created**: a `wild:WorkflowInstance` with `workflowInstanceOf <modelUri>`, `dcterms:title`, optional `dcterms:description`, `prov:startedAtTime`, and `wild:hasState wild:done`; plus one `wild:ActivityInstance, prov:Activity` per activity node in the model (root behaviour + all descendants via `(wild:hasChildActivities/rdf:rest*/rdf:first)*`); all activity instances get `wild:hasState wild:done` immediately — registering a run represents a completed execution whose input data is filled in afterwards via the SHACL input forms
 - Activity instance URIs use the pattern `vpd:actinst-<slug>-<suffix>-<n>`; workflow instance URI uses `vpd:wfinst-<slug>-<suffix>`
 - `AddRunModal.vue` — simple modal (title + description); emits `created(instanceUri)` on success
 - Workflow store: `addWorkflowRun(modelUri, title, description): Promise<string>` — queries all model activities, builds and executes a single `INSERT DATA`; returns the new instance URI
@@ -227,16 +228,16 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 - `StepForm.isLibraryRef?` and `StepFormWithId.isLibraryRef` carry the flag through the form layer; `fetchWorkflowForEdit` detects library refs by checking for `dcterms:issued` on each child node in the tree query
 - Workflow store functions: `fetchAtomicActivities(): Promise<AtomicActivitySummary[]>`, `fetchAtomicActivityOptions(): Promise<AtomicActivityOption[]>`, `addAtomicActivity(form)`, `updateAtomicActivity(uri, form)`, `isAtomicActivityInUse(uri): Promise<boolean>`, `deleteAtomicActivity(uri)`; interfaces `AtomicActivitySummary`, `AtomicActivityOption`, `AtomicActivityForm` exported from `src/stores/workflow.ts`
 
-### Process Parameter Shapes (implemented)
-- Each `wild:AtomicActivity` (= `sosa:Procedure`) can have a SHACL parameter schema that defines the typed process parameters an operator must supply when executing a run (e.g. closing speed, tool temperature, forming pressure)
-- **Ontologies**: SHACL (`sh: <http://www.w3.org/ns/shacl#>`) for the constraint vocabulary; QUDT (`qudt: <http://qudt.org/schema/qudt/>`, `unit: <http://qudt.org/vocab/unit/>`) for physical units
-- **Linking predicate**: `vpd:hasParameterShape` — custom predicate connecting a `wild:AtomicActivity` to its `sh:NodeShape`
-- **Shape storage**: `sh:NodeShape` and `sh:PropertyShape` resources use **named URIs** (not blank nodes) to allow SPARQL CRUD; NodeShape pattern `vpd:shape-{slug}-params`, PropertyShape pattern `vpd:propshape-{slug}-{timestamp}-{n}`
-- **PropertyShape terms used**: `sh:path` (full URI; doubles as the RDF predicate for storing values), `sh:name`, `sh:description`, `sh:datatype` (XSD URI), `sh:minCount`, `sh:maxCount`, `sh:minInclusive`, `sh:maxInclusive`, `sh:order`, `qudt:unit`
-- **Run-time value storage**: parameter values are written directly on the control-flow `wild:ActivityInstance` using `sh:path` as the predicate — e.g. `<actInst> vpd:closingSpeed "150.0"^^xsd:decimal`; this is standard SHACL semantics
-- **Authoring** (Activity Library): `AddActivityModal` has a "Process Parameters" section; each parameter row lets the user define label, path local name (expanded to `vpd:` URI internally), datatype (decimal/integer/string), QUDT unit, required flag, min/max, and display order; shapes are persisted via `upsertParameterShape`; shapes are cleaned up before activity deletion via `deleteParameterShape`
-- **Run-time form** (Run view): `RunActivityNode` lazy-loads the parameter shape for each atomic node on mount via `fetchParameterShape(modelActivityUri)`; if a shape exists, `ActivityParameterForm` renders a dynamic form with one field per property shape; values are loaded via `fetchParameterValues` and saved via `saveParameterValues`; client-side validation enforces required fields and numeric ranges before the SPARQL update is sent
-- **v-model / number type caveat**: Vue 3's `v-model` on `<input type="number">` coerces values to `number` at runtime; `fieldValues` in `ActivityParameterForm` is typed `Record<string, string | number>` and values are stringified via `String()` before SPARQL insertion
-- `QUDT_UNIT_LABELS` and `QUDT_UNIT_OPTIONS` are module-level exports from `src/stores/workflow.ts`; used by both `AddActivityModal` and `ActivityParameterForm`
-- Workflow store functions: `fetchParameterShape(activityUri)`, `upsertParameterShape(activityUri, forms)`, `deleteParameterShape(activityUri)`, `fetchParameterValues(instanceUri, shape)`, `saveParameterValues(instanceUri, shape, values)`; interfaces `ParameterPropertyShape`, `ParameterShape`, `ParameterPropertyShapeForm` exported from `src/stores/workflow.ts`
-- Seed shapes in `data/parameter-shapes.ttl`: `vpd:step-hydraulic-forming` (3 params), `vpd:wfact-cnc-temperature` (2 params), `vpd:wfact-cnc-vibration` (1 param)
+### Activity Input Forms via SHACL (implemented)
+- Each `wild:AtomicActivity` (= `sosa:Procedure`) can have a SHACL input shape that defines the structured data an operator must supply when executing a run (e.g. closing speed, tool temperature, forming pressure)
+- **Ontologies**: SHACL (`sh: <http://www.w3.org/ns/shacl#>`) for the constraint vocabulary; QUDT (`qudt: <http://qudt.org/schema/qudt/>`, `unit: <http://qudt.org/vocab/unit/>`) for physical units; PROV-O (`prov:`) for the Plan/used relation; SSN (`ssn:hasInput`) for linking the shape to the activity
+- **Linking predicate**: `ssn:hasInput` — connects a `wild:AtomicActivity` to its `sh:NodeShape` (the shape is also typed `ssn:Input`); distinguished from plain material `ssn:Input` links by the `a sh:NodeShape` type; one SHACL shape per activity maximum
+- **Shape storage**: `sh:NodeShape` and `sh:PropertyShape` resources use **named URIs** (not blank nodes); NodeShape pattern `vpd:shape-{slug}-params`, PropertyShape pattern `vpd:propshape-{slug}-{timestamp}-{n}`
+- **PropertyShape terms used**: `sh:path` (full URI), `sh:name`, `sh:description`, `sh:datatype` (XSD URI), `sh:minCount`, `sh:maxCount`, `sh:minInclusive`, `sh:maxInclusive`, `sh:order`, `qudt:unit`
+- **Run-time value storage**: user input is stored as a `prov:Plan` node; `<activityInstance> prov:used <planUri>`; plan URI pattern: `vpd:plan-<activityInstanceLocalName>`; the plan carries property values as plain triples using `sh:path` predicates
+- **Form generation**: `@ulb-darmstadt/shacl-form` web component (`<shacl-form>`) generates a validated HTML form from the shape Turtle; wrapped by `ShaclFormWrapper.vue` which maps props → `data-*` attributes and emits `ready`, `change`, `submit` events
+- **Authoring** (Activity Library): `AddActivityModal` has a "Process Parameters" section; `upsertParameterShape` and `deleteParameterShape` write/remove `ssn:hasInput → sh:NodeShape` triples
+- **Run-time form** (Run view): `RunActivityNode` lazy-loads the parameter shape via `fetchParameterShape(modelActivityUri)` (queries via `ssn:hasInput ... a sh:NodeShape`); builds Turtle for the shape via `buildShapeAsTurtle(shape)` and fetches any existing plan via `fetchExistingPlan(instanceUri)` + `fetchPlanTurtle(planUri)`; renders `ShaclFormWrapper` with the shape Turtle, existing plan Turtle as pre-fill values, and plan URI as `valuesSubject`; on submit calls `savePlan(instanceUri, planUri, rdf)` which parses the Turtle with `n3.Parser` and issues a SPARQL DELETE + INSERT
+- `QUDT_UNIT_LABELS` and `QUDT_UNIT_OPTIONS` are module-level exports from `src/stores/workflow.ts`; used by `AddActivityModal`
+- Workflow store functions: `fetchParameterShape(activityUri)`, `buildShapeAsTurtle(shape)`, `fetchExistingPlan(instanceUri)`, `fetchPlanTurtle(planUri)`, `savePlan(instanceUri, planUri, planTurtle)`, `upsertParameterShape(activityUri, forms)`, `deleteParameterShape(activityUri)`; interfaces `ParameterPropertyShape`, `ParameterShape`, `ParameterPropertyShapeForm` exported from `src/stores/workflow.ts`
+- Seed shapes in `data/parameter-shapes.ttl`: `vpd:step-hydraulic-forming` (3 params), `vpd:wfact-cnc-temperature` (2 params), `vpd:wfact-cnc-vibration` (1 param); all linked via `ssn:hasInput`

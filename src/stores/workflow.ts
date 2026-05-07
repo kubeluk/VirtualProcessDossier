@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { Parser as N3Parser, type Quad, type Term } from 'n3'
 import { querySparql, askSparql, updateSparql } from '@/services/sparql'
 import { useGraphStore } from '@/stores/graph'
 
@@ -1036,22 +1037,19 @@ ${lines.join('\n')}
       lines.push(`  <${instanceUri}> dcterms:description "${esc(description)}"@en .`)
     }
     lines.push(`  <${instanceUri}> prov:startedAtTime "${now}"^^xsd:dateTime .`)
-    lines.push(`  <${instanceUri}> wild:hasState wild:initialized .`)
+    lines.push(`  <${instanceUri}> wild:hasState wild:done .`)
 
-    // ActivityInstances: one per activity node, root gets wild:active
+    // ActivityInstances: one per activity node, all start as wild:done
     let actCounter = 0
-    let rootUri: string | null = null
 
     for (const b of activityResults.results.bindings) {
-      if (!rootUri) rootUri = b.root.value
       const actUri = b.activity.value
       const actInstUri = `${base}actinst-${slug}-${suffix}-${actCounter++}`
-      const isRoot = actUri === rootUri
 
-      lines.push(`  <${actInstUri}> a wild:ActivityInstance .`)
+      lines.push(`  <${actInstUri}> a wild:ActivityInstance, prov:Activity .`)
       lines.push(`  <${actInstUri}> wild:activityInstanceOf <${actUri}> .`)
       lines.push(`  <${actInstUri}> wild:inWorkflowInstance <${instanceUri}> .`)
-      lines.push(`  <${actInstUri}> wild:hasState ${isRoot ? 'wild:active' : 'wild:initialized'} .`)
+      lines.push(`  <${actInstUri}> wild:hasState wild:done .`)
     }
 
     const update = `
@@ -1527,13 +1525,13 @@ ${lines.join('\n')}
   async function fetchParameterShape(activityUri: string): Promise<ParameterShape | null> {
     const query = `
       PREFIX sh:   <http://www.w3.org/ns/shacl#>
+      PREFIX ssn:  <http://www.w3.org/ns/ssn/>
       PREFIX qudt: <http://qudt.org/schema/qudt/>
-      PREFIX vpd:  <${VPD_BASE}>
 
       SELECT ?shape ?propShape ?path ?name ?description ?datatype
              ?minCount ?maxCount ?minInclusive ?maxInclusive ?order ?unit
       WHERE {
-        <${activityUri}> vpd:hasParameterShape ?shape .
+        <${activityUri}> ssn:hasInput ?shape .
         ?shape a sh:NodeShape ;
                sh:property ?propShape .
         ?propShape sh:path ?path .
@@ -1614,6 +1612,7 @@ ${lines.join('\n')}
       .join('\n  ')
 
     const sh = 'http://www.w3.org/ns/shacl#'
+    const ssn = 'http://www.w3.org/ns/ssn/'
     const update = `
       DELETE { ?ps ?p ?o }
       WHERE  { <${shapeUri}> <${sh}property> ?ps . ?ps ?p ?o } ;
@@ -1621,12 +1620,12 @@ ${lines.join('\n')}
       DELETE { <${shapeUri}> <${sh}property> ?ps }
       WHERE  { <${shapeUri}> <${sh}property> ?ps } ;
 
-      DELETE { <${activityUri}> <${VPD_BASE}hasParameterShape> ?s }
-      WHERE  { <${activityUri}> <${VPD_BASE}hasParameterShape> ?s } ;
+      DELETE { <${activityUri}> <${ssn}hasInput> ?s }
+      WHERE  { <${activityUri}> <${ssn}hasInput> ?s . ?s a <${sh}NodeShape> } ;
 
       INSERT DATA {
-        <${activityUri}> <${VPD_BASE}hasParameterShape> <${shapeUri}> .
-        <${shapeUri}> a <${sh}NodeShape> .
+        <${activityUri}> <${ssn}hasInput> <${shapeUri}> .
+        <${shapeUri}> a <${sh}NodeShape>, <${ssn}Input> .
         ${propInserts}
       }
     `
@@ -1637,6 +1636,7 @@ ${lines.join('\n')}
     const slug = activitySlug(activityUri)
     const shapeUri = `${VPD_BASE}shape-${slug}-params`
     const sh = 'http://www.w3.org/ns/shacl#'
+    const ssn = 'http://www.w3.org/ns/ssn/'
     const update = `
       DELETE { ?ps ?p ?o }
       WHERE  { <${shapeUri}> <${sh}property> ?ps . ?ps ?p ?o } ;
@@ -1644,64 +1644,149 @@ ${lines.join('\n')}
       DELETE { <${shapeUri}> ?p ?o }
       WHERE  { <${shapeUri}> ?p ?o } ;
 
-      DELETE { <${activityUri}> <${VPD_BASE}hasParameterShape> ?s }
-      WHERE  { <${activityUri}> <${VPD_BASE}hasParameterShape> ?s }
+      DELETE { <${activityUri}> <${ssn}hasInput> ?s }
+      WHERE  { <${activityUri}> <${ssn}hasInput> ?s . ?s a <${sh}NodeShape> }
     `
     await updateSparql(graphStore.updateEndpoint, update)
   }
 
-  async function fetchParameterValues(
-    instanceUri: string,
-    shape: ParameterShape,
-  ): Promise<Record<string, string>> {
-    if (!shape.properties.length) return {}
-    const pathValues = shape.properties.map((p) => `<${p.path}>`).join(' ')
+  function buildShapeAsTurtle(shape: ParameterShape): string {
+    const sh = 'http://www.w3.org/ns/shacl#'
+    const xsd = 'http://www.w3.org/2001/XMLSchema#'
+    const qudt = 'http://qudt.org/schema/qudt/'
+
+    function abbrevDatatype(uri: string): string {
+      if (uri.startsWith(xsd)) return `<${uri}>`
+      return `<${uri}>`
+    }
+
+    const propUris = shape.properties.map((p) => `<${p.propShapeUri}>`).join(' ,\n               ')
+    let turtle =
+      `@prefix sh:   <${sh}> .\n` +
+      `@prefix xsd:  <${xsd}> .\n` +
+      `@prefix qudt: <${qudt}> .\n\n` +
+      `<${shape.shapeUri}> a sh:NodeShape ;\n` +
+      `  sh:property ${propUris} .\n\n`
+
+    for (const p of shape.properties) {
+      turtle += `<${p.propShapeUri}>\n`
+      turtle += `  sh:path <${p.path}> ;\n`
+      if (p.name) turtle += `  sh:name ${JSON.stringify(p.name)}@en ;\n`
+      if (p.description) turtle += `  sh:description ${JSON.stringify(p.description)}@en ;\n`
+      if (p.datatype) turtle += `  sh:datatype ${abbrevDatatype(p.datatype)} ;\n`
+      if (p.minCount !== null) turtle += `  sh:minCount ${p.minCount} ;\n`
+      if (p.maxCount !== null) turtle += `  sh:maxCount ${p.maxCount} ;\n`
+      if (p.minInclusive !== null)
+        turtle += `  sh:minInclusive "${p.minInclusive}"^^<${xsd}decimal> ;\n`
+      if (p.maxInclusive !== null)
+        turtle += `  sh:maxInclusive "${p.maxInclusive}"^^<${xsd}decimal> ;\n`
+      if (p.order !== null) turtle += `  sh:order ${p.order} ;\n`
+      if (p.unitUri) turtle += `  qudt:unit <${p.unitUri}> ;\n`
+      // Replace trailing ' ;\n' with ' .\n\n'
+      turtle = turtle.replace(/;\s*\n$/, '.\n\n')
+    }
+    return turtle
+  }
+
+  async function fetchExistingPlan(instanceUri: string): Promise<string | null> {
+    const prov = 'http://www.w3.org/ns/prov#'
     const query = `
-      SELECT ?path ?value WHERE {
-        VALUES ?path { ${pathValues} }
-        OPTIONAL { <${instanceUri}> ?path ?value }
+      SELECT ?plan WHERE {
+        <${instanceUri}> <${prov}used> ?plan .
+        ?plan a <${prov}Plan> .
+      }
+      LIMIT 1
+    `
+    const result = await querySparql(graphStore.endpoint, query)
+    return result.results.bindings[0]?.plan?.value ?? null
+  }
+
+  async function fetchPlanTurtle(planUri: string): Promise<string> {
+    const query = `
+      SELECT ?p ?o WHERE {
+        <${planUri}> ?p ?o .
       }
     `
     const result = await querySparql(graphStore.endpoint, query)
-    const map: Record<string, string> = {}
-    for (const b of result.results.bindings) {
-      if (b.value) map[b.path.value] = b.value.value
+    if (!result.results.bindings.length) {
+      return `<${planUri}> a <http://www.w3.org/ns/prov#Plan> .`
     }
-    return map
+    const parts: string[] = []
+    for (const b of result.results.bindings) {
+      const pred = `<${b.p.value}>`
+      let obj: string
+      if (b.o.type === 'uri') {
+        obj = `<${b.o.value}>`
+      } else {
+        const escaped = b.o.value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')
+        if (b.o['xml:lang']) {
+          obj = `"${escaped}"@${b.o['xml:lang']}`
+        } else if (b.o.datatype) {
+          obj = `"${escaped}"^^<${b.o.datatype}>`
+        } else {
+          obj = `"${escaped}"`
+        }
+      }
+      parts.push(`${pred} ${obj}`)
+    }
+    return `<${planUri}> ${parts.join(' ;\n  ')} .`
   }
 
-  async function saveParameterValues(
+  async function savePlan(
     instanceUri: string,
-    shape: ParameterShape,
-    values: Record<string, string>,
+    planUri: string,
+    planTurtle: string,
   ): Promise<void> {
-    function esc(s: string): string {
-      return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-    }
-    const xsd = 'http://www.w3.org/2001/XMLSchema#'
-    const dtMap: Record<string, string> = {
-      [`${xsd}decimal`]: `${xsd}decimal`,
-      [`${xsd}integer`]: `${xsd}integer`,
+    const prov = 'http://www.w3.org/ns/prov#'
+
+    // Parse Turtle to N-Triples-style inline triples for SPARQL INSERT DATA
+    const parser = new N3Parser()
+    let quads: Quad[]
+    try {
+      quads = parser.parse(planTurtle)
+    } catch {
+      throw new Error('Failed to parse plan RDF output')
     }
 
-    const operations: string[] = []
-    for (const prop of shape.properties) {
-      const val = values[prop.path]
-      // DELETE existing value regardless
-      operations.push(
-        `DELETE { <${instanceUri}> <${prop.path}> ?v }
-       WHERE  { OPTIONAL { <${instanceUri}> <${prop.path}> ?v } }`,
-      )
-      if (val !== undefined && val !== '') {
-        const dt = prop.datatype ? (dtMap[prop.datatype] ?? null) : null
-        const literal = dt
-          ? `"${esc(val)}"^^<${dt}>`
-          : `"${esc(val)}"`
-        operations.push(`INSERT DATA { <${instanceUri}> <${prop.path}> ${literal} }`)
+    function termToSparql(term: Term): string | null {
+      if (term.termType === 'NamedNode') return `<${term.value}>`
+      if (term.termType === 'BlankNode') return `_:${term.value}`
+      if (term.termType === 'Literal') {
+        const escaped = term.value
+          .replace(/\\/g, '\\\\')
+          .replace(/"/g, '\\"')
+          .replace(/\n/g, '\\n')
+        if (term.language) return `"${escaped}"@${term.language}`
+        if (term.datatype) return `"${escaped}"^^<${term.datatype.value}>`
+        return `"${escaped}"`
       }
+      return null
     }
-    if (!operations.length) return
-    const update = operations.join(' ;\n')
+
+    const tripleLines = quads
+      .map((q) => {
+        const s = termToSparql(q.subject as Term)
+        const p = termToSparql(q.predicate as Term)
+        const o = termToSparql(q.object as Term)
+        if (!s || !p || !o) return null
+        return `${s} ${p} ${o} .`
+      })
+      .filter(Boolean)
+      .join('\n      ')
+
+    const update = `
+      DELETE { <${planUri}> ?p ?o }
+      WHERE  { <${planUri}> ?p ?o } ;
+
+      DELETE { <${instanceUri}> <${prov}used> ?plan }
+      WHERE  { <${instanceUri}> <${prov}used> ?plan . ?plan a <${prov}Plan> } ;
+
+      INSERT DATA {
+        <${planUri}> a <${prov}Plan> .
+        ${tripleLines}
+        <${instanceUri}> <${prov}used> <${planUri}> .
+      }
+    `
     await updateSparql(graphStore.updateEndpoint, update)
   }
 
@@ -1764,9 +1849,11 @@ ${lines.join('\n')}
     isAtomicActivityInUse,
     deleteAtomicActivity,
     fetchParameterShape,
+    buildShapeAsTurtle,
+    fetchExistingPlan,
+    fetchPlanTurtle,
+    savePlan,
     upsertParameterShape,
     deleteParameterShape,
-    fetchParameterValues,
-    saveParameterValues,
   }
 })

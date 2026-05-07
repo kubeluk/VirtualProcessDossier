@@ -1,4 +1,5 @@
 @prefix sh:      <http://www.w3.org/ns/shacl#> .
+@prefix ssn:     <http://www.w3.org/ns/ssn/> .
 @prefix qudt:    <http://qudt.org/schema/qudt/> .
 @prefix unit:    <http://qudt.org/vocab/unit/> .
 @prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
@@ -6,10 +7,10 @@
 
 # ── Hydraulic Forming & Stamping ────────────────────────────────────────────
 
-vpd:step-hydraulic-forming  vpd:hasParameterShape  vpd:shape-step-hydraulic-forming-params .
+vpd:step-hydraulic-forming  ssn:hasInput  vpd:shape-step-hydraulic-forming-params .
 
 vpd:shape-step-hydraulic-forming-params
-    a sh:NodeShape .
+    a sh:NodeShape, ssn:Input .
 
 vpd:propshape-hf-1
     sh:path         vpd:closingSpeed ;
@@ -52,10 +53,10 @@ vpd:shape-step-hydraulic-forming-params
 
 # ── CNC Temperature Monitoring ───────────────────────────────────────────────
 
-vpd:wfact-cnc-temperature  vpd:hasParameterShape  vpd:shape-wfact-cnc-temperature-params .
+vpd:wfact-cnc-temperature  ssn:hasInput  vpd:shape-wfact-cnc-temperature-params .
 
 vpd:shape-wfact-cnc-temperature-params
-    a sh:NodeShape .
+    a sh:NodeShape, ssn:Input .
 
 vpd:propshape-cnc-t-1
     sh:path         vpd:spindleSpeed ;
@@ -87,10 +88,10 @@ vpd:shape-wfact-cnc-temperature-params
 
 # ── CNC Vibration Condition Monitoring ───────────────────────────────────────
 
-vpd:wfact-cnc-vibration  vpd:hasParameterShape  vpd:shape-wfact-cnc-vibration-params .
+vpd:wfact-cnc-vibration  ssn:hasInput  vpd:shape-wfact-cnc-vibration-params .
 
 vpd:shape-wfact-cnc-vibration-params
-    a sh:NodeShape .
+    a sh:NodeShape, ssn:Input .
 
 vpd:propshape-cnc-v-1
     sh:path         vpd:vibrationThreshold ;

@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useWorkflowStore, type RunActivityInstance, type ParameterShape } from '@/stores/workflow'
+import { useWorkflowStore, type RunActivityInstance } from '@/stores/workflow'
 // Self-referencing recursive component — Vue resolves by filename in <script setup>
 import RunActivityNode from './RunActivityNode.vue'
-import ActivityParameterForm from './ActivityParameterForm.vue'
+import ShaclFormWrapper from './ShaclFormWrapper.vue'
+
+const VPD_BASE = 'https://example.org/vpd#'
 
 const props = defineProps<{
   inst: RunActivityInstance
@@ -25,8 +27,9 @@ const isAtomic = computed(
   () => !props.inst.modelActivityType || props.inst.modelActivityType === 'AtomicActivity',
 )
 
-const parameterShape = ref<ParameterShape | null>(null)
-const parameterValues = ref<Record<string, string>>({})
+const shapesTurtle = ref<string | null>(null)
+const planUri = ref<string | null>(null)
+const planValuesTurtle = ref<string | null>(null)
 const parameterLoading = ref(false)
 
 onMounted(async () => {
@@ -35,13 +38,31 @@ onMounted(async () => {
   try {
     const shape = await workflowStore.fetchParameterShape(props.inst.modelActivityUri)
     if (shape) {
-      parameterShape.value = shape
-      parameterValues.value = await workflowStore.fetchParameterValues(props.inst.uri, shape)
+      shapesTurtle.value = workflowStore.buildShapeAsTurtle(shape)
+
+      const local = props.inst.uri.includes('#')
+        ? props.inst.uri.split('#').pop()!
+        : props.inst.uri.split('/').pop()!
+      const newPlanUri = `${VPD_BASE}plan-${local}`
+
+      const existingPlanUri = await workflowStore.fetchExistingPlan(props.inst.uri)
+      if (existingPlanUri) {
+        planUri.value = existingPlanUri
+        planValuesTurtle.value = await workflowStore.fetchPlanTurtle(existingPlanUri)
+      } else {
+        planUri.value = newPlanUri
+        planValuesTurtle.value = `<${newPlanUri}> a <http://www.w3.org/ns/prov#Plan> .`
+      }
     }
   } finally {
     parameterLoading.value = false
   }
 })
+
+async function handlePlanSubmit({ rdf }: { rdf: string }) {
+  await workflowStore.savePlan(props.inst.uri, planUri.value!, rdf)
+  planValuesTurtle.value = await workflowStore.fetchPlanTurtle(planUri.value!)
+}
 const isParallel = computed(() => props.inst.modelActivityType === 'ParallelActivity')
 
 const stepNumber = props.index + 1
@@ -97,14 +118,15 @@ const stateLabel = computed(() => props.inst.state ?? null)
             </button>
           </div>
 
-          <!-- Process parameter form -->
+          <!-- Process parameter form (shacl-form driven) -->
           <p v-if="parameterLoading" class="param-loading">Loading parameters…</p>
-          <ActivityParameterForm
-            v-else-if="parameterShape"
-            :inst="inst"
-            :shape="parameterShape"
-            :initial-values="parameterValues"
-            @saved="parameterValues = $event"
+          <ShaclFormWrapper
+            v-else-if="shapesTurtle && planUri && planValuesTurtle !== null"
+            :shapes="shapesTurtle"
+            :values="planValuesTurtle"
+            :values-subject="planUri"
+            submit-button-label="Save"
+            @submit="handlePlanSubmit"
           />
         </div>
       </div>

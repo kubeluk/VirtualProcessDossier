@@ -1,3 +1,4 @@
+import '@ulb-darmstadt/shacl-form'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 
