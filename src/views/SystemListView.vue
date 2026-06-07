@@ -81,6 +81,7 @@ function toggleExpand(uri: string) {
       <RouterLink to="/workflows" class="nav-tab">Workflows</RouterLink>
       <RouterLink to="/activities" class="nav-tab">Activities</RouterLink>
       <RouterLink to="/systems" class="nav-tab nav-tab--active">Systems</RouterLink>
+      <RouterLink to="/parts" class="nav-tab">Parts</RouterLink>
     </nav>
 
     <div v-if="loading" class="state-message">Loading systems…</div>

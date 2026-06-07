@@ -1,4 +1,3 @@
-@prefix : <#> .
 @prefix qudt: <http://qudt.org/schema/qudt/> .
 @prefix part: <http://purl.org/for/part#> .
 @prefix laminat: <http://purl.org/for/laminat#> .
@@ -6,6 +5,7 @@
 @prefix tape: <http://purl.org/for/tape#> .
 @prefix run: <http://purl.org/for/run#> .
 @prefix workflow: <http://purl.org/for/workflow#> .
+@prefix feature: <http://purl.org/for/feature#> .
 @prefix activity: <http://purl.org/for/activity#> .
 @prefix machine: <http://purl.org/for/machine#> .
 @prefix gripper: <http://purl.org/for/gripper#> .
@@ -22,6 +22,9 @@
 @prefix wild: <http://purl.org/wild/vocab#> .
 @prefix dcat: <http://www.w3.org/ns/dcat#> .
 @prefix geo: <http://www.opengis.net/ont/geosparql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix ssn: <http://www.w3.org/ns/ssn/> .
 
 # Material
 
@@ -64,7 +67,7 @@ laminat:1 a geo:Feature, prov:Entity ;
     param:hasFiberMassFraction [
         a qudt:Quantity ;
         qudt:hasQuantityKind quantitykind:MassFraction ;
-        qudt:hasUnit unit:UNITLESS ;
+        qudt:hasUnit unit:PERCENT ;
         qudt:value 60
     ] ;
     pos:hasPositionalReference pos:laminatReferencePoint ;
@@ -155,7 +158,7 @@ layup:1 a prov:Entity ;
     prov:qualifiedDerivation [
         a prov:Derivation ;
         prov:entity tape:1 ;
-        :fiberOrientation [
+        param:fiberOrientation [
             a qudt:Quantity ;
             qudt:hasUnit unit:DEG ;
             qudt:value 0
@@ -164,7 +167,7 @@ layup:1 a prov:Entity ;
     prov:qualifiedDerivation [
         a prov:Derivation ;
         prov:entity tape:2 ;
-        :fiberOrientation [
+        param:fiberOrientation [
             a qudt:Quantity ;
             qudt:hasUnit unit:DEG ;
             qudt:value 60
@@ -173,7 +176,7 @@ layup:1 a prov:Entity ;
     prov:qualifiedDerivation [
         a prov:Derivation ;
         prov:entity tape:3 ;
-        :fiberOrientation [
+        param:fiberOrientation [
             a qudt:Quantity ;
             qudt:hasUnit unit:DEG ;
             qudt:value 120
@@ -182,7 +185,7 @@ layup:1 a prov:Entity ;
     prov:qualifiedDerivation [
         a prov:Derivation ;
         prov:entity tape:4 ;
-        :fiberOrientation [
+        param:fiberOrientation [
             a qudt:Quantity ;
             qudt:hasUnit unit:DEG ;
             qudt:value 120
@@ -191,7 +194,7 @@ layup:1 a prov:Entity ;
     prov:qualifiedDerivation [
         a prov:Derivation ;
         prov:entity tape:5 ;
-        :fiberOrientation [
+        param:fiberOrientation [
             a qudt:Quantity ;
             qudt:hasUnit unit:DEG ;
             qudt:value 60
@@ -200,7 +203,7 @@ layup:1 a prov:Entity ;
     prov:qualifiedDerivation [
         a prov:Derivation ;
         prov:entity tape:6 ;
-        :fiberOrientation [
+        param:fiberOrientation [
             a qudt:Quantity ;
             qudt:hasUnit unit:DEG ;
             qudt:value 0
@@ -210,25 +213,25 @@ layup:1 a prov:Entity ;
 ## Tape
 
 tape:1 a prov:Entity ;
-    :polymer :PA6 ;
-    :fiber :GF .
+    param:polymer "PA6" ;
+    param:fiberType "GF" .
 
 tape:2 a prov:Entity ;
-    :polymer :PA6 ;
-    :fiber :GF .
+    param:polymer "PA6" ;
+    param:fiberType "GF" .
 
 tape:3 a prov:Entity ;
-    :polymer :PA6 ;
-    :fiber :GF .
+    param:polymer "PA6" ;
+    param:fiberType "GF" .
 
 tape:4 a prov:Entity ;
-    :polymer :PA6 ;
-    :fiber :GF .
+    param:polymer "PA6" ;
+    param:fiberType "GF" .
 
 tape:5 a prov:Entity ;
-    :polymer :PA6 ;
-    :fiber :GF .
+    param:polymer "PA6" ;
+    param:fiberType "GF" .
 
 tape:6 a prov:Entity ;
-    :polymer :PA6 ;
-    :fiber :GF .
+    param:polymer "PA6" ;
+    param:fiberType "GF" .

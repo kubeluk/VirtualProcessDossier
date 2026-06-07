@@ -6,6 +6,7 @@
 @prefix tape: <http://purl.org/for/tape#> .
 @prefix run: <http://purl.org/for/run#> .
 @prefix workflow: <http://purl.org/for/workflow#> .
+@prefix feature: <http://purl.org/for/feature#> .
 @prefix activity: <http://purl.org/for/activity#> .
 @prefix machine: <http://purl.org/for/machine#> .
 @prefix gripper: <http://purl.org/for/gripper#> .
@@ -22,6 +23,9 @@
 @prefix wild: <http://purl.org/wild/vocab#> .
 @prefix dcat: <http://www.w3.org/ns/dcat#> .
 @prefix geo: <http://www.opengis.net/ont/geosparql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix ssn: <http://www.w3.org/ns/ssn/> .
 
 # Plans
 

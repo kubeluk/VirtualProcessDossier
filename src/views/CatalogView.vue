@@ -107,6 +107,7 @@ function onDatasetCreated(uri: string) {
       <RouterLink to="/workflows" class="nav-tab">Workflows</RouterLink>
       <RouterLink to="/activities" class="nav-tab">Activities</RouterLink>
       <RouterLink to="/systems" class="nav-tab">Systems</RouterLink>
+      <RouterLink to="/parts" class="nav-tab">Parts</RouterLink>
     </nav>
 
     <!-- Filter panel -->

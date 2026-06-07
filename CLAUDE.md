@@ -23,6 +23,7 @@ src/
     graph.ts     # SPARQL endpoint config (endpoint ref, defaults to /sparql)
     catalog.ts   # Dataset list + detail fetching/adding (fetchDatasets, fetchDataset, addDataset)
     workflow.ts  # Workflow model + run queries and mutations
+    material.ts  # Parts + material lineage queries (fetchParts, fetchPartDetail)
   components/
     AddDatasetModal.vue       # Modal for adding a new dataset to a run step
     AddWorkflowModal.vue      # Modal for creating a workflow model or editing its metadata/structure
@@ -41,6 +42,7 @@ src/
     RunView.vue             # Workflow run detail: editable header, step timeline, datasets
     ActivityListView.vue    # Activity library: browse/create/edit reusable atomic activities
     SystemListView.vue      # System library: browse/create/edit ssn:System instances
+    PartListView.vue        # Parts overview: material lineage + properties + needle-point viz
 data/
   catalog.ttl       # dcat:Catalog + dcat:Dataset + dcat:Distribution → vpd dataset
   workflow.ttl      # wild:WorkflowModel + all activity definitions → vpd dataset
@@ -137,7 +139,8 @@ docker compose down -v           # Tear down including data volume (resets seed)
   - `machine:oven` → `machine:ir_top`, `machine:ir_bottom` → middle / edge / corner zones
   - `machine:press` — flat (no sub-systems in the seed)
 - Physical dimensions on machines (e.g. frame size) are expressed as `qudt:Quantity` nodes via `geo:hasSize`
-- Positional references (gripper positions, laminate needle points) use the `pos:` namespace; origins typed `pos:Origin`; coordinate vectors typed `qudt:Quantity` with `qudt:hasQuantityKind quantitykind:PositionVector`
+- Positional references (gripper positions, laminate needle points) use the `pos:` namespace; origins typed `pos:Origin`; coordinate vectors typed `qudt:Quantity` with `qudt:hasQuantityKind quantitykind:PositionVector`; XY components stored as a 2-element RDF list under `qudt:value`, queryable via `rdf:first` / `rdf:rest/rdf:first`
+- Material predicates on tape and layup entities use the `param:` namespace: `param:fiberOrientation` (on `prov:qualifiedDerivation` blank nodes), `param:polymer`, `param:fiberType` (on `tape:` entities), `param:hasNeedlePoint` (on `laminat:` entities); the old file-local `@prefix : <#>` was replaced with these stable URIs
 - Confirmed valid SSN terms used: `ssn:System`, `ssn:hasSubSystem`, `ssn:implementedBy`, `ssn:implements`
 
 ## Domain Context
@@ -156,6 +159,7 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 | `/run?uri=` | `run` | RunView | Workflow run detail: editable header, activity instance tree with state + datasets (uri = WorkflowInstance URI) |
 | `/activities` | `activities` | ActivityListView | Activity library: browse/create/edit reusable atomic activities |
 | `/systems` | `systems` | SystemListView | System library: browse/create/edit ssn:System instances |
+| `/parts` | `parts` | PartListView | Parts overview: material lineage, laminat properties, ply stack, needle-point visualization |
 
 ## Features
 
@@ -257,6 +261,18 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 - **Delete guard**: an activity cannot be deleted while it appears in any `wild:WorkflowModel`'s behaviour tree; `AddActivityModal` checks `isAtomicActivityInUse(uri)` on open and disables the Delete button with a "Used in a workflow — cannot delete" hint when true; `askSparql` (new helper in `src/services/sparql.ts`) handles SPARQL ASK queries returning `boolean`
 - `StepForm.isLibraryRef?` and `StepFormWithId.isLibraryRef` carry the flag through the form layer; `fetchWorkflowForEdit` detects library refs by checking for `dcterms:issued` on each child node in the tree query
 - Workflow store functions: `fetchAtomicActivities(): Promise<AtomicActivitySummary[]>`, `fetchAtomicActivityOptions(): Promise<AtomicActivityOption[]>`, `addAtomicActivity(form)`, `updateAtomicActivity(uri, form)`, `isAtomicActivityInUse(uri): Promise<boolean>`, `deleteAtomicActivity(uri)`; interfaces `AtomicActivitySummary`, `AtomicActivityOption`, `AtomicActivityForm` exported from `src/stores/workflow.ts`
+
+### Material / Parts Overview (implemented)
+- **Browse**: `/parts` shows all `sosa:Sample` resources (manufactured parts); each card has a color-coded top border (amber) and loads full detail automatically on mount
+- **Lineage trail** in the card header: four connected chips — Part ← Laminat ← Layup ← N× Tape — each in a distinct color (amber / emerald / blue / violet); immediately communicates the full derivation chain at a glance
+- **"Produced in run"** button navigates to `/run` for provenance context
+- Three collapsible sections per part (progressive disclosure):
+  1. **Laminat Properties** — material label, identifier, dimensions (length/width/thickness via `geo:hasSize`), fiber mass fraction (`param:hasFiberMassFraction`); properties sorted in a stable display order (L → W → T → mass fraction)
+  2. **Ply Stack** — layup notation label, table of layers ordered by tape URI; columns: layer index, tape ID, fiber type, polymer, orientation badge (color-coded: emerald 0° / blue 60° / violet 120°); uses `prov:qualifiedDerivation` + `param:fiberOrientation` + `param:polymer` / `param:fiberType`
+  3. **Needle Points** — SVG footprint diagram (400×400 mm laminat with XY axis, amber circles labeled 1–8 at `param:hasNeedlePoint` positions) alongside a coordinate table with sign-colored values (green positive / red negative); XY extracted via `rdf:first` / `rdf:rest/rdf:first` on the RDF list stored under `qudt:quantityValue/qudt:value`
+- Store: `src/stores/material.ts` — `fetchParts(): Promise<PartSummary[]>` (one query), `fetchPartDetail(summary): Promise<PartDetail>` (three parallel queries); unit URIs and quantitykind URIs mapped to display symbols via local-name lookup tables
+- Interfaces: `PartSummary`, `PartDetail`, `LaminatProperty`, `PlySummary`, `NeedlePoint` — all exported from `src/stores/material.ts`
+- Tab nav on all list views updated to include the "Parts" tab
 
 ### Activity Input Parameters via PROV-O + QUDT (seeded; UI adaptation pending)
 - The SHACL-form approach (design-time `sh:NodeShape` shapes + flat runtime `prov:Plan` with `sh:path` predicates) has been superseded by a native PROV-O + QUDT parameter model
