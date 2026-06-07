@@ -1,19 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import {
-  useCatalogStore,
-  type DatasetDetail,
-  type DatasetProvenance,
-  type WorkflowContext,
-} from '@/stores/catalog'
+import { useCatalogStore, type DatasetDetail, type WorkflowContext } from '@/stores/catalog'
 
 const route = useRoute()
 const router = useRouter()
 const catalog = useCatalogStore()
 
 const dataset = ref<DatasetDetail | null>(null)
-const provenance = ref<DatasetProvenance | null>(null)
 const workflowContext = ref<WorkflowContext | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -25,9 +19,8 @@ onMounted(async () => {
     return
   }
   try {
-    ;[dataset.value, provenance.value, workflowContext.value] = await Promise.all([
+    ;[dataset.value, workflowContext.value] = await Promise.all([
       catalog.fetchDataset(uri),
-      catalog.fetchDatasetProvenance(uri),
       catalog.fetchDatasetWorkflowContext(uri),
     ])
     if (!dataset.value) error.value = 'Dataset not found.'
@@ -37,21 +30,6 @@ onMounted(async () => {
     loading.value = false
   }
 })
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes >= 1_000_000) return `${(bytes / 1_000_000).toFixed(0)} MB`
-  if (bytes >= 1_000) return `${(bytes / 1_000).toFixed(0)} KB`
-  return `${bytes} B`
-}
-
-function formatMediaType(uri: string): string {
-  const match = uri.match(/media-types\/(.+)$/)
-  return match ? match[1] : uri
-}
 </script>
 
 <template>
@@ -70,47 +48,35 @@ function formatMediaType(uri: string): string {
       <section class="metadata-section">
         <h2>Details</h2>
         <dl class="metadata-grid">
-          <template v-if="dataset.modified">
-            <dt>Last updated</dt>
-            <dd>{{ formatDate(dataset.modified) }}</dd>
+          <template v-if="dataset.mediaType">
+            <dt>Media type</dt>
+            <dd>{{ dataset.mediaType }}</dd>
           </template>
-          <template v-if="dataset.keywords.length > 0">
-            <dt>Keywords</dt>
-            <dd class="keywords">
-              <span v-for="kw in dataset.keywords" :key="kw" class="keyword-tag">{{ kw }}</span>
-            </dd>
+          <template v-if="dataset.temporalResolution">
+            <dt>Temporal resolution</dt>
+            <dd>{{ dataset.temporalResolution }}</dd>
           </template>
         </dl>
       </section>
 
       <section v-if="workflowContext" class="workflow-context-section">
         <h2>Workflow Context</h2>
-
-        <template v-if="workflowContext.isDirectWorkflowLink">
-          <p class="wc-note">This dataset spans the full workflow run and is not tied to a single step.</p>
-        </template>
-
-        <template v-else-if="workflowContext.activityInstanceUri">
-          <p class="wc-label">Collected during</p>
-          <p class="wc-step-title">
-            {{ workflowContext.modelActivityTitle ?? workflowContext.activityInstanceTitle ?? workflowContext.activityInstanceUri }}
-          </p>
-          <p v-if="workflowContext.modelActivityDescription" class="wc-step-desc">
-            {{ workflowContext.modelActivityDescription }}
-          </p>
-          <p v-if="workflowContext.parentStepUri" class="wc-parent-step">
-            <span class="wc-workflow-label">Part of step</span>
-            {{ workflowContext.parentStepTitle ?? workflowContext.parentStepUri }}
-          </p>
-        </template>
-
-        <div v-if="workflowContext.runUri" class="wc-workflow-row">
+        <div class="wc-workflow-row">
           <span class="wc-workflow-label">Part of run</span>
           <button
             class="wc-workflow-link"
-            @click="router.push({ name: 'run', query: { uri: workflowContext.runUri! } })"
+            @click="router.push({ name: 'run', query: { uri: workflowContext.runUri } })"
           >
-            {{ workflowContext.runTitle ?? workflowContext.runUri }} →
+            {{ workflowContext.runLabel ?? workflowContext.runUri }} →
+          </button>
+        </div>
+        <div v-if="workflowContext.workflowUri" class="wc-workflow-row">
+          <span class="wc-workflow-label">Workflow</span>
+          <button
+            class="wc-workflow-link"
+            @click="router.push({ name: 'workflow', query: { uri: workflowContext.workflowUri! } })"
+          >
+            {{ workflowContext.workflowLabel ?? workflowContext.workflowUri }}
           </button>
         </div>
       </section>
@@ -118,16 +84,14 @@ function formatMediaType(uri: string): string {
       <section v-if="dataset.distributions.length > 0" class="distributions-section">
         <h2>Downloads</h2>
         <ul class="distribution-list">
-          <li v-for="dist in dataset.distributions" :key="dist.uri" class="distribution-item">
+          <li
+            v-for="(dist, i) in dataset.distributions"
+            :key="i"
+            class="distribution-item"
+          >
             <div class="dist-info">
-              <span v-if="dist.title" class="dist-title">{{ dist.title }}</span>
               <div class="dist-meta">
-                <span v-if="dist.mediaType" class="dist-format">
-                  {{ formatMediaType(dist.mediaType) }}
-                </span>
-                <span v-if="dist.byteSize" class="dist-size">
-                  {{ formatBytes(dist.byteSize) }}
-                </span>
+                <span v-if="dist.mediaType" class="dist-format">{{ dist.mediaType }}</span>
               </div>
             </div>
             <a
@@ -141,58 +105,6 @@ function formatMediaType(uri: string): string {
             </a>
           </li>
         </ul>
-      </section>
-
-      <section v-if="provenance" class="provenance-section">
-        <h2>Data Origin</h2>
-
-        <div class="prov-header">
-          <p v-if="provenance.observationTitle" class="prov-obs-title">
-            {{ provenance.observationTitle }}
-          </p>
-          <p v-if="provenance.startTime || provenance.endTime" class="prov-timerange">
-            <span class="prov-meta-label">Period:</span>
-            {{ provenance.startTime ? formatDate(provenance.startTime) : '—' }}
-            –
-            {{ provenance.endTime ? formatDate(provenance.endTime) : 'ongoing' }}
-          </p>
-        </div>
-
-        <dl class="prov-grid">
-          <template v-if="provenance.sensor">
-            <dt>Sensor</dt>
-            <dd>
-              <span class="entity-title">{{ provenance.sensor.title ?? provenance.sensor.uri }}</span>
-              <span v-if="provenance.sensor.description" class="entity-desc">
-                {{ provenance.sensor.description }}
-              </span>
-            </dd>
-          </template>
-
-          <template v-if="provenance.featureOfInterest">
-            <dt>Feature of Interest</dt>
-            <dd>
-              <span class="entity-title">
-                {{ provenance.featureOfInterest.title ?? provenance.featureOfInterest.uri }}
-              </span>
-              <span v-if="provenance.featureOfInterest.description" class="entity-desc">
-                {{ provenance.featureOfInterest.description }}
-              </span>
-            </dd>
-          </template>
-
-          <template v-if="provenance.observedProperty">
-            <dt>Observed Property</dt>
-            <dd>
-              <span class="entity-title">
-                {{ provenance.observedProperty.title ?? provenance.observedProperty.uri }}
-              </span>
-              <span v-if="provenance.observedProperty.description" class="entity-desc">
-                {{ provenance.observedProperty.description }}
-              </span>
-            </dd>
-          </template>
-        </dl>
       </section>
     </template>
   </main>

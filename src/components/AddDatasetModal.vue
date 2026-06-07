@@ -1,12 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
-import { useCatalogStore, type AddDatasetForm } from '@/stores/catalog'
-import { useWorkflowStore, type WorkflowStepOption } from '@/stores/workflow'
+import { ref, watch, onMounted } from 'vue'
+import { useCatalogStore, type AddDatasetForm, type DatasetFilterOptions } from '@/stores/catalog'
 
 const props = defineProps<{
   modelValue: boolean
-  preselectedStepUri?: string
-  // When set, filters step options to this specific run and pre-fills the instance
   workflowInstanceUri?: string
 }>()
 
@@ -16,96 +13,42 @@ const emit = defineEmits<{
 }>()
 
 const catalog = useCatalogStore()
-const workflowStore = useWorkflowStore()
 
 // Form state
 const title = ref('')
 const description = ref('')
-const keywords = ref('')
 const downloadUrl = ref('')
 const mediaType = ref('')
-const byteSize = ref('')
-const selectedStepUri = ref('')
+const temporalResolution = ref('')
 const selectedWorkflowInstanceUri = ref('')
-const isFullWorkflowLink = ref(false)
 
-// Step options
-const stepOptions = ref<WorkflowStepOption[]>([])
-const loadingSteps = ref(false)
+// Run options
+const runOptions = ref<DatasetFilterOptions['workflowRuns']>([])
+const loadingRuns = ref(false)
 const loadError = ref<string | null>(null)
 
 // UI state
 const submitting = ref(false)
 const submitError = ref<string | null>(null)
 
-// When workflowInstanceUri prop is set, limit choices to that run's options
-const visibleOptions = computed(() => {
-  if (!props.workflowInstanceUri) return stepOptions.value
-  return stepOptions.value.filter((o) => o.workflowInstanceUri === props.workflowInstanceUri)
-})
-
-// Group visible step options by workflow for display
-const groupedOptions = computed(() => {
-  const groups = new Map<string, { workflowTitle: string | null; options: WorkflowStepOption[] }>()
-  for (const opt of visibleOptions.value) {
-    if (!groups.has(opt.workflowUri)) {
-      groups.set(opt.workflowUri, { workflowTitle: opt.workflowTitle, options: [] })
-    }
-    groups.get(opt.workflowUri)!.options.push(opt)
-  }
-  return [...groups.values()]
-})
-
-// When the preselectedStepUri changes or the modal opens, sync the selection
 watch(
-  () => [props.modelValue, props.preselectedStepUri, visibleOptions.value.length] as const,
-  ([open]) => {
-    if (!open) return
-    applyPreselection()
+  () => props.modelValue,
+  (open) => {
+    if (open) selectedWorkflowInstanceUri.value = props.workflowInstanceUri ?? ''
   },
 )
 
-function applyPreselection() {
-  if (!props.preselectedStepUri) {
-    selectedStepUri.value = ''
-    selectedWorkflowInstanceUri.value = props.workflowInstanceUri ?? ''
-    isFullWorkflowLink.value = false
-    return
-  }
-  // Exact match — atomic step or full-workflow option (uri === workflowUri)
-  const exact = visibleOptions.value.find((o) => o.uri === props.preselectedStepUri)
-  if (exact) {
-    selectedStepUri.value = exact.uri
-    selectedWorkflowInstanceUri.value = exact.workflowInstanceUri ?? ''
-    isFullWorkflowLink.value = exact.uri === exact.workflowUri
-    return
-  }
-  // Parallel step URI: preselect the first leaf whose parentStepUri matches
-  const leaf = visibleOptions.value.find((o) => o.parentStepUri === props.preselectedStepUri)
-  if (leaf) {
-    selectedStepUri.value = leaf.uri
-    selectedWorkflowInstanceUri.value = leaf.workflowInstanceUri ?? ''
-    isFullWorkflowLink.value = false
-  }
-}
-
-// Keep workflowInstanceUri and isFullWorkflowLink in sync with the selected step
-function onStepChange() {
-  const opt = visibleOptions.value.find((o) => o.uri === selectedStepUri.value)
-  selectedWorkflowInstanceUri.value = opt?.workflowInstanceUri ?? ''
-  isFullWorkflowLink.value = opt ? opt.uri === opt.workflowUri : false
-}
-
 onMounted(async () => {
-  loadingSteps.value = true
+  loadingRuns.value = true
   loadError.value = null
   try {
-    stepOptions.value = await workflowStore.fetchWorkflowStepOptions()
-    applyPreselection()
+    const opts = await catalog.fetchFilterOptions()
+    runOptions.value = opts.workflowRuns
+    selectedWorkflowInstanceUri.value = props.workflowInstanceUri ?? ''
   } catch {
-    loadError.value = 'Could not load workflow steps from the triple store.'
+    loadError.value = 'Could not load workflow runs from the triple store.'
   } finally {
-    loadingSteps.value = false
+    loadingRuns.value = false
   }
 })
 
@@ -116,13 +59,10 @@ function close() {
 function reset() {
   title.value = ''
   description.value = ''
-  keywords.value = ''
   downloadUrl.value = ''
   mediaType.value = ''
-  byteSize.value = ''
-  selectedStepUri.value = ''
-  selectedWorkflowInstanceUri.value = ''
-  isFullWorkflowLink.value = false
+  temporalResolution.value = ''
+  selectedWorkflowInstanceUri.value = props.workflowInstanceUri ?? ''
   submitError.value = null
 }
 
@@ -147,13 +87,10 @@ async function submit() {
   const form: AddDatasetForm = {
     title: title.value.trim(),
     description: description.value.trim(),
-    keywords: keywords.value,
     downloadUrl: downloadUrl.value.trim(),
     mediaType: mediaType.value.trim(),
-    byteSize: byteSize.value.trim(),
-    stepUri: selectedStepUri.value,
+    temporalResolution: temporalResolution.value.trim(),
     workflowInstanceUri: selectedWorkflowInstanceUri.value,
-    isFullWorkflowLink: isFullWorkflowLink.value,
   }
 
   submitting.value = true
@@ -168,12 +105,6 @@ async function submit() {
   } finally {
     submitting.value = false
   }
-}
-
-// Build option label: indent leaf activities under their parent parallel step
-function optionLabel(opt: WorkflowStepOption): string {
-  if (opt.parentStepTitle) return `    ${opt.label}`
-  return opt.label
 }
 </script>
 
@@ -195,7 +126,7 @@ function optionLabel(opt: WorkflowStepOption): string {
               v-model="title"
               type="text"
               class="field-input"
-              placeholder="e.g. Hydraulic Pressure Readings"
+              placeholder="e.g. Heating Phase Sensor Data"
               autocomplete="off"
             />
           </div>
@@ -212,19 +143,6 @@ function optionLabel(opt: WorkflowStepOption): string {
             />
           </div>
 
-          <!-- Keywords -->
-          <div class="field">
-            <label for="ds-keywords" class="field-label">Keywords</label>
-            <input
-              id="ds-keywords"
-              v-model="keywords"
-              type="text"
-              class="field-input"
-              placeholder="pressure, hydraulics, manufacturing  (comma-separated)"
-              autocomplete="off"
-            />
-          </div>
-
           <hr class="divider" />
 
           <!-- Download URL -->
@@ -237,12 +155,12 @@ function optionLabel(opt: WorkflowStepOption): string {
               v-model="downloadUrl"
               type="url"
               class="field-input"
-              placeholder="https://example.org/files/dataset.csv"
+              placeholder="https://example.org/files/dataset.txt"
               autocomplete="off"
             />
           </div>
 
-          <!-- Media type + byte size on one row -->
+          <!-- Media type + temporal resolution on one row -->
           <div class="field-row">
             <div class="field">
               <label for="ds-media" class="field-label">Media type</label>
@@ -257,69 +175,43 @@ function optionLabel(opt: WorkflowStepOption): string {
               />
               <datalist id="media-type-list">
                 <option value="text/csv" />
+                <option value="text/tab-separated-values" />
                 <option value="application/json" />
                 <option value="application/x-parquet" />
                 <option value="application/x-hdf" />
-                <option value="application/octet-stream" />
               </datalist>
             </div>
 
-            <div class="field field--narrow">
-              <label for="ds-size" class="field-label">File size (bytes)</label>
+            <div class="field">
+              <label for="ds-resolution" class="field-label">Temporal resolution</label>
               <input
-                id="ds-size"
-                v-model="byteSize"
-                type="number"
-                min="0"
+                id="ds-resolution"
+                v-model="temporalResolution"
+                type="text"
                 class="field-input"
-                placeholder="41943040"
+                placeholder="PT0.02S"
+                autocomplete="off"
               />
+              <span class="field-hint">ISO 8601 duration, e.g. PT0.02S = 50 Hz</span>
             </div>
           </div>
 
           <hr class="divider" />
 
-          <!-- Workflow step -->
+          <!-- Workflow run -->
           <div class="field">
-            <label for="ds-step" class="field-label">Workflow step</label>
+            <label for="ds-run" class="field-label">Workflow run</label>
             <p v-if="loadError" class="load-error">{{ loadError }}</p>
-            <p class="field-hint">
-              Link this dataset to the step where it was collected, or to a full workflow if it
-              spans multiple steps.
-            </p>
             <select
-              id="ds-step"
-              v-model="selectedStepUri"
+              id="ds-run"
+              v-model="selectedWorkflowInstanceUri"
               class="field-input field-select"
-              :disabled="loadingSteps"
-              @change="onStepChange"
+              :disabled="loadingRuns"
             >
               <option value="">— No connection —</option>
-              <template v-if="!loadingSteps">
-                <optgroup
-                  v-for="group in groupedOptions"
-                  :key="group.workflowTitle ?? 'wf'"
-                  :label="group.workflowTitle ?? 'Workflow'"
-                >
-                  <template v-for="opt in group.options" :key="opt.uri">
-                    <!-- Insert a disabled "header" row before the first leaf of a parallel step -->
-                    <option
-                      v-if="
-                        opt.parentStepUri &&
-                        !group.options
-                          .slice(0, group.options.indexOf(opt))
-                          .some((o) => o.parentStepUri === opt.parentStepUri)
-                      "
-                      disabled
-                      value=""
-                      class="group-header"
-                    >
-                      ▸ {{ opt.parentStepTitle }}
-                    </option>
-                    <option :value="opt.uri">{{ optionLabel(opt) }}</option>
-                  </template>
-                </optgroup>
-              </template>
+              <option v-for="run in runOptions" :key="run.uri" :value="run.uri">
+                {{ run.label ?? run.uri }}
+              </option>
             </select>
           </div>
 

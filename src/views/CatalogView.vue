@@ -11,20 +11,15 @@ const showModal = ref(false)
 
 // Filter state
 const searchText = ref('')
-const selectedKeywords = ref<string[]>([])
 const selectedRunUri = ref('')
 const selectedModelUri = ref('')
 
 // Filter options loaded from the triple store
-const filterOptions = ref<DatasetFilterOptions>({ keywords: [], workflowRuns: [], workflowModels: [] })
+const filterOptions = ref<DatasetFilterOptions>({ workflowRuns: [], workflowModels: [] })
 const filterOptionsLoading = ref(false)
 
 const hasActiveFilters = computed(
-  () =>
-    searchText.value.trim() !== '' ||
-    selectedKeywords.value.length > 0 ||
-    selectedRunUri.value !== '' ||
-    selectedModelUri.value !== '',
+  () => searchText.value.trim() !== '' || selectedRunUri.value !== '' || selectedModelUri.value !== '',
 )
 
 function activeFilterChips(): { label: string; clear: () => void }[] {
@@ -32,23 +27,17 @@ function activeFilterChips(): { label: string; clear: () => void }[] {
   if (searchText.value.trim()) {
     chips.push({ label: `"${searchText.value.trim()}"`, clear: () => (searchText.value = '') })
   }
-  for (const kw of selectedKeywords.value) {
-    chips.push({
-      label: kw,
-      clear: () => (selectedKeywords.value = selectedKeywords.value.filter((k) => k !== kw)),
-    })
-  }
   if (selectedRunUri.value) {
     const run = filterOptions.value.workflowRuns.find((r) => r.uri === selectedRunUri.value)
     chips.push({
-      label: `Run: ${run?.title ?? selectedRunUri.value}`,
+      label: `Run: ${run?.label ?? selectedRunUri.value}`,
       clear: () => (selectedRunUri.value = ''),
     })
   }
   if (selectedModelUri.value) {
     const model = filterOptions.value.workflowModels.find((m) => m.uri === selectedModelUri.value)
     chips.push({
-      label: `Workflow: ${model?.title ?? selectedModelUri.value}`,
+      label: `Workflow: ${model?.label ?? selectedModelUri.value}`,
       clear: () => (selectedModelUri.value = ''),
     })
   }
@@ -57,23 +46,13 @@ function activeFilterChips(): { label: string; clear: () => void }[] {
 
 function clearAllFilters() {
   searchText.value = ''
-  selectedKeywords.value = []
   selectedRunUri.value = ''
   selectedModelUri.value = ''
-}
-
-function toggleKeyword(kw: string) {
-  if (selectedKeywords.value.includes(kw)) {
-    selectedKeywords.value = selectedKeywords.value.filter((k) => k !== kw)
-  } else {
-    selectedKeywords.value = [...selectedKeywords.value, kw]
-  }
 }
 
 function refetchWithFilters() {
   catalog.fetchDatasets({
     search: searchText.value.trim() || undefined,
-    keywords: selectedKeywords.value.length ? selectedKeywords.value : undefined,
     workflowRunUri: selectedRunUri.value || undefined,
     workflowModelUri: selectedModelUri.value || undefined,
   })
@@ -85,7 +64,7 @@ watch(searchText, () => {
   clearTimeout(searchTimer)
   searchTimer = setTimeout(() => refetchWithFilters(), 400)
 })
-watch([selectedKeywords, selectedRunUri, selectedModelUri], () => refetchWithFilters())
+watch([selectedRunUri, selectedModelUri], () => refetchWithFilters())
 
 onMounted(async () => {
   catalog.fetchDatasets()
@@ -98,10 +77,6 @@ onMounted(async () => {
 })
 
 onUnmounted(() => clearTimeout(searchTimer))
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' })
-}
 
 function openDataset(uri: string) {
   router.push({ name: 'dataset', query: { uri } })
@@ -150,29 +125,13 @@ function onDatasetCreated(uri: string) {
       </div>
 
       <div v-if="!filterOptionsLoading" class="filter-facets">
-        <!-- Keyword chips -->
-        <div v-if="filterOptions.keywords.length" class="facet-group">
-          <span class="facet-label">Keywords</span>
-          <div class="keyword-chips">
-            <button
-              v-for="kw in filterOptions.keywords"
-              :key="kw"
-              class="kw-chip"
-              :class="{ 'kw-chip--active': selectedKeywords.includes(kw) }"
-              @click="toggleKeyword(kw)"
-            >
-              {{ kw }}
-            </button>
-          </div>
-        </div>
-
         <!-- Workflow run select -->
         <div v-if="filterOptions.workflowRuns.length" class="facet-group facet-group--select">
           <label class="facet-label" for="run-select">Workflow Run</label>
           <select id="run-select" v-model="selectedRunUri" class="facet-select">
             <option value="">All runs</option>
             <option v-for="run in filterOptions.workflowRuns" :key="run.uri" :value="run.uri">
-              {{ run.title ?? run.uri }}
+              {{ run.label ?? run.uri }}
             </option>
           </select>
         </div>
@@ -183,7 +142,7 @@ function onDatasetCreated(uri: string) {
           <select id="model-select" v-model="selectedModelUri" class="facet-select">
             <option value="">All workflows</option>
             <option v-for="model in filterOptions.workflowModels" :key="model.uri" :value="model.uri">
-              {{ model.title ?? model.uri }}
+              {{ model.label ?? model.uri }}
             </option>
           </select>
         </div>
@@ -231,9 +190,6 @@ function onDatasetCreated(uri: string) {
             <p v-if="ds.description" class="card-description">{{ ds.description }}</p>
           </div>
           <div class="card-meta">
-            <span v-if="ds.modified" class="meta-item">
-              Updated {{ formatDate(ds.modified) }}
-            </span>
             <span class="meta-item">
               {{ ds.distributionCount }}
               {{ ds.distributionCount === 1 ? 'distribution' : 'distributions' }}
