@@ -42,11 +42,16 @@ src/
     ActivityListView.vue    # Activity library: browse/create/edit reusable atomic activities
     SystemListView.vue      # System library: browse/create/edit ssn:System instances
 data/
-  catalog.ttl           # DCAT seed data → loaded into the 'vpd' dataset on first Docker start
-  parameter-shapes.ttl  # SHACL parameter shape seed data → loaded into the 'vpd' dataset on first Docker start
-  unit.ttl              # QUDT unit definitions → loaded into the 'qudt' dataset on first Docker start
-  quantitykind.ttl      # QUDT quantity-kind definitions → loaded into the 'qudt' dataset on first Docker start
-  seed.sh               # Init script run by the 'seed' Docker service
+  catalog.ttl       # dcat:Catalog + dcat:Dataset + dcat:Distribution → vpd dataset
+  workflow.ttl      # wild:WorkflowModel + all activity definitions → vpd dataset
+  systems.ttl       # ssn:System hierarchy (machines, grippers, oven zones, press) → vpd dataset
+  material.ttl      # laminat, layup, tape, part entities + needle-point positions → vpd dataset
+  runs.ttl          # wild:WorkflowInstance + wild:ActivityInstance resources → vpd dataset
+  plans.ttl         # prov:Plan parameter values per activity instance → vpd dataset
+  unit.ttl          # QUDT unit definitions → qudt dataset
+  quantitykind.ttl  # QUDT quantity-kind definitions → qudt dataset
+  seed.sh           # Init script run by the 'seed' Docker service
+  archive/          # Retired seed files (old CNC machining domain + SHACL parameter shapes)
 ```
 
 ## Commands
@@ -65,7 +70,7 @@ docker compose down -v           # Tear down including data volume (resets seed)
 ```
 
 - The `seed` service manages two Fuseki datasets:
-  - **`vpd`** — application data; auto-created and seeded from `data/catalog.ttl` and `data/parameter-shapes.ttl` on first start; the UI reads from and writes to this dataset
+  - **`vpd`** — application data; auto-created and seeded from `data/catalog.ttl`, `data/workflow.ttl`, `data/systems.ttl`, `data/material.ttl`, `data/runs.ttl`, and `data/plans.ttl` on first start; the UI reads from and writes to this dataset
   - **`qudt`** — static reference data (QUDT units + quantity kinds); auto-created and seeded from `data/unit.ttl` + `data/quantitykind.ttl` on first start; the UI reads from this dataset but never writes to it
 - Seeding is skipped on subsequent starts if the target dataset already contains triples.
 - Fuseki admin UI: `http://localhost:3030` (credentials: `admin` / `admin`)
@@ -81,50 +86,58 @@ docker compose down -v           # Tear down including data volume (resets seed)
 
 - **Ontology**: [DCAT 3](https://www.w3.org/TR/vocab-dcat-3/) for the data catalog structure
 - **DCAT namespace**: `http://www.w3.org/ns/dcat#` (http, not https — as declared in dcat3.ttl)
-- **Resource URIs**: Hash URIs under a single base — `https://example.org/vpd#<resource>`
-  - e.g. `vpd:catalog`, `vpd:dataset-air-quality`, `vpd:dist-air-quality-csv`
-  - Rationale: all catalog resources belong to one document; hash URIs are appropriate per the [Cool URIs](https://www.w3.org/TR/cooluris/#hashuri) recommendation
-- **Supporting vocabularies**: `dcterms`, `foaf`, `xsd`, `prov`, `sosa`, `ssn`, `geo`, `wild`, `sh` (SHACL), `qudt`, `unit` (QUDT)
+- **Namespace strategy**: domain-specific prefixes rather than a single monolithic `vpd:` base:
+  - `vpd: <http://purl.org/vpd/data#>` — catalog and dataset resources
+  - `workflow: <http://purl.org/for/workflow#>` — workflow models and composite activities
+  - `activity: <http://purl.org/for/activity#>` — atomic activity definitions
+  - `run: <http://purl.org/for/run#>` — workflow instances and activity instances
+  - `machine: <http://purl.org/for/machine#>` — machines and subsystems
+  - `plan: <http://purl.org/for/plan#>` — parameter plans
+  - `param: <http://purl.org/for/param#>` — parameter predicates (domain vocabulary)
+  - `laminat:`, `layup:`, `tape:`, `part:`, `pos:` — material domain entities
+- **Supporting vocabularies**: `dcterms`, `rdfs`, `prov`, `sosa`, `ssn`, `wild`, `qudt`, `unit` (QUDT), `quantitykind` (QUDT), `geo` (GeoSPARQL `<http://www.opengis.net/ont/geosparql#>`)
+- **Annotation predicates**: `rdfs:label` / `rdfs:comment` for domain resources (machines, activities, runs, plans); `dcterms:title` / `dcterms:description` for catalog and dataset nodes only
 - Ontologies for new features are provided incrementally and documented here as they are added
 
 ### Provenance (seeded)
-- Each `dcat:Dataset` is linked to exactly one `sosa:Observation` via `prov:wasGeneratedBy`; the observation also carries `sosa:hasResult <dataset>` — making the dataset the result of the observation
-- Each `sosa:Observation` is also typed `prov:Activity` to satisfy PROV-O semantics; it carries `prov:startedAtTime` / `prov:endedAtTime`
-- A `sosa:Observation` may have **at most one** `sosa:madeBySensor`, `sosa:hasFeatureOfInterest`, and `sosa:observedProperty` — none are required
-- Sensors (`sosa:Sensor`) use `sosa:observes` to link to their observable property
-- Features of interest (`sosa:FeatureOfInterest`) use `ssn:hasProperty` to link to their property
-- Observable properties are typed `sosa:ObservableProperty`
+- Each `dcat:Dataset` is linked directly to its producing run via `prov:wasGeneratedBy <run>`; there is no `sosa:Observation` intermediary
+- The physical output of a run (the formed part) is a `sosa:Sample` linked via `sosa:hasResult` on the run; datasets are a side-product of the run, not the primary output
+- `wild:WorkflowInstance` is also typed `sosa:Sampling` and `prov:Activity` — the run is simultaneously a provenance activity, a sampling event, and a workflow instance
+- The run carries `sosa:usedProcedure <workflowModel>`, `sosa:madeBySampler`, `sosa:hasFeatureOfInterest`
+- Material lineage is expressed via PROV-O: part → laminat → layup → tapes using `prov:wasDerivedFrom` + `prov:qualifiedDerivation`; fiber orientation per tape layer stored as a `qudt:Quantity` on each `prov:qualifiedDerivation`
 - Verified namespaces (dereferenced from W3C specs): `prov: <http://www.w3.org/ns/prov#>`, `sosa: <http://www.w3.org/ns/sosa/>`, `ssn: <http://www.w3.org/ns/ssn/>`
-- Confirmed valid terms — SOSA: `Observation`, `Sensor`, `FeatureOfInterest`, `ObservableProperty`, `madeBySensor`, `hasFeatureOfInterest`, `observedProperty`, `hasResult`, `hasSimpleResult`, `resultTime`, `phenomenonTime`, `observes` — SSN: `hasProperty`, `Property` — PROV: `Activity`, `wasGeneratedBy`, `startedAtTime`, `endedAtTime`
+- Confirmed valid terms — SOSA: `Sampling`, `Sample`, `Sampler`, `madeBySampler`, `usedProcedure`, `hasFeatureOfInterest`, `hasResult`, `isResultOf`, `isSampleOf` — PROV: `Activity`, `Entity`, `Plan`, `Collection`, `wasGeneratedBy`, `wasDerivedFrom`, `qualifiedDerivation`, `qualifiedAssociation`, `wasAssociatedWith`, `hadPlan`, `hadMember`, `startedAtTime`
 - `sosa:ObservationCollection` and `ssn:observes` do **not** exist in the standards — do not use them
 
 ### Workflow (seeded)
 - **Ontology**: [WiLD](http://purl.org/wild/vocab) — Workflows in Linked Data; `wild: <http://purl.org/wild/vocab#>`
-- The manufacturing workflow is described at two levels:
-  - **`wild:WorkflowModel`** (`vpd:workflow-manufacturing-line`) — static structure; defines the expected activities and their order/composition
-  - **`wild:WorkflowInstance`** (`vpd:wfinst-manufacturing-line`) — runtime execution; groups the completed activity instances
-- **Workflow model tree** — root behaviour is a `wild:SequentialActivity` whose `wild:hasChildActivities` (RDF list) encodes step order:
-  - Step 1: `vpd:step-material-preparation` — `wild:AtomicActivity`
-  - Step 2: `vpd:step-cnc-machining` — `wild:ParallelActivity` with two child `wild:AtomicActivity` nodes (`vpd:wfact-cnc-temperature`, `vpd:wfact-cnc-vibration`)
-  - Step 3: `vpd:step-hydraulic-forming` — `wild:AtomicActivity`
-  - Step 4: `vpd:step-quality-dispatch` — `wild:AtomicActivity` (no observation dataset)
-- Each `sosa:Observation` is also typed `wild:ActivityInstance` and carries:
-  - `wild:activityInstanceOf` → the corresponding leaf `wild:Activity` in the model
-  - `wild:inWorkflowInstance` → `vpd:wfinst-manufacturing-line`
+- The stamp-forming workflow is described at two levels:
+  - **`wild:WorkflowModel`** (`workflow:stampForming`) — static structure; defines the expected activities and their order/composition; annotated with `rdfs:label` / `rdfs:comment`
+  - **`wild:WorkflowInstance`** (`run:1`) — runtime execution; also typed `sosa:Sampling` and `prov:Activity`
+- **Workflow model tree** — root behaviour is a `wild:ParallelActivity`; `wild:hasChildActivities` (RDF list) encodes structure:
+  - Branch A: `activity:gripping` — `wild:AtomicActivity` (gripper frame holds laminate throughout)
+  - Branch B: `workflow:heatingTransferingForming` — `wild:SequentialActivity` containing:
+    - `activity:heating` — `wild:AtomicActivity`
+    - `activity:transfering` — `wild:AtomicActivity`
+    - `activity:forming` — `wild:AtomicActivity`
+- Each `wild:ActivityInstance` is also typed `prov:Activity` and carries:
+  - `wild:activityInstanceOf` → the corresponding `wild:Activity` in the model
+  - `wild:inWorkflowInstance` → the run
   - `wild:hasState wild:done`
-- Each `sosa:Observation` that is a `wild:ActivityInstance` is also typed `prov:Activity`
-- `wild:WorkflowInstance` state is `wild:done` once all activity instances are completed
-- Dataset-to-step context is also expressed directly via `dcterms:isPartOf` on each `dcat:Dataset` (pointing to the relevant step or the workflow model for cross-cutting datasets)
+  - `prov:wasAssociatedWith <machine>` + `prov:qualifiedAssociation [ prov:agent <machine> ; prov:hadPlan <plan> ]` — for activity instances that involve a machine
 - Confirmed valid WiLD terms: `WorkflowModel`, `WorkflowInstance`, `ActivityInstance`, `SequentialActivity`, `ParallelActivity`, `AtomicActivity`, `hasBehaviour`, `hasChildActivities`, `workflowInstanceOf`, `activityInstanceOf`, `inWorkflowInstance`, `hasState`, `done`, `active`
 
 ### Procedure / System / Input (seeded)
-- **`wild:AtomicActivity` ≡ `sosa:Procedure`** in this data model — each atomic activity is also typed `sosa:Procedure`
-- Each `sosa:Procedure` may carry:
-  - `ssn:implementedBy` → `ssn:System` — the machine or station that executes the step
-  - `ssn:hasInput` → `ssn:Input` — the material or data consumed by the step
-- Seeded `ssn:System` resources: `vpd:sys-intake-station`, `vpd:sys-cnc-line-a`, `vpd:sys-hydraulic-presses-b`, `vpd:sys-cmm-dispatch`
-- Seeded `ssn:Input` resources: `vpd:input-raw-stock`, `vpd:input-machined-blanks`, `vpd:input-machined-parts`, `vpd:input-formed-parts`
-- Confirmed valid SSN terms used: `ssn:System`, `ssn:Input`, `ssn:hasInput`, `ssn:implementedBy`, `ssn:implements` (inverse of `ssn:implementedBy`; written on the system side when authoring via the System library UI)
+- Machine–activity association has moved from the **model level** to the **instance level**:
+  - Model activities (`wild:AtomicActivity`) no longer carry `ssn:implementedBy`
+  - Activity instances carry `prov:wasAssociatedWith <machine>` + a `prov:qualifiedAssociation` that co-locates the machine agent with its parameter plan: `[ a prov:Association ; prov:agent <machine> ; prov:hadPlan <plan> ]`
+- **Machine subsystem hierarchy**: machines are modeled as `ssn:System` trees via `ssn:hasSubSystem` at arbitrary depth
+  - `machine:gripperFrame` → 8 grippers (`gripper:1` … `gripper:8`), each with sub-sensors
+  - `machine:oven` → `machine:ir_top`, `machine:ir_bottom` → middle / edge / corner zones
+  - `machine:press` — flat (no sub-systems in the seed)
+- Physical dimensions on machines (e.g. frame size) are expressed as `qudt:Quantity` nodes via `geo:hasSize`
+- Positional references (gripper positions, laminate needle points) use the `pos:` namespace; origins typed `pos:Origin`; coordinate vectors typed `qudt:Quantity` with `qudt:hasQuantityKind quantitykind:PositionVector`
+- Confirmed valid SSN terms used: `ssn:System`, `ssn:hasSubSystem`, `ssn:implementedBy`, `ssn:implements`
 
 ## Domain Context
 
@@ -239,16 +252,11 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 - `StepForm.isLibraryRef?` and `StepFormWithId.isLibraryRef` carry the flag through the form layer; `fetchWorkflowForEdit` detects library refs by checking for `dcterms:issued` on each child node in the tree query
 - Workflow store functions: `fetchAtomicActivities(): Promise<AtomicActivitySummary[]>`, `fetchAtomicActivityOptions(): Promise<AtomicActivityOption[]>`, `addAtomicActivity(form)`, `updateAtomicActivity(uri, form)`, `isAtomicActivityInUse(uri): Promise<boolean>`, `deleteAtomicActivity(uri)`; interfaces `AtomicActivitySummary`, `AtomicActivityOption`, `AtomicActivityForm` exported from `src/stores/workflow.ts`
 
-### Activity Input Forms via SHACL (implemented)
-- Each `wild:AtomicActivity` (= `sosa:Procedure`) can have a SHACL input shape that defines the structured data an operator must supply when executing a run (e.g. closing speed, tool temperature, forming pressure)
-- **Ontologies**: SHACL (`sh: <http://www.w3.org/ns/shacl#>`) for the constraint vocabulary; QUDT (`qudt: <http://qudt.org/schema/qudt/>`, `unit: <http://qudt.org/vocab/unit/>`) for physical units; PROV-O (`prov:`) for the Plan/used relation; SSN (`ssn:hasInput`) for linking the shape to the activity
-- **Linking predicate**: `ssn:hasInput` — connects a `wild:AtomicActivity` to its `sh:NodeShape` (the shape is also typed `ssn:Input`); distinguished from plain material `ssn:Input` links by the `a sh:NodeShape` type; one SHACL shape per activity maximum
-- **Shape storage**: `sh:NodeShape` and `sh:PropertyShape` resources use **named URIs** (not blank nodes); NodeShape pattern `vpd:shape-{slug}-params`, PropertyShape pattern `vpd:propshape-{slug}-{timestamp}-{n}`
-- **PropertyShape terms used**: `sh:path` (full URI), `sh:name`, `sh:description`, `sh:datatype` (XSD URI), `sh:minCount`, `sh:maxCount`, `sh:minInclusive`, `sh:maxInclusive`, `sh:order`, `qudt:unit`
-- **Run-time value storage**: user input is stored as a `prov:Plan` node; `<activityInstance> prov:used <planUri>`; plan URI pattern: `vpd:plan-<activityInstanceLocalName>`; the plan carries property values as plain triples using `sh:path` predicates
-- **Form generation**: `@ulb-darmstadt/shacl-form` web component (`<shacl-form>`) generates a validated HTML form from the shape Turtle; wrapped by `ShaclFormWrapper.vue` which maps props → `data-*` attributes and emits `ready`, `change`, `submit` events
-- **Authoring** (Activity Library): `AddActivityModal` has a "Process Parameters" section; `upsertParameterShape` and `deleteParameterShape` write/remove `ssn:hasInput → sh:NodeShape` triples
-- **Run-time form** (Run view): `RunActivityNode` lazy-loads the parameter shape via `fetchParameterShape(modelActivityUri)` (queries via `ssn:hasInput ... a sh:NodeShape`); builds Turtle for the shape via `buildShapeAsTurtle(shape)` and fetches any existing plan via `fetchExistingPlan(instanceUri)` + `fetchPlanTurtle(planUri)`; renders `ShaclFormWrapper` with the shape Turtle, existing plan Turtle as pre-fill values, and plan URI as `valuesSubject`; on submit calls `savePlan(instanceUri, planUri, rdf)` which parses the Turtle with `n3.Parser` and issues a SPARQL DELETE + INSERT
-- `QUDT_UNIT_LABELS` and `QUDT_UNIT_OPTIONS` are module-level exports from `src/stores/workflow.ts`; used by `AddActivityModal`
-- Workflow store functions: `fetchParameterShape(activityUri)`, `buildShapeAsTurtle(shape)`, `fetchExistingPlan(instanceUri)`, `fetchPlanTurtle(planUri)`, `savePlan(instanceUri, planUri, planTurtle)`, `upsertParameterShape(activityUri, forms)`, `deleteParameterShape(activityUri)`; interfaces `ParameterPropertyShape`, `ParameterShape`, `ParameterPropertyShapeForm` exported from `src/stores/workflow.ts`
-- Seed shapes in `data/parameter-shapes.ttl`: `vpd:step-hydraulic-forming` (3 params), `vpd:wfact-cnc-temperature` (2 params), `vpd:wfact-cnc-vibration` (1 param); all linked via `ssn:hasInput`
+### Activity Input Parameters via PROV-O + QUDT (seeded; UI adaptation pending)
+- The SHACL-form approach (design-time `sh:NodeShape` shapes + flat runtime `prov:Plan` with `sh:path` predicates) has been superseded by a native PROV-O + QUDT parameter model
+- **Parameter plans**: each activity instance that involves a machine carries a `prov:Plan` linked via `prov:hadPlan` inside its `prov:qualifiedAssociation`; the plan URI pattern is `plan:<runId>_<activityName>` (e.g. `plan:1_press`, `plan:1_heating`)
+- **Parameter values**: each parameter is a `qudt:Quantity` node with `qudt:hasQuantityKind`, `qudt:hasUnit`, and `qudt:value`; domain-specific predicates from the `param:` namespace name the parameter role (e.g. `param:pressForce`, `param:closingSpeed`, `param:temperatureGoal`, `param:zoneControl`)
+- **Per-subsystem plans**: for machines with independently controlled subsystems, the plan is a `prov:Collection` with `prov:hadMember` sub-plans — one per subsystem; each sub-plan carries `prov:wasDerivedFrom <subsystem>` to trace the parameter value to the exact machine component it configures
+- **Ordered step parameters**: parameters that form a sequence (e.g. `param:closingSpeedSteps`) use an RDF list as the object, with each list member being a blank node grouping the speed and remaining-distance values for that step
+- Seed plans in `data/plans.ttl`: `plan:1_gripping` (per-gripper positions + setpoints), `plan:1_heating` (per-IR-field temperature goals and zone power percentages + holding time), `plan:1_press` (press force, cooling time, mold temperatures, multi-step closing speed profile)
+- **UI adaptation**: the `ShaclFormWrapper`, `AddActivityModal` parameter authoring, and `RunActivityNode` plan rendering need to be updated to reflect this model — tracked separately
