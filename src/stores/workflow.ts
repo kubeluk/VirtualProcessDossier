@@ -232,12 +232,60 @@ export const QUDT_UNIT_LABELS: Record<string, string> = {
   'http://qudt.org/vocab/unit/M': 'm',
   'http://qudt.org/vocab/unit/MilliM': 'mm',
   'http://qudt.org/vocab/unit/N': 'N',
+  'http://qudt.org/vocab/unit/KiloN': 'kN',
   'http://qudt.org/vocab/unit/SEC': 's',
   'http://qudt.org/vocab/unit/MIN': 'min',
   'http://qudt.org/vocab/unit/RPM': 'rpm',
+  'http://qudt.org/vocab/unit/PERCENT': '%',
+  'http://qudt.org/vocab/unit/UNITLESS': '',
 }
 
 export const QUDT_UNIT_OPTIONS: [string, string][] = Object.entries(QUDT_UNIT_LABELS)
+
+// ---------------------------------------------------------------------------
+// Activity plan types (PROV-O + QUDT parameter model)
+// ---------------------------------------------------------------------------
+
+export interface PlanParamValue {
+  paramUri: string
+  paramName: string      // human-readable from param URI local name
+  value: number
+  unit: string | null    // QUDT unit symbol
+  sourceUri: string | null
+  sourceLabel: string | null
+}
+
+export interface SubPlanEntry {
+  id: string             // blank-node identifier for Vue key
+  machineUri: string | null
+  machineLabel: string | null
+  params: PlanParamValue[]
+}
+
+export interface GripperPosition {
+  machineUri: string
+  machineLabel: string | null
+  x: number
+  y: number
+  unit: string
+}
+
+export interface ClosingSpeedStep {
+  speed: number
+  speedUnit: string
+  remaining: number
+  remainingUnit: string
+}
+
+export interface ActivityPlanData {
+  planUri: string
+  machineUri: string | null
+  machineLabel: string | null
+  directParams: PlanParamValue[]    // scalar params directly on the plan
+  subPlans: SubPlanEntry[]          // prov:hadMember sub-plans
+  gripperPositions: GripperPosition[] // XY vector positions per gripper
+  closingSteps: ClosingSpeedStep[]  // press closing speed profile
+}
 
 // ---------------------------------------------------------------------------
 // Step-picker option (used by AddDatasetModal)
@@ -1695,6 +1743,205 @@ ${lines.join('\n')}
     await updateSparql(graphStore.updateEndpoint, update)
   }
 
+  // ── Activity plan (PROV-O + QUDT) ────────────────────────────────────────
+
+  function formatParamName(uri: string): string {
+    const local = uri.includes('#') ? uri.split('#').pop()! : uri.split('/').pop()!
+    return local.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase()).trim()
+  }
+
+  function unitSym(uri: string | undefined | null): string | null {
+    if (!uri) return null
+    return QUDT_UNIT_LABELS[uri] ?? null
+  }
+
+  async function fetchActivityPlan(actInstUri: string): Promise<ActivityPlanData | null> {
+    // Q1: plan discovery + machine + direct qudt:Quantity params on the plan
+    const q1 = `
+      PREFIX prov:  <http://www.w3.org/ns/prov#>
+      PREFIX qudt:  <http://qudt.org/schema/qudt/>
+      PREFIX rdfs:  <http://www.w3.org/2000/01/rdf-schema#>
+      SELECT ?plan ?machine ?machineLabel ?paramPred ?value ?unit WHERE {
+        <${actInstUri}> prov:qualifiedAssociation ?assoc .
+        ?assoc prov:hadPlan ?plan .
+        OPTIONAL { ?assoc prov:agent ?machine . OPTIONAL { ?machine rdfs:label ?machineLabel } }
+        OPTIONAL {
+          ?plan ?paramPred ?qty .
+          ?qty a <http://qudt.org/schema/qudt/Quantity> ;
+               qudt:value ?value .
+          FILTER(STRSTARTS(STR(?paramPred), 'http://purl.org/for/param#'))
+          FILTER(isLiteral(?value))
+          OPTIONAL { ?qty qudt:hasUnit ?unit }
+        }
+      }
+    `
+    // Q2: direct prov:Entity params on the plan (source-attributed scalar values)
+    const q2 = `
+      PREFIX prov:  <http://www.w3.org/ns/prov#>
+      PREFIX qudt:  <http://qudt.org/schema/qudt/>
+      PREFIX rdfs:  <http://www.w3.org/2000/01/rdf-schema#>
+      SELECT ?paramPred ?value ?unit ?source ?sourceLabel WHERE {
+        <${actInstUri}> prov:qualifiedAssociation ?assoc .
+        ?assoc prov:hadPlan ?plan .
+        ?plan ?paramPred ?entity .
+        FILTER(STRSTARTS(STR(?paramPred), 'http://purl.org/for/param#'))
+        ?entity prov:value ?qty .
+        ?qty qudt:value ?value .
+        FILTER(isLiteral(?value))
+        OPTIONAL { ?qty qudt:hasUnit ?unit }
+        OPTIONAL { ?entity prov:wasDerivedFrom ?source . OPTIONAL { ?source rdfs:label ?sourceLabel } }
+      }
+    `
+    // Q3: sub-plan (prov:hadMember) params — scalar values only (vector positions excluded)
+    const q3 = `
+      PREFIX prov:  <http://www.w3.org/ns/prov#>
+      PREFIX qudt:  <http://qudt.org/schema/qudt/>
+      PREFIX rdfs:  <http://www.w3.org/2000/01/rdf-schema#>
+      SELECT ?subPlan ?subMachine ?subMachineLabel ?paramPred ?value ?unit ?source ?sourceLabel WHERE {
+        <${actInstUri}> prov:qualifiedAssociation ?assoc .
+        ?assoc prov:hadPlan ?plan .
+        ?plan prov:hadMember ?subPlan .
+        OPTIONAL { ?subPlan prov:wasDerivedFrom ?subMachine . OPTIONAL { ?subMachine rdfs:label ?subMachineLabel } }
+        ?subPlan ?paramPred ?paramObj .
+        FILTER(STRSTARTS(STR(?paramPred), 'http://purl.org/for/param#'))
+        ?paramObj prov:value ?qty .
+        ?qty qudt:value ?value .
+        FILTER(isLiteral(?value))
+        OPTIONAL { ?qty qudt:hasUnit ?unit }
+        OPTIONAL { ?paramObj prov:wasDerivedFrom ?source . OPTIONAL { ?source rdfs:label ?sourceLabel } }
+      }
+      ORDER BY ?subMachine ?subPlan
+    `
+    // Q4: gripper position XY vectors from sub-plan members
+    const q4 = `
+      PREFIX prov:   <http://www.w3.org/ns/prov#>
+      PREFIX qudt:   <http://qudt.org/schema/qudt/>
+      PREFIX param:  <http://purl.org/for/param#>
+      PREFIX rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+      PREFIX rdfs:   <http://www.w3.org/2000/01/rdf-schema#>
+      SELECT ?subMachine ?subMachineLabel ?x ?y ?unit WHERE {
+        <${actInstUri}> prov:qualifiedAssociation ?assoc .
+        ?assoc prov:hadPlan ?plan .
+        ?plan prov:hadMember ?subPlan .
+        ?subPlan prov:wasDerivedFrom ?subMachine .
+        OPTIONAL { ?subMachine rdfs:label ?subMachineLabel }
+        ?subPlan param:gripperPosition ?posEntity .
+        ?posEntity prov:value ?qtyNode .
+        ?qtyNode qudt:value ?list .
+        ?list rdf:first ?x .
+        ?list rdf:rest/rdf:first ?y .
+        OPTIONAL { ?qtyNode qudt:hasUnit ?unit }
+      }
+      ORDER BY ?subMachine
+    `
+    // Q5: closing speed step profile (RDF list)
+    const q5 = `
+      PREFIX prov:   <http://www.w3.org/ns/prov#>
+      PREFIX qudt:   <http://qudt.org/schema/qudt/>
+      PREFIX param:  <http://purl.org/for/param#>
+      PREFIX rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+      SELECT ?speed ?speedUnit ?remaining ?remainingUnit WHERE {
+        <${actInstUri}> prov:qualifiedAssociation ?assoc .
+        ?assoc prov:hadPlan ?plan .
+        ?plan param:closingSpeedSteps ?list .
+        ?list rdf:rest*/rdf:first ?stepNode .
+        ?stepNode param:closingSpeed ?speedQty .
+        ?speedQty qudt:value ?speed .
+        OPTIONAL { ?speedQty qudt:hasUnit ?speedUnit }
+        ?stepNode param:remaining ?remainQty .
+        ?remainQty qudt:value ?remaining .
+        OPTIONAL { ?remainQty qudt:hasUnit ?remainingUnit }
+      }
+      ORDER BY DESC(?remaining)
+    `
+
+    const [r1, r2, r3, r4, r5] = await Promise.all([
+      querySparql(graphStore.endpoint, q1),
+      querySparql(graphStore.endpoint, q2),
+      querySparql(graphStore.endpoint, q3),
+      querySparql(graphStore.endpoint, q4),
+      querySparql(graphStore.endpoint, q5),
+    ])
+
+    if (!r1.results.bindings.length) return null
+    const first = r1.results.bindings[0]
+    const planUri = first.plan?.value
+    if (!planUri) return null
+
+    const machineUri = first.machine?.value ?? null
+    const machineLabel = first.machineLabel?.value ?? null
+
+    // Direct scalar params from Q1
+    const directParams: PlanParamValue[] = []
+    for (const b of r1.results.bindings) {
+      if (!b.paramPred || !b.value) continue
+      directParams.push({
+        paramUri: b.paramPred.value,
+        paramName: formatParamName(b.paramPred.value),
+        value: Number(b.value.value),
+        unit: unitSym(b.unit?.value),
+        sourceUri: null,
+        sourceLabel: null,
+      })
+    }
+
+    // Direct entity params from Q2 (source-attributed)
+    for (const b of r2.results.bindings) {
+      if (!b.paramPred || !b.value) continue
+      directParams.push({
+        paramUri: b.paramPred.value,
+        paramName: formatParamName(b.paramPred.value),
+        value: Number(b.value.value),
+        unit: unitSym(b.unit?.value),
+        sourceUri: b.source?.value ?? null,
+        sourceLabel: b.sourceLabel?.value ?? null,
+      })
+    }
+
+    // Sub-plan entries from Q3
+    const subPlanMap = new Map<string, SubPlanEntry>()
+    for (const b of r3.results.bindings) {
+      if (!b.subPlan || !b.paramPred || !b.value) continue
+      const spId = b.subPlan.value
+      if (!subPlanMap.has(spId)) {
+        subPlanMap.set(spId, {
+          id: spId,
+          machineUri: b.subMachine?.value ?? null,
+          machineLabel: b.subMachineLabel?.value ?? null,
+          params: [],
+        })
+      }
+      subPlanMap.get(spId)!.params.push({
+        paramUri: b.paramPred.value,
+        paramName: formatParamName(b.paramPred.value),
+        value: Number(b.value.value),
+        unit: unitSym(b.unit?.value),
+        sourceUri: b.source?.value ?? null,
+        sourceLabel: b.sourceLabel?.value ?? null,
+      })
+    }
+    const subPlans = [...subPlanMap.values()]
+
+    // Gripper positions from Q4
+    const gripperPositions: GripperPosition[] = r4.results.bindings.map((b) => ({
+      machineUri: b.subMachine?.value ?? '',
+      machineLabel: b.subMachineLabel?.value ?? null,
+      x: Number(b.x?.value ?? 0),
+      y: Number(b.y?.value ?? 0),
+      unit: unitSym(b.unit?.value) ?? 'mm',
+    }))
+
+    // Closing speed steps from Q5
+    const closingSteps: ClosingSpeedStep[] = r5.results.bindings.map((b) => ({
+      speed: Number(b.speed?.value ?? 0),
+      speedUnit: unitSym(b.speedUnit?.value) ?? 'mm/s',
+      remaining: Number(b.remaining?.value ?? 0),
+      remainingUnit: unitSym(b.remainingUnit?.value) ?? 'mm',
+    }))
+
+    return { planUri, machineUri, machineLabel, directParams, subPlans, gripperPositions, closingSteps }
+  }
+
   // ── Parameter shapes (SHACL) ─────────────────────────────────────────────
 
   const VPD_BASE = 'https://example.org/vpd#'
@@ -2030,6 +2277,7 @@ ${lines.join('\n')}
     updateAtomicActivity,
     isAtomicActivityInUse,
     deleteAtomicActivity,
+    fetchActivityPlan,
     fetchParameterShape,
     buildShapeAsTurtle,
     fetchExistingPlan,

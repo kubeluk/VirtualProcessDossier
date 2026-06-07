@@ -281,4 +281,14 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 - **Per-subsystem plans**: for machines with independently controlled subsystems, the plan is a `prov:Collection` with `prov:hadMember` sub-plans — one per subsystem; each sub-plan carries `prov:wasDerivedFrom <subsystem>` to trace the parameter value to the exact machine component it configures
 - **Ordered step parameters**: parameters that form a sequence (e.g. `param:closingSpeedSteps`) use an RDF list as the object, with each list member being a blank node grouping the speed and remaining-distance values for that step
 - Seed plans in `data/plans.ttl`: `plan:1_gripping` (per-gripper positions + setpoints), `plan:1_heating` (per-IR-field temperature goals and zone power percentages + holding time), `plan:1_press` (press force, cooling time, mold temperatures, multi-step closing speed profile)
-- **UI adaptation**: the `ShaclFormWrapper`, `AddActivityModal` parameter authoring, and `RunActivityNode` plan rendering need to be updated to reflect this model — tracked separately
+- `RunActivityNode` plan rendering has been updated to use the PROV-O + QUDT model via `ActivityPlanPanel.vue` (see below); `ShaclFormWrapper` and `AddActivityModal` parameter authoring remain to be updated
+
+### Activity Plan Parameters in RunView (implemented)
+- Each atomic `RunActivityNode` shows a collapsible amber **"Machine Parameters"** panel below the dataset chips; the panel is rendered by `ActivityPlanPanel.vue`
+- The panel calls `workflowStore.fetchActivityPlan(actInstUri)` on mount — 5 parallel SPARQL queries; returns `null` for activity instances with no `prov:qualifiedAssociation` (e.g. transferring), in which case the panel is hidden entirely
+- **Gripping**: renders a *Gripper Positions* table — one row per gripper sub-plan, columns X (mm) / Y (mm); sign-coloured values (green positive, red negative); XY extracted via `rdf:first` / `rdf:rest/rdf:first` on the RDF list stored in `qudt:value`
+- **Heating**: renders direct scalar params (holding time) + two IR-field sub-plan sections; section titles derived from the `param:temperatureGoal` entity's `prov:wasDerivedFrom` source label; each section shows temperature goal + per-zone power percentages
+- **Forming/Press**: renders direct scalar params (press force, cooling time, remaining press path), source-attributed mold temperatures (upper/lower), and a *Closing Speed Profile* table with 4 phases; each phase row shows speed, an amber gradient bar proportional to the max speed, and distance remaining
+- `fetchActivityPlan(actInstUri): Promise<ActivityPlanData | null>` in `src/stores/workflow.ts`; exported interfaces: `ActivityPlanData`, `PlanParamValue`, `SubPlanEntry`, `GripperPosition`, `ClosingSpeedStep`
+- `QUDT_UNIT_LABELS` extended with `KiloN → kN`, `PERCENT → %`, `UNITLESS → ""`
+- `RunActivityNode.vue` now imports `ActivityPlanPanel` instead of `ShaclFormWrapper`; all SHACL-related reactive state and `onMounted` hook removed from that component
