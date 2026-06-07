@@ -2,12 +2,14 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useWorkflowStore, type RunDetail } from '@/stores/workflow'
+import { useMaterialStore } from '@/stores/material'
 import AddDatasetModal from '@/components/AddDatasetModal.vue'
 import RunActivityNode from '@/components/RunActivityNode.vue'
 
 const route = useRoute()
 const router = useRouter()
 const workflowStore = useWorkflowStore()
+const materialStore = useMaterialStore()
 
 const run = ref<RunDetail | null>(null)
 const loading = ref(true)
@@ -72,6 +74,12 @@ function cancelEditRun() {
   editingRun.value = false
 }
 
+async function openDossier() {
+  if (!run.value) return
+  const partUri = await materialStore.fetchPartForRun(run.value.uri)
+  if (partUri) router.push({ name: 'dossier', query: { part: partUri } })
+}
+
 async function saveRun() {
   if (!run.value) return
   if (!runTitleInput.value.trim()) {
@@ -122,6 +130,7 @@ async function saveRun() {
         <template v-if="!editingRun">
           <div class="run-title-row">
             <h1 class="run-title">{{ run.title ?? '(untitled run)' }}</h1>
+            <button class="dossier-btn" @click="openDossier">Dossier →</button>
             <button class="edit-btn" @click="startEditRun">Edit</button>
           </div>
           <p v-if="run.description" class="run-description">{{ run.description }}</p>
@@ -350,6 +359,26 @@ async function saveRun() {
 }
 
 /* Inline edit */
+.dossier-btn {
+  background: #fefce8;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #b45309;
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
+  margin-top: 0.4rem;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.dossier-btn:hover {
+  background: #fef3c7;
+  border-color: #fbbf24;
+}
+
 .edit-btn {
   background: none;
   border: 1px solid var(--color-border);

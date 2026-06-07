@@ -115,11 +115,20 @@ function formatValue(value: number): string {
               <h2 class="part-title">{{ partLabel(part.uri) }}</h2>
               <p v-if="part.runDescription" class="part-subtitle">{{ part.runDescription }}</p>
             </div>
-            <button class="run-link" @click="router.push({ name: 'run', query: { uri: part.runUri } })">
-              <span class="run-link-label">Produced in run</span>
-              <span class="run-link-name">{{ part.runLabel ?? localName(part.runUri) }}</span>
-              <span class="run-link-arrow">→</span>
-            </button>
+            <div class="part-actions">
+              <button class="run-link" @click="router.push({ name: 'run', query: { uri: part.runUri } })">
+                <span class="run-link-label">Produced in run</span>
+                <span class="run-link-name">{{ part.runLabel ?? localName(part.runUri) }}</span>
+                <span class="run-link-arrow">→</span>
+              </button>
+              <button
+                class="dossier-link"
+                @click="router.push({ name: 'dossier', query: { part: part.uri } })"
+              >
+                <span class="dossier-link-label">Dossier</span>
+                <span class="dossier-link-arrow">→</span>
+              </button>
+            </div>
           </div>
 
           <!-- Lineage trail -->
@@ -448,6 +457,43 @@ function formatValue(value: number): string {
 .run-link-arrow {
   font-size: 0.75rem;
   color: var(--color-primary);
+}
+
+.part-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.dossier-link {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  background: none;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 0.35rem 0.85rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.dossier-link:hover {
+  border-color: #f59e0b;
+  background: #fffbf0;
+}
+
+.dossier-link-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #b45309;
+}
+
+.dossier-link-arrow {
+  font-size: 0.75rem;
+  color: #b45309;
 }
 
 /* ── Lineage trail ───────────────────────────────────────────────── */

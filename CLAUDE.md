@@ -160,6 +160,7 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 | `/activities` | `activities` | ActivityListView | Activity library: browse/create/edit reusable atomic activities |
 | `/systems` | `systems` | SystemListView | System library: browse/create/edit ssn:System instances |
 | `/parts` | `parts` | PartListView | Parts overview: material lineage, laminat properties, ply stack, needle-point visualization |
+| `/dossier?part=` | `dossier` | DossierView | Virtual Process Dossier: one-page summary of part identity, process timeline, and material — links to detail views (part = sosa:Sample URI) |
 
 ## Features
 
@@ -292,3 +293,14 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 - `fetchActivityPlan(actInstUri): Promise<ActivityPlanData | null>` in `src/stores/workflow.ts`; exported interfaces: `ActivityPlanData`, `PlanParamValue`, `SubPlanEntry`, `GripperPosition`, `ClosingSpeedStep`
 - `QUDT_UNIT_LABELS` extended with `KiloN → kN`, `PERCENT → %`, `UNITLESS → ""`
 - `RunActivityNode.vue` now imports `ActivityPlanPanel` instead of `ShaclFormWrapper`; all SHACL-related reactive state and `onMounted` hook removed from that component
+
+### Virtual Process Dossier (implemented)
+- **Route**: `/dossier?part=<sosa:Sample URI>` — anchored on the physical part since it is the artefact the dossier describes
+- **Entry points**: "Dossier →" amber button on each part card in PartListView; "Dossier →" amber button in the RunView title row (resolves part URI via a quick `sosa:isResultOf` lookup)
+- **Design intent**: curated one-page summary — answers "what happened to produce this part?" in one sweep without navigating between views; detail is intentionally withheld and delegated to the linked detail views
+- **Header**: dark gradient card with amber top accent — part label, run label, date, state badge, workflow label
+- **Process timeline**: horizontal strip of activity cards (one per atomic activity in model tree order); cards with plans have amber left border + key params (temperature, force, times); cards without plans have gray border + "No recorded parameters"
+- **Material section**: compact lineage trail (Part ← Laminat ← Layup ← N×Tape), key dimension/fraction facts, ply orientation badges (same palette as PartListView)
+- **Footer strip**: three equal-width navigation buttons — "Full material detail" (→ /parts), "Full run detail" (→ /run), dataset count
+- `src/stores/dossier.ts` — `DossierData`, `DossierActivity`, `DossierHeadlineParam` interfaces; `fetchDossier(partUri)` runs 7 parallel SPARQL queries after a phase-1 header lookup; headline params limited to temperature goal, press force, cooling time, holding time, and gripper count; temperature deduplicated across IR sub-plans
+- `material.ts` extended with `fetchPartForRun(runUri): Promise<string | null>` — used by RunView's Dossier button

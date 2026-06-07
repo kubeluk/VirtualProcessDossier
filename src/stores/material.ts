@@ -209,5 +209,14 @@ export const useMaterialStore = defineStore('material', () => {
     return { ...summary, properties, plies, needlePoints }
   }
 
-  return { fetchParts, fetchPartDetail }
+  async function fetchPartForRun(runUri: string): Promise<string | null> {
+    const query = `
+      PREFIX sosa: <http://www.w3.org/ns/sosa/>
+      SELECT ?part WHERE { ?part sosa:isResultOf <${runUri}> . } LIMIT 1
+    `
+    const res = await querySparql(graphStore.endpoint, query)
+    return res.results.bindings[0]?.part?.value ?? null
+  }
+
+  return { fetchParts, fetchPartDetail, fetchPartForRun }
 })
