@@ -97,6 +97,7 @@ docker compose down -v           # Tear down including data volume (resets seed)
   - `laminat:`, `layup:`, `tape:`, `part:`, `pos:` — material domain entities
 - **Supporting vocabularies**: `dcterms`, `rdfs`, `prov`, `sosa`, `ssn`, `wild`, `qudt`, `unit` (QUDT), `quantitykind` (QUDT), `geo` (GeoSPARQL `<http://www.opengis.net/ont/geosparql#>`)
 - **Annotation predicates**: `rdfs:label` / `rdfs:comment` for domain resources (machines, activities, runs, plans); `dcterms:title` / `dcterms:description` for catalog and dataset nodes only
+- **DCAT distribution structure**: `dcat:Distribution` is a blank node (not a named resource); `dcat:mediaType` and `dcat:temporalResolution` are properties of the distribution, not the dataset; catalog URI is `vpd:it`
 - Ontologies for new features are provided incrementally and documented here as they are added
 
 ### Provenance (seeded)
@@ -159,8 +160,12 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 ## Features
 
 ### Data Catalog Browse (implemented)
-- Dataset list at `/catalog`: queries all `dcat:Dataset` resources linked via `dcat:Catalog`, shows title, description, modified date, distribution count
-- Dataset detail at `/dataset?uri=<encoded-uri>`: shows full metadata (keywords, modified) and all distributions with format, file size, and download link
+- Dataset list at `/catalog`: queries all `dcat:Dataset` resources linked via `dcat:Catalog`; shows title, description, distribution count
+- Dataset detail at `/dataset?uri=<encoded-uri>`:
+  - **Workflow Context** section: shows the run label (via `prov:wasGeneratedBy` → `rdfs:label`) with a link to the run view, and the workflow model label with a link to the workflow view
+  - **Distributions** section: one row per blank-node distribution showing `dcat:mediaType`, `dcat:temporalResolution`, and `dcat:downloadURL`; no byte-size or distribution title
+- `WorkflowContext` interface: `{ runUri, runLabel, workflowUri, workflowLabel }` — populated by `fetchDatasetWorkflowContext(uri)` via `prov:wasGeneratedBy` + `wild:workflowInstanceOf` + `rdfs:label`; `DatasetProvenance` interface and `fetchDatasetProvenance` have been removed
+- `Distribution` interface: `{ downloadURL, mediaType, temporalResolution }` — all optional; distributions are blank nodes so they are keyed by array index in the UI
 - Both views share a Datasets / Workflows tab nav
 - SPARQL queries live in `src/stores/catalog.ts`; views are purely presentational
 
@@ -189,14 +194,15 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 
 ### Dataset Search & Filtering (implemented)
 - Filter panel on `/catalog` above the dataset list; filters are applied server-side via SPARQL
-- **Text search** (debounced 400 ms): `CONTAINS(LCASE(...))` across `dcterms:title`, `dcterms:description`, and `dcat:keyword` (keyword match via `FILTER EXISTS`)
-- **Keyword chips**: togglable pill buttons populated from all `dcat:keyword` values present in the catalog; multiple selections use OR logic (`FILTER EXISTS { ... IN (...) }`)
-- **Workflow Run select**: filters datasets directly `isPartOf` a `wild:WorkflowInstance` or linked via an `ActivityInstance`'s `wild:inWorkflowInstance`
-- **Workflow Model select**: same traversal extended by `wild:workflowInstanceOf`; disabled when a run is already selected (run is more specific)
-- Filter options (keywords, runs, models) are loaded once on mount via `fetchFilterOptions()` — only options that have at least one associated dataset are offered
+- **Text search** (debounced 400 ms): `CONTAINS(LCASE(...))` across `dcterms:title` and `dcterms:description`
+- **Workflow Run select**: filters datasets by `prov:wasGeneratedBy <run>`
+- **Workflow Model select**: same traversal extended via `wild:workflowInstanceOf`; disabled when a run is already selected
+- Filter options (runs, models) loaded once on mount via `fetchFilterOptions()` — only options that have at least one linked dataset are offered; labels from `rdfs:label`
 - Active filters shown as dismissible chips; "Clear all" button; result count updates to "X datasets matching your filters"
-- Catalog store: `fetchDatasets(filters?: DatasetFilters)` builds SPARQL `FILTER` / `FILTER EXISTS` clauses conditionally; `fetchFilterOptions(): Promise<DatasetFilterOptions>` runs 3 parallel queries for keywords, runs, models
-- `DatasetFilters` and `DatasetFilterOptions` interfaces exported from `src/stores/catalog.ts`
+- Catalog store: `fetchDatasets(filters?: DatasetFilters)` builds `FILTER EXISTS` clauses conditionally; `fetchFilterOptions(): Promise<DatasetFilterOptions>` runs 2 parallel queries (runs, models)
+- `DatasetFilters` interface: `{ search?, workflowRunUri?, workflowModelUri? }` — no keyword field
+- `DatasetFilterOptions` interface: `{ workflowRuns: { uri, label }[], workflowModels: { uri, label }[] }` — no keyword list
+- `AddDatasetModal`: title, description, download URL (required), media type, temporal resolution, workflow run select; no keyword or byte-size fields; run options loaded from `fetchFilterOptions()`
 
 ### Workflow Model Authoring (implemented)
 - **Create**: "Add Workflow" button on `/workflows` opens `AddWorkflowModal`; user defines title, description, root behaviour type, and an arbitrarily deep tree of steps; each node can be `AtomicActivity` (leaf), `ParallelActivity`, or `SequentialActivity`; generates a WiLD-compliant `WorkflowModel` with the selected root activity type (`SequentialActivity` or `ParallelActivity`) and nested `hasChildActivities` RDF lists; navigates to the new workflow on success
