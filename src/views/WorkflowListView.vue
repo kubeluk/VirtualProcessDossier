@@ -50,6 +50,7 @@ function openWorkflow(uri: string) {
     <AddWorkflowModal v-model="showAddModal" @created="onWorkflowCreated" />
 
     <nav class="page-nav">
+      <RouterLink to="/" class="nav-tab">Dossier</RouterLink>
       <RouterLink to="/catalog" class="nav-tab">Datasets</RouterLink>
       <RouterLink to="/workflows" class="nav-tab nav-tab--active">Workflows</RouterLink>
       <RouterLink to="/activities" class="nav-tab">Activities</RouterLink>

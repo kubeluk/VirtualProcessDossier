@@ -85,7 +85,7 @@ const atomicActivities = computed<DossierActivity[]>(
   <main class="dossier-view">
 
     <!-- Back navigation -->
-    <button class="back-link" @click="router.back()">← Back</button>
+    <button class="back-link" @click="router.push({ name: 'home' })">← Dossier overview</button>
 
     <div v-if="loading" class="state-msg">Loading dossier…</div>
     <div v-else-if="error" class="state-msg state-msg--error">{{ error }}</div>

@@ -151,7 +151,7 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 
 | Path | Name | View | Description |
 |------|------|------|-------------|
-| `/` | `home` | HomeView | Landing page |
+| `/` | `home` | HomeView | Dossier gallery — scrollable overview of all produced parts; the primary landing page of the application |
 | `/catalog` | `catalog` | CatalogView | Browse all datasets |
 | `/dataset?uri=` | `dataset` | DatasetView | Dataset detail (uri = full encoded dataset URI) |
 | `/workflows` | `workflows` | WorkflowListView | Browse all workflow models |
@@ -296,7 +296,7 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 
 ### Virtual Process Dossier (implemented)
 - **Route**: `/dossier?part=<sosa:Sample URI>` — anchored on the physical part since it is the artefact the dossier describes
-- **Entry points**: "Dossier →" amber button on each part card in PartListView; "Dossier →" amber button in the RunView title row (resolves part URI via a quick `sosa:isResultOf` lookup)
+- **Entry points**: `/` dossier gallery home page (each card has an "Open →" button); "Dossier →" amber button on part cards in PartListView; "Dossier →" amber button in RunView title row
 - **Design intent**: curated one-page summary — answers "what happened to produce this part?" in one sweep without navigating between views; detail is intentionally withheld and delegated to the linked detail views
 - **Header**: dark gradient card with amber top accent — part label, run label, date, state badge, workflow label
 - **Process timeline**: horizontal strip of activity cards (one per atomic activity in model tree order); cards with plans have amber left border + key params (temperature, force, times); cards without plans have gray border + "No recorded parameters"
@@ -304,3 +304,6 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 - **Footer strip**: three equal-width navigation buttons — "Full material detail" (→ /parts), "Full run detail" (→ /run), dataset count
 - `src/stores/dossier.ts` — `DossierData`, `DossierActivity`, `DossierHeadlineParam` interfaces; `fetchDossier(partUri)` runs 7 parallel SPARQL queries after a phase-1 header lookup; headline params limited to temperature goal, press force, cooling time, holding time, and gripper count; temperature deduplicated across IR sub-plans
 - `material.ts` extended with `fetchPartForRun(runUri): Promise<string | null>` — used by RunView's Dossier button
+- **HomeView** (the `/` route) is now the Dossier gallery — replaces the old static landing page; loads all parts via `materialStore.fetchParts()` then fires `dossierStore.fetchDossier()` for each in parallel; each card shows: amber header with part label + run name + date + state + workflow, compact process strip (activity chips with key param values, amber border for planned activities), material summary (lineage tokens + ply orientation badges + dimensions), and a three-button footer (Parts detail / Run detail / dataset count)
+- All list-view nav tabs now include "Dossier" as the first tab (links to `/`); consistent across CatalogView, WorkflowListView, ActivityListView, SystemListView, PartListView, and HomeView
+- DossierView (`/dossier?part=`) now functions as a permalink/detail page for a single part; its back button navigates to the gallery home

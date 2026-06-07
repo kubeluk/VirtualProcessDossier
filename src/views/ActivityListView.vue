@@ -71,6 +71,7 @@ function onDeleted() {
     />
 
     <nav class="page-nav">
+      <RouterLink to="/" class="nav-tab">Dossier</RouterLink>
       <RouterLink to="/catalog" class="nav-tab">Datasets</RouterLink>
       <RouterLink to="/workflows" class="nav-tab">Workflows</RouterLink>
       <RouterLink to="/activities" class="nav-tab nav-tab--active">Activities</RouterLink>
