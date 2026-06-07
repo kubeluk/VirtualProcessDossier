@@ -1,0 +1,130 @@
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix ex:   <http://example.org/vpd/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix ssn:  <http://www.w3.org/ns/ssn/> .
+@prefix qudt: <http://qudt.org/schema/qudt/> .
+@prefix unit: <http://qudt.org/vocab/unit/> .
+@prefix quantitykind: <http://qudt.org/vocab/quantitykind/> .
+@prefix fofa: <http://purl.org/fofa/ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+
+fofa:Material a sh:NodeShape, rdfs:Class ;
+    rdfs:label "Material" ;
+    sh:property [
+        sh:name "Thickness" ;
+        sh:description "The thickness of the material being pressed." ;
+        sh:path fofa:hasThickness ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:node fofa:thickness
+    ] ;
+    sh:property [
+        sh:name "Material Type" ;
+        sh:description "The type of material being pressed." ;
+        sh:path fofa:hasMaterialType ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:name "Lagenaufbau" ;
+        sh:description "The layer structure of the material being pressed." ;
+        sh:path fofa:hasLagenaufbau ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:name "Width" ;
+        sh:description "The width of the material being pressed." ;
+        sh:path fofa:hasWidth ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:node fofa:width
+    ] ;
+    sh:property [
+        sh:name "Length" ;
+        sh:description "The length of the material being pressed." ;
+        sh:path fofa:hasLength ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:node fofa:length
+    ] .
+
+fofa:width a sh:NodeShape ;
+    sh:node fofa:length ;
+    sh:property [
+        sh:name "Quantity Kind" ;
+        sh:description "The quantity kind of the width measurement." ;
+        sh:path qudt:hasQuantityKind ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:hasValue quantitykind:Width ;
+    ] .
+
+fofa:length a sh:NodeShape ;
+    sh:targetClass qudt:Quantity ;
+    sh:property [
+        sh:name "Quantity Value" ;
+        sh:description "The quantity value of the length measurement." ;
+        sh:path qudt:quantityValue ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:node [
+            sh:property [
+                sh:name "Quantity Unit" ;
+                sh:description "The unit of the quantity measurement." ;
+                sh:path qudt:hasUnit ;
+                sh:minCount 1 ;
+                sh:maxCount 1 ;
+                sh:hasValue unit:MilliM ;
+            ] ;
+            sh:property [
+                sh:name "Quantity Value" ;
+                sh:description "The numeric value of the quantity measurement." ;
+                sh:path qudt:value ;
+                sh:minCount 1 ;
+                sh:maxCount 1 ;
+                sh:datatype xsd:decimal ;
+            ]
+        ]
+    ] .
+
+fofa:thickness a sh:NodeShape ;
+    sh:targetClass qudt:Quantity ;
+    sh:property [
+        sh:name "Quantity Kind" ;
+        sh:description "The quantity kind of the thickness measurement." ;
+        sh:path qudt:hasQuantityKind ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:hasValue quantitykind:Thickness ;
+    ] ;
+    sh:property [
+        sh:name "Quantity Value" ;
+        sh:description "The quantity value of the thickness measurement." ;
+        sh:path qudt:quantityValue ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:node [
+            sh:property [
+                sh:name "Quantity Unit" ;
+                sh:description "The unit of the quantity measurement." ;
+                sh:path qudt:hasUnit ;
+                sh:minCount 1 ;
+                sh:maxCount 1 ;
+                sh:hasValue unit:MilliM ;
+            ] ;
+            sh:property [
+                sh:name "Quantity Value" ;
+                sh:description "The numeric value of the quantity measurement." ;
+                sh:path qudt:value ;
+                sh:minCount 1 ;
+                sh:maxCount 1 ;
+                sh:datatype xsd:decimal ;
+            ]
+        ]
+    ] .

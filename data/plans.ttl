@@ -1,0 +1,550 @@
+@prefix : <#> .
+@prefix qudt: <http://qudt.org/schema/qudt/> .
+@prefix part: <http://purl.org/for/part#> .
+@prefix laminat: <http://purl.org/for/laminat#> .
+@prefix layup: <http://purl.org/for/layup#> .
+@prefix tape: <http://purl.org/for/tape#> .
+@prefix run: <http://purl.org/for/run#> .
+@prefix workflow: <http://purl.org/for/workflow#> .
+@prefix activity: <http://purl.org/for/activity#> .
+@prefix machine: <http://purl.org/for/machine#> .
+@prefix gripper: <http://purl.org/for/gripper#> .
+@prefix plan: <http://purl.org/for/plan#> .
+@prefix param: <http://purl.org/for/param#> .
+@prefix tool: <http://purl.org/for/tool#> .
+@prefix pos: <http://purl.org/for/position#> .
+@prefix vpd: <http://purl.org/vpd/data#> .
+@prefix quantitykind: <http://qudt.org/vocab/quantitykind/> .
+@prefix unit: <http://qudt.org/vocab/unit/> .
+@prefix sosa: <http://www.w3.org/ns/sosa/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix wild: <http://purl.org/wild/vocab#> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix geo: <http://www.opengis.net/ont/geosparql#> .
+
+# Plans
+
+## Gripping
+
+plan:1_gripping a prov:Plan, prov:Collection ;
+    prov:hadMember [
+        a prov:Plan ;
+        prov:wasDerivedFrom gripper:1 ;
+        param:gripperPosition [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( 210.0 100.0 )
+            ] ;
+            prov:wasDerivedFrom pos:gripperFrameReferencePoint ;
+        ] ;
+        param:setpoint [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ] ;
+            prov:wasDerivedFrom activity:heating
+        ] ;
+        param:setpoint [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ] ;
+            prov:wasDerivedFrom activity:forming
+        ] ;
+        param:setpoint [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 0
+            ] ;
+            prov:wasDerivedFrom activity:reworking
+        ]
+    ] ;
+    prov:hadMember [
+        a prov:Plan ;
+        prov:wasDerivedFrom gripper:2 ;
+        param:gripperPosition [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( 210.0 -100.0 )
+            ] ;
+            prov:wasDerivedFrom pos:gripperFrameReferencePoint ;
+        ] ;
+        param:setpoint [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ] ;
+            prov:wasDerivedFrom activity:heating
+        ] ;
+        param:setpoint [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ] ;
+            prov:wasDerivedFrom activity:forming
+        ] ;
+        param:setpoint [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 0
+            ] ;
+            prov:wasDerivedFrom activity:reworking
+        ]
+    ] ;
+    prov:hadMember [
+        a prov:Plan ;
+        prov:wasDerivedFrom gripper:3 ;
+        param:gripperPosition [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( -210.0 100.0 )
+            ] ;
+            prov:wasDerivedFrom pos:gripperFrameReferencePoint ;
+        ] ;
+        param:setpoint [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ] ;
+            prov:wasDerivedFrom activity:heating
+        ] ;
+        param:setpoint [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ] ;
+            prov:wasDerivedFrom activity:forming
+        ] ;
+        param:setpoint [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 0
+            ] ;
+            prov:wasDerivedFrom activity:reworking
+        ]
+    ] ;
+    prov:hadMember [
+        a prov:Plan ;
+        prov:wasDerivedFrom gripper:4 ;
+        param:gripperPosition [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( -210.0 -100.0 )
+            ] ;
+            prov:wasDerivedFrom pos:gripperFrameReferencePoint ;
+        ] ;
+        param:setpoint [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ] ;
+            prov:wasDerivedFrom activity:heating
+        ] ;
+        param:setpoint [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ] ;
+            prov:wasDerivedFrom activity:forming
+        ] ;
+        param:setpoint [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 0
+            ] ;
+            prov:wasDerivedFrom activity:reworking
+        ]
+    ] ;
+    prov:hadMember [
+        a prov:Plan ;
+        prov:wasDerivedFrom gripper:5 ;
+        param:gripperPosition [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( 100.0 210.0 )
+            ] ;
+            prov:wasDerivedFrom pos:gripperFrameReferencePoint ;
+        ] ;
+        param:setpoint [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ] ;
+            prov:wasDerivedFrom activity:heating
+        ] ;
+        param:setpoint [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ] ;
+            prov:wasDerivedFrom activity:forming
+        ] ;
+        param:setpoint [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 0
+            ] ;
+            prov:wasDerivedFrom activity:reworking
+        ]
+    ] ;
+    prov:hadMember [
+        a prov:Plan ;
+        prov:wasDerivedFrom gripper:6 ;
+        param:gripperPosition [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( -100.0 210.0 )
+            ] ;
+            prov:wasDerivedFrom pos:gripperFrameReferencePoint ;
+        ] ;
+        param:setpoint [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ] ;
+            prov:wasDerivedFrom activity:heating
+        ] ;
+        param:setpoint [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ] ;
+            prov:wasDerivedFrom activity:forming
+        ] ;
+        param:setpoint [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 0
+            ] ;
+            prov:wasDerivedFrom activity:reworking
+        ]
+    ] ;
+    prov:hadMember [
+        a prov:Plan ;
+        prov:wasDerivedFrom gripper:7 ;
+        param:gripperPosition [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( 100.0 -210.0 )
+            ] ;
+            prov:wasDerivedFrom pos:gripperFrameReferencePoint ;
+        ] ;
+        param:setpoint [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ] ;
+            prov:wasDerivedFrom activity:heating
+        ] ;
+        param:setpoint [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ] ;
+            prov:wasDerivedFrom activity:forming
+        ] ;
+        param:setpoint [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 0
+            ] ;
+            prov:wasDerivedFrom activity:reworking
+        ]
+    ] ;
+    prov:hadMember [
+        a prov:Plan ;
+        prov:wasDerivedFrom gripper:8 ;
+        param:gripperPosition [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( -100.0 -210.0 )
+            ] ;
+            prov:wasDerivedFrom pos:gripperFrameReferencePoint ;
+        ] ;
+        param:setpoint [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ] ;
+            prov:wasDerivedFrom activity:heating
+        ] ;
+        param:setpoint [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ] ;
+            prov:wasDerivedFrom activity:forming
+        ] ;
+        param:setpoint [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 0
+            ] ;
+            prov:wasDerivedFrom activity:reworking
+        ]
+    ] .
+
+## Heating
+
+plan:1_heating a prov:Plan, prov:Collection ;
+    prov:hadMember [
+        a prov:Plan ;
+        param:temperatureGoal [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value 280.0
+            ] ;
+            prov:wasDerivedFrom machine:ir_top
+        ] ;
+        param:zoneControl [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:PERCENT ;
+                qudt:value 80.0
+            ] ;
+            prov:wasDerivedFrom machine:ir_top_middle
+        ] ;
+        param:zoneControl [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:PERCENT ;
+                qudt:value 20.0
+            ] ;
+            prov:wasDerivedFrom machine:ir_top_edge
+        ] ;
+        param:zoneControl [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:PERCENT ;
+                qudt:value 20.0
+            ] ;
+            prov:wasDerivedFrom machine:ir_top_corner
+        ]
+    ] ;
+    prov:hadMember [
+        a prov:Plan ;
+        param:temperatureGoal [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value 280.0
+            ] ;
+            prov:wasDerivedFrom machine:ir_bottom
+        ] ;
+        param:zoneControl [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:PERCENT ;
+                qudt:value 100.0
+            ] ;
+            prov:wasDerivedFrom machine:ir_bottom_middle
+        ] ;
+        param:zoneControl [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:PERCENT ;
+                qudt:value 20.0
+            ] ;
+            prov:wasDerivedFrom machine:ir_bottom_edge
+        ] ;
+        param:zoneControl [
+            a prov:Entity ;
+            prov:value [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:PERCENT ;
+                qudt:value 20.0
+            ] ;
+            prov:wasDerivedFrom machine:ir_bottom_corner
+        ]
+    ] ;
+    param:holdingTime [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Time ;
+        qudt:hasUnit unit:SEC ;
+        qudt:value 5.0
+    ] .
+
+## Pressing
+
+plan:1_press a prov:Plan ;
+    prov:wasDerivedFrom machine:press ;
+    param:tool :Drapiernapf ;
+    param:pressForce [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Force ;
+        qudt:hasUnit unit:KiloN ;
+        qudt:value 1000.0
+    ] ;
+    param:coolingTime [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Time ;
+        qudt:hasUnit unit:SEC ;
+        qudt:value 60.0
+    ] ;
+    param:remainingPressPath [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Distance ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value 0.0
+    ] ;
+    param:moldTemperature [
+        a prov:Entity ;
+        prov:value [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:Temperature ;
+            qudt:hasUnit unit:DEG_C ;
+            qudt:value 110.0
+        ] ;
+        prov:wasDerivedFrom machine:press_mold_upper
+    ] ;
+    param:moldTemperature [
+        a prov:Entity ;
+        prov:value [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:Temperature ;
+            qudt:hasUnit unit:DEG_C ;
+            qudt:value 110.0
+        ] ;
+        prov:wasDerivedFrom machine:press_mold_lower
+    ] ;
+    param:closingSpeedSteps (
+        [
+            param:closingSpeed [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:LinearVelocity;
+                qudt:hasUnit unit:MilliM-PER-SEC ;
+                qudt:value 80.0
+            ] ;
+            param:remaining [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:Distance ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value 60.0
+            ]
+        ]
+        [
+            param:closingSpeed [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:LinearVelocity;
+                qudt:hasUnit unit:MilliM-PER-SEC ;
+                qudt:value 60.0
+            ] ;
+            param:remaining [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:Distance ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value 25.0
+            ]
+        ]
+        [
+            param:closingSpeed [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:LinearVelocity;
+                qudt:hasUnit unit:MilliM-PER-SEC ;
+                qudt:value 35.0
+            ] ;
+            param:remaining [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:Distance ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value 10.0
+            ]
+        ]
+        [
+            param:closingSpeed [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:LinearVelocity;
+                qudt:hasUnit unit:MilliM-PER-SEC ;
+                qudt:value 10.0
+            ] ;
+            param:remaining [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:Distance ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value 0.0
+            ]
+        ]
+    ) .

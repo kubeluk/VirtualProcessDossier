@@ -1,0 +1,234 @@
+@prefix : <#> .
+@prefix qudt: <http://qudt.org/schema/qudt/> .
+@prefix part: <http://purl.org/for/part#> .
+@prefix laminat: <http://purl.org/for/laminat#> .
+@prefix layup: <http://purl.org/for/layup#> .
+@prefix tape: <http://purl.org/for/tape#> .
+@prefix run: <http://purl.org/for/run#> .
+@prefix workflow: <http://purl.org/for/workflow#> .
+@prefix activity: <http://purl.org/for/activity#> .
+@prefix machine: <http://purl.org/for/machine#> .
+@prefix gripper: <http://purl.org/for/gripper#> .
+@prefix plan: <http://purl.org/for/plan#> .
+@prefix param: <http://purl.org/for/param#> .
+@prefix tool: <http://purl.org/for/tool#> .
+@prefix pos: <http://purl.org/for/position#> .
+@prefix vpd: <http://purl.org/vpd/data#> .
+@prefix quantitykind: <http://qudt.org/vocab/quantitykind/> .
+@prefix unit: <http://qudt.org/vocab/unit/> .
+@prefix sosa: <http://www.w3.org/ns/sosa/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix wild: <http://purl.org/wild/vocab#> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix geo: <http://www.opengis.net/ont/geosparql#> .
+
+# Material
+
+## Part
+
+part:1 a prov:Entity, sosa:Sample ;
+    sosa:isResultOf run:1 ;
+    sosa:isSampleOf feature:processMaturityLevel ;
+    prov:wasDerivedFrom laminat:1 ;
+    prov:qualifiedDerivation [
+        a prov:Derivation ;
+        prov:entity laminat:1 ;
+        prov:hadActivity run:1
+    ] .
+
+## Laminat
+
+laminat:1 a geo:Feature, prov:Entity ;
+    rdfs:label "BASF PA6-GF60" ;
+    dcterms:identifier "1_1" ;
+    prov:wasDerivedFrom layup:1 ;
+    geo:hasSize [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Length ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value 400.0
+    ] ;
+    geo:hasSize [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Width ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value 400.0
+    ] ;
+    geo:hasSize [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Thickness ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value 1.56
+    ] ;
+    param:hasFiberMassFraction [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:MassFraction ;
+        qudt:hasUnit unit:UNITLESS ;
+        qudt:value 60
+    ] ;
+    pos:hasPositionalReference pos:laminatReferencePoint ;
+    param:hasNeedlePoint pos:1, pos:2, pos:3, pos:4, pos:5, pos:6, pos:7, pos:8 .
+
+pos:laminatReferencePoint a pos:Origin ;
+    rdfs:label "Laminat Reference Point"@en ;
+    rdfs:comment "Die Mitte des Laminats bildet den Bezugspunkt für die Positionen der Greiferpunkte."@de .
+
+pos:1 a qudt:Quantity, prov:Entity ;
+    qudt:hasQuantityKind quantitykind:PositionVector ;
+    qudt:quantityValue [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( 190.0 100.0 )
+    ] ;
+    prov:wasDerivedFrom pos:laminatReferencePoint .
+
+pos:2 a qudt:Quantity, prov:Entity ;
+    qudt:hasQuantityKind quantitykind:PositionVector ;
+    qudt:quantityValue [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( 190.0 -100.0 )
+    ] ;
+    prov:wasDerivedFrom pos:laminatReferencePoint .
+
+pos:3 a qudt:Quantity, prov:Entity ;
+    qudt:hasQuantityKind quantitykind:PositionVector ;
+    qudt:quantityValue [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( -190.0 100.0 )
+    ] ;
+    prov:wasDerivedFrom pos:laminatReferencePoint .
+
+pos:4 a qudt:Quantity, prov:Entity ;
+    qudt:hasQuantityKind quantitykind:PositionVector ;
+    qudt:quantityValue [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( -190.0 -100.0 )
+    ] ;
+    prov:wasDerivedFrom pos:laminatReferencePoint .
+
+pos:5 a qudt:Quantity, prov:Entity ;
+    qudt:hasQuantityKind quantitykind:PositionVector ;
+    qudt:quantityValue [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( 100.0 190.0 )
+    ] ;
+    prov:wasDerivedFrom pos:laminatReferencePoint .
+
+pos:6 a qudt:Quantity, prov:Entity ;
+    qudt:hasQuantityKind quantitykind:PositionVector ;
+    qudt:quantityValue [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( -100.0 190.0 )
+    ] ;
+    prov:wasDerivedFrom pos:laminatReferencePoint .
+
+pos:7 a qudt:Quantity, prov:Entity ;
+    qudt:hasQuantityKind quantitykind:PositionVector ;
+    qudt:quantityValue [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( 100.0 -190.0 )
+    ] ;
+    prov:wasDerivedFrom pos:laminatReferencePoint .
+
+pos:8 a qudt:Quantity, prov:Entity ;
+    qudt:hasQuantityKind quantitykind:PositionVector ;
+    qudt:quantityValue [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( -100.0 -190.0 )
+    ] ;
+    prov:wasDerivedFrom pos:laminatReferencePoint .
+
+## Layup
+
+layup:1 a prov:Entity ;
+    rdfs:label "[0/60/120]s" ;
+    prov:value ( tape:1 tape:2 tape:3 tape:4 tape:5 tape:6 ) ;
+    prov:wasDerivedFrom tape:1, tape:2, tape:3, tape:4, tape:5, tape:6 ;
+    prov:qualifiedDerivation [
+        a prov:Derivation ;
+        prov:entity tape:1 ;
+        :fiberOrientation [
+            a qudt:Quantity ;
+            qudt:hasUnit unit:DEG ;
+            qudt:value 0
+        ]
+    ] ;
+    prov:qualifiedDerivation [
+        a prov:Derivation ;
+        prov:entity tape:2 ;
+        :fiberOrientation [
+            a qudt:Quantity ;
+            qudt:hasUnit unit:DEG ;
+            qudt:value 60
+        ]
+    ] ;
+    prov:qualifiedDerivation [
+        a prov:Derivation ;
+        prov:entity tape:3 ;
+        :fiberOrientation [
+            a qudt:Quantity ;
+            qudt:hasUnit unit:DEG ;
+            qudt:value 120
+        ]
+    ] ;
+    prov:qualifiedDerivation [
+        a prov:Derivation ;
+        prov:entity tape:4 ;
+        :fiberOrientation [
+            a qudt:Quantity ;
+            qudt:hasUnit unit:DEG ;
+            qudt:value 120
+        ]
+    ] ;
+    prov:qualifiedDerivation [
+        a prov:Derivation ;
+        prov:entity tape:5 ;
+        :fiberOrientation [
+            a qudt:Quantity ;
+            qudt:hasUnit unit:DEG ;
+            qudt:value 60
+        ]
+    ] ;
+    prov:qualifiedDerivation [
+        a prov:Derivation ;
+        prov:entity tape:6 ;
+        :fiberOrientation [
+            a qudt:Quantity ;
+            qudt:hasUnit unit:DEG ;
+            qudt:value 0
+        ]
+    ] .
+
+## Tape
+
+tape:1 a prov:Entity ;
+    :polymer :PA6 ;
+    :fiber :GF .
+
+tape:2 a prov:Entity ;
+    :polymer :PA6 ;
+    :fiber :GF .
+
+tape:3 a prov:Entity ;
+    :polymer :PA6 ;
+    :fiber :GF .
+
+tape:4 a prov:Entity ;
+    :polymer :PA6 ;
+    :fiber :GF .
+
+tape:5 a prov:Entity ;
+    :polymer :PA6 ;
+    :fiber :GF .
+
+tape:6 a prov:Entity ;
+    :polymer :PA6 ;
+    :fiber :GF .

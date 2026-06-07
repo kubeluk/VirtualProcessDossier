@@ -1,0 +1,55 @@
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix ssn:  <http://www.w3.org/ns/ssn/> .
+@prefix qudt: <http://qudt.org/schema/qudt/> .
+@prefix unit: <http://qudt.org/vocab/unit/> .
+@prefix fofa: <http://purl.org/fofa/ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix vpd:  <https://example.org/vpd#> .
+
+#################################################################
+# Procedure (Prospective Provenance)
+#################################################################
+
+fofa:StampingProcedure a sosa:Procedure, wild:AtomicActivity ;
+    dct:description "Standard pressing operation" ;
+    ssn:implementedBy fofa:StampingSystem ;
+    ssn:hasInput fofa:StampingInput .
+
+#################################################################
+# Plan (Execution Plan)
+#################################################################
+
+vpd:plan-1 a fofa:ParameterizedProcedure, prov:Plan ;
+    prov:specializationOf fofa:StampingProcedure ;
+    prov:wasDerivedFrom fofa:StampingProcedure ;
+    prov:qualifiedDeriavtion [
+        a prov:Derivation ;
+        prov:entity fofa:StampingProcedure ;
+        prov:hadUsage [
+            a prov:Usage ;
+            prov:hadRole fofa:StampingSystem ;
+            prov:entity vpd:stamp-system-1
+        ] ;
+        prov:hadUsage [
+            a prov:Usage ;
+            prov:hadRole fofa:StampingInput ;
+            prov:entity vpd:stamp-parameters-1
+        ]
+    ] .
+
+#################################################################
+# Execution (Retrospective Provenance)
+#################################################################
+
+fofa:Actuation_Run001 a sosa:Actuation ;
+    sosa:usedProcedure fofa:PressingProcedure ;
+    wild:activityInstanceOf fofa:PressingProcedure ;
+    prov:used fofa:ParamInstance_v1 ;
+    prov:wasAssociatedWith fofa:press ;
+    prov:startedAtTime "2026-04-10T10:05:00Z"^^xsd:dateTime ;
+    prov:endedAtTime   "2026-04-10T10:06:00Z"^^xsd:dateTime ;
+    prov:generated fofa:ObservationDataset_Run001 .

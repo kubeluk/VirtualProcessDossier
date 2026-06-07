@@ -1,0 +1,57 @@
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix ex:   <http://example.org/vpd/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix ssn:  <http://www.w3.org/ns/ssn/> .
+@prefix qudt: <http://qudt.org/schema/qudt/> .
+@prefix unit: <http://qudt.org/vocab/unit/> .
+@prefix fofa: <http://purl.org/fofa/ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+
+ex:press-input-description a sh:NodeShape .
+
+ex:press-tool-temp a sosa:ActuableProperty, sh:PropertyShape ;
+    rdfs:label "Press Tool Temperature" ;
+    rdfs:comment "The temperature of the press tool during the pressing process." ;
+    vpd:hasQuantityKind quantityKind:Temperature ;
+    vpd:hasUnit unit:DEG_C .
+
+ex:press-closing-speed-profile a sosa:ActuableProperty ;
+    rdfs:label "Press Closing Speed Profile" ;
+    rdfs:comment "The profile of the closing speed applied during the pressing process." ;
+    vpd:hasQuantityKind quantityKind:Velocity ;
+    vpd:hasUnit unit:MilliM-PER-SEC .
+
+ex:press-input-1 a prov:Collection ;
+    prov:hadMember [
+        a prov:Entity ;
+        prov:specializationOf ex:press-tool-temp ;
+        prov:value [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantityKind:Temperature ;
+            qudt:quantityValue [
+                a qudt:QuantityValue ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value 180.0 ;
+            ]
+        ]
+    ] , [
+        a prov:Entity ;
+        prov:specializationOf ex:press-closing-speed-profile ;
+        prov:value (
+            [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantityKind:Velocity ;
+                qudt:quantityValue [
+                    a qudt:QuantityValue ;
+                    qudt:hasUnit unit:MilliM-PER-SEC ;
+                    qudt:value 500.0 ;
+                ]
+            ]
+            [
+
+            ]
+        )
+    ]

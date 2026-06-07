@@ -1,0 +1,43 @@
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix ex:   <http://example.org/vpd/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix ssn:  <http://www.w3.org/ns/ssn/> .
+@prefix qudt: <http://qudt.org/schema/qudt/> .
+@prefix unit: <http://qudt.org/vocab/unit/> .
+@prefix fofa: <http://purl.org/fofa/ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+
+ex:1 a fofa:Sheet ;
+    fofa:hasThickness [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Thickness ;
+        qudt:quantityValue [
+            a qudt:QuantityValue ;
+            qudt:hasUnit unit:MilliM ;
+            qudt:value 176.0 ;
+        ]
+    ] ;
+    fofa:hasMaterialType "PA6CF" ;
+    fofa:hasLagenaufbau "[0/90/45/-45/0/90]s" ;
+    fofa:hasWidth [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Width ;
+        qudt:quantityValue [
+            a qudt:QuantityValue ;
+            qudt:hasUnit unit:MilliM ;
+            qudt:value 400.0 ;
+        ]
+    ] ;
+    fofa:hasLength [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Length ;
+        qudt:quantityValue [
+            a qudt:QuantityValue ;
+            qudt:hasUnit unit:MilliM ;
+            qudt:value 400.0 ;
+        ]
+    ] .
+

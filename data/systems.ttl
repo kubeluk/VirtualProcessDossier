@@ -1,0 +1,73 @@
+@prefix : <#> .
+@prefix qudt: <http://qudt.org/schema/qudt/> .
+@prefix part: <http://purl.org/for/part#> .
+@prefix laminat: <http://purl.org/for/laminat#> .
+@prefix layup: <http://purl.org/for/layup#> .
+@prefix tape: <http://purl.org/for/tape#> .
+@prefix run: <http://purl.org/for/run#> .
+@prefix workflow: <http://purl.org/for/workflow#> .
+@prefix activity: <http://purl.org/for/activity#> .
+@prefix machine: <http://purl.org/for/machine#> .
+@prefix gripper: <http://purl.org/for/gripper#> .
+@prefix plan: <http://purl.org/for/plan#> .
+@prefix param: <http://purl.org/for/param#> .
+@prefix tool: <http://purl.org/for/tool#> .
+@prefix pos: <http://purl.org/for/position#> .
+@prefix vpd: <http://purl.org/vpd/data#> .
+@prefix quantitykind: <http://qudt.org/vocab/quantitykind/> .
+@prefix unit: <http://qudt.org/vocab/unit/> .
+@prefix sosa: <http://www.w3.org/ns/sosa/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix wild: <http://purl.org/wild/vocab#> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix geo: <http://www.opengis.net/ont/geosparql#> .
+
+# Machines
+
+## Gripper Frame
+
+machine:gripperFrame a ssn:System, geo:Feature ;
+    rdfs:label "Gripper Frame"@en ;
+    rdfs:comment "The gripper frame is a base structure that is comprised of a range of grippers which are used for fixing a sheet of laminate in place."@en ;
+    geo:hasSize [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Length ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value 800.0
+    ] ;
+    geo:hasSize [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Width ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value 800.0
+    ] ;
+    pos:hasPositionalReference pos:gripperFrameReferencePoint ;
+    ssn:hasSubSystem gripper:1, gripper:2, gripper:3, gripper:4, gripper:5, gripper:6, gripper:7, gripper:8 .
+
+pos:gripperFrameReferencePoint a pos:Origin ;
+    rdfs:label "Greiferrahmen Reference Point"@en ;
+    rdfs:comment "Die linke, untere Ecke des Greiferrahmens bildet den Bezugspunkt für die Positionen der Greiferpunkte."@de .
+
+## Oven
+
+machine:oven a ssn:System ;
+    rdfs:label "Infrared (IR) Oven"@en ;
+    rdfs:comment "Infrared (IR) oven comprised of two IR fields (top and bottom)."@en ;
+    ssn:hasSubSystem machine:ir_top, machine:ir_bottom .
+
+machine:ir_top a ssn:System ;
+    rdfs:label "IR Field (top)"@en ;
+    rdfs:comment "The top IR field consists of three individually controllable zones: middle, edge and corner zones for the top part of the laminat."@en ;
+    ssn:hasSubSystem machine:ir_top_middle, machine:ir_top_edge, machine:ir_top_corner .
+
+machine:ir_bottom a ssn:System ;
+    rdfs:label "IR Field (bottom)"@en ;
+    rdfs:comment "The bottom IR field consists of three individually controllable zones: middle, edge and corner zones for the bottom part of the laminat."@en ;
+    ssn:hasSubSystem machine:ir_bottom_middle, machine:ir_bottom_edge, machine:ir_bottom_corner .
+
+## Press
+
+machine:press a ssn:System ;
+    rdfs:label "Press"@en ;
+    rdfs:comment "The press is used for forming the laminat."@en .

@@ -1,0 +1,57 @@
+@prefix : <#> .
+@prefix qudt: <http://qudt.org/schema/qudt/> .
+@prefix part: <http://purl.org/for/part#> .
+@prefix laminat: <http://purl.org/for/laminat#> .
+@prefix layup: <http://purl.org/for/layup#> .
+@prefix tape: <http://purl.org/for/tape#> .
+@prefix run: <http://purl.org/for/run#> .
+@prefix workflow: <http://purl.org/for/workflow#> .
+@prefix activity: <http://purl.org/for/activity#> .
+@prefix machine: <http://purl.org/for/machine#> .
+@prefix gripper: <http://purl.org/for/gripper#> .
+@prefix plan: <http://purl.org/for/plan#> .
+@prefix param: <http://purl.org/for/param#> .
+@prefix tool: <http://purl.org/for/tool#> .
+@prefix pos: <http://purl.org/for/position#> .
+@prefix vpd: <http://purl.org/vpd/data#> .
+@prefix quantitykind: <http://qudt.org/vocab/quantitykind/> .
+@prefix unit: <http://qudt.org/vocab/unit/> .
+@prefix sosa: <http://www.w3.org/ns/sosa/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix wild: <http://purl.org/wild/vocab#> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix geo: <http://www.opengis.net/ont/geosparql#> .
+
+# Workflow Model
+
+## Stamp Forming Flow
+
+workflow:stampForming a wild:WorkflowModel ;
+    rdfs:label "Stamp Forming Flow" ;
+    rdfs:comment "Workflow for the stamp forming process of a composite laminate." ;
+    wild:hasBehaviour workflow:stampForming_root .
+
+workflow:stampForming_root a wild:ParallelActivity ;
+    rdfs:label "Stamp Forming Behaviour" ;
+    wild:hasChildActivities ( activity:gripping workflow:heatingTransferingForming ) .
+
+workflow:heatingTransferingForming a wild:SequentialActivity ;
+    rdfs:label "Heating and Forming" ;
+    wild:hasChildActivities ( activity:heating activity:transfering activity:forming ) .
+
+activity:gripping a wild:AtomicActivity ;
+    rdfs:label "Gripping" ;
+    rdfs:comment "The gripping activity involves the use of the gripper frame to hold the laminate in place during the heating and forming activities." .
+
+activity:heating a wild:AtomicActivity ;
+    rdfs:label "Heating" ;
+    rdfs:comment "The heating activity involves the use of the IR oven to heat the laminate to the desired temperature." .
+
+activity:transfering a wild:AtomicActivity ;
+    rdfs:label "Transfering" ;
+    rdfs:comment "The transfering activity involves moving the laminate from the heating station to the press." .
+
+activity:forming a wild:AtomicActivity ;
+    rdfs:label "Forming" ;
+    rdfs:comment "The forming activity involves the use of the press to shape the laminate." .

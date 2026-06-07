@@ -1,0 +1,290 @@
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix ex:   <http://example.org/vpd/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix ssn:  <http://www.w3.org/ns/ssn/> .
+@prefix qudt: <http://qudt.org/schema/qudt/> .
+@prefix unit: <http://qudt.org/vocab/unit/> .
+@prefix fofa: <http://purl.org/fofa/ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+
+# T-Box
+
+fofa:PressParameterization a rdfs:Class .
+fofa:ParameterValue a rdfs:Class .
+
+fofa:hasParameterValue a rdf:Property ;
+    rdfs:domain fofa:PressParameterization ;
+    rdfs:range fofa:ParameterValue .
+
+fofa:forProperty a rdf:Property ;
+    rdfs:domain fofa:ParameterValue ;
+    rdfs:range ssn:Property .
+
+fofa:targetsSystem a rdf:Property ;
+    rdfs:domain fofa:PressParameterization ;
+    rdfs:range ssn:System .
+
+# A-Box
+
+fofa:press a ssn:System ;
+    ssn:hasProperty fofa:pressSpeed ,
+                    fofa:pressForce ,
+                    fofa:pressDuration ,
+                    fofa:pressToolTemperature .
+
+fofa:pressSpeed a ssn:Property .
+fofa:pressForce a ssn:Property .
+fofa:pressDuration a ssn:Property .
+fofa:pressToolTemperature a ssn:Property .
+
+## Gripper Frame
+
+vpd:sys-gripper-frame-1
+        a                    ssn:System;
+        dcterms:description  "A frame of eight grippers that hold a sheet of material in place."@en;
+        dcterms:identifier   "gripper-frame-1";
+        dcterms:title        "Gripper Frame v1"@en;
+        ssn:hasSubSystem     vpd:sys-gripper-1-1 , vpd:sys-gripper-2-7 , vpd:sys-gripper-3-13 , vpd:sys-gripper-4-19 , vpd:sys-gripper-5-25 , vpd:sys-gripper-6-31 , vpd:sys-gripper-7-37 , vpd:sys-gripper-8-43 .
+
+vpd:sys-gripper-1-1  a      ssn:System;
+        dcterms:identifier  "gripper-1";
+        dcterms:title       "Gripper 1"@en;
+        ssn:hasSubSystem    vpd:sys-gripper-1-force-sensor-1-2 , vpd:sys-gripper-1-angle-sensor-1-3 , vpd:sys-gripper-1-temp-sensor-1-4 , vpd:sys-gripper-1-temp-sensor-2-5 , vpd:sys-gripper-1-step-error-sensor-1-6 .
+
+vpd:sys-gripper-1-force-sensor-1-2
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-1-force-sensor-1";
+        dcterms:title       "Force Sensor 1"@en .
+
+vpd:sys-gripper-1-angle-sensor-1-3
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-1-angle-sensor-1";
+        dcterms:title       "Angle Sensor 1"@en .
+
+vpd:sys-gripper-1-temp-sensor-1-4
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-1-temp-sensor-1";
+        dcterms:title       "Temperature Sensor 1-1"@en .
+
+vpd:sys-gripper-1-temp-sensor-2-5
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-1-temp-sensor-2";
+        dcterms:title       "Temperature Sensor 1-2"@en .
+
+vpd:sys-gripper-1-step-error-sensor-1-6
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-1-step-error-sensor-1";
+        dcterms:title       "Step Error Sensor 1"@en .
+
+vpd:sys-gripper-2-7  a      ssn:System;
+        dcterms:identifier  "gripper-2";
+        dcterms:title       "Gripper 2"@en;
+        ssn:hasSubSystem    vpd:sys-gripper-2-force-sensor-1-8 , vpd:sys-gripper-2-angle-sensor-1-9 , vpd:sys-gripper-2-temp-sensor-1-10 , vpd:sys-gripper-2-temp-sensor-2-11 , vpd:sys-gripper-2-step-error-sensor-1-12 .
+
+vpd:sys-gripper-2-force-sensor-1-8
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-2-force-sensor-1";
+        dcterms:title       "Force Sensor 1"@en .
+
+vpd:sys-gripper-2-angle-sensor-1-9
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-2-angle-sensor-1";
+        dcterms:title       "Angle Sensor 1"@en .
+
+vpd:sys-gripper-2-temp-sensor-1-10
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-2-temp-sensor-1";
+        dcterms:title       "Temperature Sensor 2-1"@en .
+
+vpd:sys-gripper-2-temp-sensor-2-11
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-2-temp-sensor-2";
+        dcterms:title       "Temperature Sensor 2-2"@en .
+
+vpd:sys-gripper-2-step-error-sensor-1-12
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-2-step-error-sensor-1";
+        dcterms:title       "Step Error Sensor 1"@en .
+
+vpd:sys-gripper-3-13  a     ssn:System;
+        dcterms:identifier  "gripper-3";
+        dcterms:title       "Gripper 3"@en;
+        ssn:hasSubSystem    vpd:sys-gripper-3-force-sensor-1-14 , vpd:sys-gripper-3-angle-sensor-1-15 , vpd:sys-gripper-3-temp-sensor-1-16 , vpd:sys-gripper-3-temp-sensor-2-17 , vpd:sys-gripper-3-step-error-sensor-1-18 .
+
+vpd:sys-gripper-3-force-sensor-1-14
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-3-force-sensor-1";
+        dcterms:title       "Force Sensor 1"@en .
+
+vpd:sys-gripper-3-angle-sensor-1-15
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-3-angle-sensor-1";
+        dcterms:title       "Angle Sensor 1"@en .
+
+vpd:sys-gripper-3-temp-sensor-1-16
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-3-temp-sensor-1";
+        dcterms:title       "Temperature Sensor 3-1"@en .
+
+vpd:sys-gripper-3-temp-sensor-2-17
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-3-temp-sensor-2";
+        dcterms:title       "Temperature Sensor 3-2"@en .
+
+vpd:sys-gripper-3-step-error-sensor-1-18
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-3-step-error-sensor-1";
+        dcterms:title       "Step Error Sensor 1"@en .
+
+vpd:sys-gripper-4-19  a     ssn:System;
+        dcterms:identifier  "gripper-4";
+        dcterms:title       "Gripper 4"@en;
+        ssn:hasSubSystem    vpd:sys-gripper-4-force-sensor-1-20 , vpd:sys-gripper-4-angle-sensor-1-21 , vpd:sys-gripper-4-temp-sensor-1-22 , vpd:sys-gripper-4-temp-sensor-2-23 , vpd:sys-gripper-4-step-error-sensor-1-24 .
+
+vpd:sys-gripper-4-force-sensor-1-20
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-4-force-sensor-1";
+        dcterms:title       "Force Sensor 1"@en .
+
+vpd:sys-gripper-4-angle-sensor-1-21
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-4-angle-sensor-1";
+        dcterms:title       "Angle Sensor 1"@en .
+
+vpd:sys-gripper-4-temp-sensor-1-22
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-4-temp-sensor-1";
+        dcterms:title       "Temperature Sensor 4-1"@en .
+
+vpd:sys-gripper-4-temp-sensor-2-23
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-4-temp-sensor-2";
+        dcterms:title       "Temperature Sensor 4-2"@en .
+
+vpd:sys-gripper-4-step-error-sensor-1-24
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-4-step-error-sensor-1";
+        dcterms:title       "Step Error Sensor 1"@en .
+
+vpd:sys-gripper-5-25  a     ssn:System;
+        dcterms:identifier  "gripper-5";
+        dcterms:title       "Gripper 5"@en;
+        ssn:hasSubSystem    vpd:sys-gripper-5-force-sensor-1-26 , vpd:sys-gripper-5-angle-sensor-1-27 , vpd:sys-gripper-5-temp-sensor-1-28 , vpd:sys-gripper-5-temp-sensor-2-29 , vpd:sys-gripper-5-step-error-sensor-1-30 .
+
+vpd:sys-gripper-5-force-sensor-1-26
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-5-force-sensor-1";
+        dcterms:title       "Force Sensor 1"@en .
+
+vpd:sys-gripper-5-angle-sensor-1-27
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-5-angle-sensor-1";
+        dcterms:title       "Angle Sensor 1"@en .
+
+vpd:sys-gripper-5-temp-sensor-1-28
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-5-temp-sensor-1";
+        dcterms:title       "Temperature Sensor 5-1"@en .
+
+vpd:sys-gripper-5-temp-sensor-2-29
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-5-temp-sensor-2";
+        dcterms:title       "Temperature Sensor 5-2"@en .
+
+vpd:sys-gripper-5-step-error-sensor-1-30
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-5-step-error-sensor-1";
+        dcterms:title       "Step Error Sensor 1"@en .
+
+vpd:sys-gripper-6-31  a     ssn:System;
+        dcterms:identifier  "gripper-6";
+        dcterms:title       "Gripper 6"@en;
+        ssn:hasSubSystem    vpd:sys-gripper-6-force-sensor-1-32 , vpd:sys-gripper-6-angle-sensor-1-33 , vpd:sys-gripper-6-temp-sensor-1-34 , vpd:sys-gripper-6-temp-sensor-2-35 , vpd:sys-gripper-6-step-error-sensor-1-36 .
+
+vpd:sys-gripper-6-force-sensor-1-32
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-6-force-sensor-1";
+        dcterms:title       "Force Sensor 1"@en .
+
+vpd:sys-gripper-6-angle-sensor-1-33
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-6-angle-sensor-1";
+        dcterms:title       "Angle Sensor 1"@en .
+
+vpd:sys-gripper-6-temp-sensor-1-34
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-6-temp-sensor-1";
+        dcterms:title       "Temperature Sensor 6-1"@en .
+
+vpd:sys-gripper-6-temp-sensor-2-35
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-6-temp-sensor-2";
+        dcterms:title       "Temperature Sensor 6-2"@en .
+
+vpd:sys-gripper-6-step-error-sensor-1-36
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-6-step-error-sensor-1";
+        dcterms:title       "Step Error Sensor 1"@en .
+
+vpd:sys-gripper-7-37  a     ssn:System;
+        dcterms:identifier  "gripper-7";
+        dcterms:title       "Gripper 7"@en;
+        ssn:hasSubSystem    vpd:sys-gripper-7-force-sensor-1-38 , vpd:sys-gripper-7-angle-sensor-1-39 , vpd:sys-gripper-7-temp-sensor-1-40 , vpd:sys-gripper-7-temp-sensor-2-41 , vpd:sys-gripper-7-step-error-sensor-1-42 .
+
+vpd:sys-gripper-7-force-sensor-1-38
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-7-force-sensor-1";
+        dcterms:title       "Force Sensor 1"@en .
+
+vpd:sys-gripper-7-angle-sensor-1-39
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-7-angle-sensor-1";
+        dcterms:title       "Angle Sensor 1"@en .
+
+vpd:sys-gripper-7-temp-sensor-1-40
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-7-temp-sensor-1";
+        dcterms:title       "Temperature Sensor 7-1"@en .
+
+vpd:sys-gripper-7-temp-sensor-2-41
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-7-temp-sensor-2";
+        dcterms:title       "Temperature Sensor 7-2"@en .
+
+vpd:sys-gripper-7-step-error-sensor-1-42
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-7-step-error-sensor-1";
+        dcterms:title       "Step Error Sensor 1"@en .
+
+vpd:sys-gripper-8-43  a     ssn:System;
+        dcterms:identifier  "gripper-8";
+        dcterms:title       "Gripper 8"@en;
+        ssn:hasSubSystem    vpd:sys-gripper-8-force-sensor-1-44 , vpd:sys-gripper-8-angle-sensor-1-45 , vpd:sys-gripper-8-temp-sensor-1-46 , vpd:sys-gripper-8-temp-sensor-2-47 , vpd:sys-gripper-8-step-error-sensor-1-48 .
+
+vpd:sys-gripper-8-force-sensor-1-44
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-8-force-sensor-1";
+        dcterms:title       "Force Sensor 1"@en .
+
+vpd:sys-gripper-8-angle-sensor-1-45
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-8-angle-sensor-1";
+        dcterms:title       "Angle Sensor 1"@en .
+
+vpd:sys-gripper-8-temp-sensor-1-46
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-8-temp-sensor-1";
+        dcterms:title       "Temperature Sensor 8-1"@en .
+
+vpd:sys-gripper-8-temp-sensor-2-47
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-8-temp-sensor-2";
+        dcterms:title       "Temperature Sensor 8-2"@en .
+
+vpd:sys-gripper-8-step-error-sensor-1-48
+        a                   sosa:Sensor;
+        dcterms:identifier  "gripper-8-step-error-sensor-1";
+        dcterms:title       "Step Error Sensor 1"@en .
