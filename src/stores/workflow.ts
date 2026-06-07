@@ -61,7 +61,7 @@ export interface RunActivityInstance {
   uri: string                       // control flow activity instance URI (fallback = modelActivityUri)
   state: string | null              // 'initialized' | 'active' | 'done' | null
   modelActivityUri: string
-  modelActivityTitle: string | null // from model activity's dcterms:title
+  modelActivityTitle: string | null // from model activity's rdfs:label
   modelActivityType: string | null  // 'AtomicActivity' | 'ParallelActivity' | 'SequentialActivity'
   datasets: WorkflowStepDataset[]
   children: RunActivityInstance[]
@@ -266,11 +266,12 @@ export const useWorkflowStore = defineStore('workflow', () => {
     const query = `
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
+      PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
 
       SELECT ?workflow ?title ?description ?issued WHERE {
         ?workflow a wild:WorkflowModel .
-        OPTIONAL { ?workflow dcterms:title ?title }
-        OPTIONAL { ?workflow dcterms:description ?description }
+        OPTIONAL { ?workflow rdfs:label ?title }
+        OPTIONAL { ?workflow rdfs:comment ?description }
         OPTIONAL { ?workflow dcterms:issued ?issued }
       }
       ORDER BY ?title
@@ -289,11 +290,13 @@ export const useWorkflowStore = defineStore('workflow', () => {
     const metaQuery = `
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
+      PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
 
       SELECT ?wfTitle ?wfDesc ?wfIssued ?root ?rootType WHERE {
         BIND(<${uri}> AS ?wf)
-        ?wf dcterms:title ?wfTitle .
-        OPTIONAL { ?wf dcterms:description ?wfDesc }
+        ?wf a wild:WorkflowModel .
+        OPTIONAL { ?wf rdfs:label ?wfTitle }
+        OPTIONAL { ?wf rdfs:comment ?wfDesc }
         OPTIONAL { ?wf dcterms:issued ?wfIssued }
         OPTIONAL {
           ?wf wild:hasBehaviour ?root .
@@ -311,24 +314,25 @@ export const useWorkflowStore = defineStore('workflow', () => {
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
       PREFIX ssn:     <http://www.w3.org/ns/ssn/>
+      PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
 
       SELECT DISTINCT ?parent ?child ?childTitle ?childDesc ?childType
                       ?childSystem ?childSystemTitle ?childInput ?childInputTitle WHERE {
         <${uri}> wild:hasBehaviour/(wild:hasChildActivities/rdf:rest*/rdf:first)* ?parent .
         ?parent wild:hasChildActivities/rdf:rest*/rdf:first ?child .
-        OPTIONAL { ?child dcterms:title ?childTitle }
-        OPTIONAL { ?child dcterms:description ?childDesc }
+        OPTIONAL { ?child rdfs:label ?childTitle }
+        OPTIONAL { ?child rdfs:comment ?childDesc }
         OPTIONAL {
           ?child a ?childType .
           FILTER(STRSTARTS(STR(?childType), 'http://purl.org/wild/vocab#'))
         }
         OPTIONAL {
           ?child ssn:implementedBy ?childSystem .
-          OPTIONAL { ?childSystem dcterms:title ?childSystemTitle }
+          OPTIONAL { ?childSystem rdfs:label ?childSystemTitle }
         }
         OPTIONAL {
           ?child ssn:hasInput ?childInput .
-          OPTIONAL { ?childInput dcterms:title ?childInputTitle }
+          OPTIONAL { ?childInput rdfs:label ?childInputTitle }
         }
       }
     `
@@ -349,7 +353,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
     if (!rootUri) {
       return {
         uri,
-        title: first.wfTitle.value,
+        title: first.wfTitle?.value ?? uri,
         description: first.wfDesc?.value ?? null,
         issued: first.wfIssued?.value ?? null,
         rootType: null,
@@ -416,7 +420,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
 
     return {
       uri,
-      title: first.wfTitle.value,
+      title: first.wfTitle?.value ?? uri,
       description: first.wfDesc?.value ?? null,
       issued: first.wfIssued?.value ?? null,
       rootType,
@@ -431,12 +435,13 @@ export const useWorkflowStore = defineStore('workflow', () => {
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX prov:    <http://www.w3.org/ns/prov#>
+      PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
 
       SELECT ?instance ?title ?description ?state ?started WHERE {
         ?instance a wild:WorkflowInstance ;
                   wild:workflowInstanceOf <${modelUri}> .
-        OPTIONAL { ?instance dcterms:title ?title }
-        OPTIONAL { ?instance dcterms:description ?description }
+        OPTIONAL { ?instance rdfs:label ?title }
+        OPTIONAL { ?instance rdfs:comment ?description }
         OPTIONAL { ?instance wild:hasState ?state }
         OPTIONAL { ?instance prov:startedAtTime ?started }
       }
@@ -458,16 +463,17 @@ export const useWorkflowStore = defineStore('workflow', () => {
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX prov:    <http://www.w3.org/ns/prov#>
+      PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
 
       SELECT ?instTitle ?instDesc ?instState ?instStarted ?modelUri ?modelTitle ?root ?rootType WHERE {
         BIND(<${uri}> AS ?instance)
         ?instance a wild:WorkflowInstance ;
                   wild:workflowInstanceOf ?modelUri .
-        OPTIONAL { ?instance dcterms:title ?instTitle }
-        OPTIONAL { ?instance dcterms:description ?instDesc }
+        OPTIONAL { ?instance rdfs:label ?instTitle }
+        OPTIONAL { ?instance rdfs:comment ?instDesc }
         OPTIONAL { ?instance wild:hasState ?instState }
         OPTIONAL { ?instance prov:startedAtTime ?instStarted }
-        OPTIONAL { ?modelUri dcterms:title ?modelTitle }
+        OPTIONAL { ?modelUri rdfs:label ?modelTitle }
         OPTIONAL {
           ?modelUri wild:hasBehaviour ?root .
           OPTIONAL { ?root a ?rootType . FILTER(STRSTARTS(STR(?rootType), 'http://purl.org/wild/vocab#')) }
@@ -490,11 +496,12 @@ export const useWorkflowStore = defineStore('workflow', () => {
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+      PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
 
       SELECT DISTINCT ?parent ?child ?childTitle ?childType WHERE {
         <${modelUri}> wild:hasBehaviour/(wild:hasChildActivities/rdf:rest*/rdf:first)* ?parent .
         ?parent wild:hasChildActivities/rdf:rest*/rdf:first ?child .
-        OPTIONAL { ?child dcterms:title ?childTitle }
+        OPTIONAL { ?child rdfs:label ?childTitle }
         OPTIONAL {
           ?child a ?childType .
           FILTER(STRSTARTS(STR(?childType), 'http://purl.org/wild/vocab#'))
@@ -648,21 +655,21 @@ export const useWorkflowStore = defineStore('workflow', () => {
     const escapedTitle = title.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
     const escapedDesc = description.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
     const descTriple = description.trim()
-      ? `<${instanceUri}> dcterms:description "${escapedDesc}"@en .`
+      ? `<${instanceUri}> rdfs:comment "${escapedDesc}"@en .`
       : ''
     const update = `
-      PREFIX dcterms: <http://purl.org/dc/terms/>
+      PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
       DELETE {
-        <${instanceUri}> dcterms:title ?oldTitle .
-        <${instanceUri}> dcterms:description ?oldDesc .
+        <${instanceUri}> rdfs:label ?oldTitle .
+        <${instanceUri}> rdfs:comment ?oldDesc .
       }
       INSERT {
-        <${instanceUri}> dcterms:title "${escapedTitle}"@en .
+        <${instanceUri}> rdfs:label "${escapedTitle}"@en .
         ${descTriple}
       }
       WHERE {
-        OPTIONAL { <${instanceUri}> dcterms:title ?oldTitle }
-        OPTIONAL { <${instanceUri}> dcterms:description ?oldDesc }
+        OPTIONAL { <${instanceUri}> rdfs:label ?oldTitle }
+        OPTIONAL { <${instanceUri}> rdfs:comment ?oldDesc }
       }
     `
     await updateSparql(graphStore.updateEndpoint, update)
@@ -675,11 +682,13 @@ export const useWorkflowStore = defineStore('workflow', () => {
     const metaQuery = `
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
+      PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
 
       SELECT ?wfTitle ?wfDesc ?root ?rootType WHERE {
         BIND(<${uri}> AS ?wf)
-        ?wf dcterms:title ?wfTitle .
-        OPTIONAL { ?wf dcterms:description ?wfDesc }
+        ?wf a wild:WorkflowModel .
+        OPTIONAL { ?wf rdfs:label ?wfTitle }
+        OPTIONAL { ?wf rdfs:comment ?wfDesc }
         OPTIONAL {
           ?wf wild:hasBehaviour ?root .
           OPTIONAL { ?root a ?rootType . FILTER(STRSTARTS(STR(?rootType), 'http://purl.org/wild/vocab#')) }
@@ -691,12 +700,13 @@ export const useWorkflowStore = defineStore('workflow', () => {
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
       PREFIX ssn:     <http://www.w3.org/ns/ssn/>
+      PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
 
       SELECT DISTINCT ?parent ?child ?childTitle ?childDesc ?childType ?childSystem ?childInput ?childIssued WHERE {
         <${uri}> wild:hasBehaviour/(wild:hasChildActivities/rdf:rest*/rdf:first)* ?parent .
         ?parent wild:hasChildActivities/rdf:rest*/rdf:first ?child .
-        OPTIONAL { ?child dcterms:title ?childTitle }
-        OPTIONAL { ?child dcterms:description ?childDesc }
+        OPTIONAL { ?child rdfs:label ?childTitle }
+        OPTIONAL { ?child rdfs:comment ?childDesc }
         OPTIONAL {
           ?child a ?childType .
           FILTER(STRSTARTS(STR(?childType), 'http://purl.org/wild/vocab#'))
@@ -721,7 +731,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
       rawRootType === 'ParallelActivity' ? 'ParallelActivity' : 'SequentialActivity'
 
     if (!rootUri) {
-      return { title: first.wfTitle.value, description: first.wfDesc?.value ?? '', rootType: 'SequentialActivity', steps: [] }
+      return { title: first.wfTitle?.value ?? '', description: first.wfDesc?.value ?? '', rootType: 'SequentialActivity', steps: [] }
     }
 
     type NodeMeta = { title: string | null; desc: string | null; type: string | null; systemUri: string | null; inputUri: string | null; isLibraryRef: boolean }
@@ -771,7 +781,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
     }
 
     const steps = sortedChildren(rootUri).map(buildStepForm)
-    return { title: first.wfTitle.value, description: first.wfDesc?.value ?? '', rootType, steps }
+    return { title: first.wfTitle?.value ?? '', description: first.wfDesc?.value ?? '', rootType, steps }
   }
 
   // ── Update workflow model (only allowed when no runs exist) ───────────────
@@ -809,9 +819,9 @@ export const useWorkflowStore = defineStore('workflow', () => {
     const insertLines: string[] = []
 
     insertLines.push(`  <${uri}> a wild:WorkflowModel .`)
-    insertLines.push(`  <${uri}> dcterms:title "${esc(form.title)}"@en .`)
+    insertLines.push(`  <${uri}> rdfs:label "${esc(form.title)}"@en .`)
     if (form.description.trim()) {
-      insertLines.push(`  <${uri}> dcterms:description "${esc(form.description)}"@en .`)
+      insertLines.push(`  <${uri}> rdfs:comment "${esc(form.description)}"@en .`)
     }
     insertLines.push(`  <${uri}> wild:hasBehaviour <${rootUri}> .`)
 
@@ -820,9 +830,9 @@ export const useWorkflowStore = defineStore('workflow', () => {
       insertLines.push(`  <${nodeUri}> a wild:${step.type} .`)
       if (step.type === 'AtomicActivity') {
         const title = step.title.trim()
-        insertLines.push(`  <${nodeUri}> dcterms:title "${esc(title)}"@en .`)
+        insertLines.push(`  <${nodeUri}> rdfs:label "${esc(title)}"@en .`)
         if (step.description.trim()) {
-          insertLines.push(`  <${nodeUri}> dcterms:description "${esc(step.description)}"@en .`)
+          insertLines.push(`  <${nodeUri}> rdfs:comment "${esc(step.description)}"@en .`)
         }
         insertLines.push(`  <${nodeUri}> a sosa:Procedure .`)
         insertLines.push(`  <${nodeUri}> dcterms:issued "${now}"^^xsd:dateTime .`)
@@ -855,6 +865,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
       PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
       PREFIX ssn:     <http://www.w3.org/ns/ssn/>
       PREFIX sosa:    <http://www.w3.org/ns/sosa/>
+      PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
       PREFIX xsd:     <http://www.w3.org/2001/XMLSchema#>
 
       DELETE { <${uri}> ?p ?o }
@@ -888,7 +899,7 @@ ${insertLines.join('\n')}
   }
 
   // ── Update workflow model metadata (safe when runs exist) ────────────────
-  // Only updates dcterms:title and dcterms:description on the workflow model
+  // Only updates rdfs:label and rdfs:comment on the workflow model
   // and each existing step / leaf activity. The structural RDF (types, lists,
   // hasBehaviour) is untouched.
 
@@ -899,13 +910,13 @@ ${insertLines.join('\n')}
 
     function metaOp(resourceUri: string, newTitle: string, newDesc: string): string {
       const descInsert = newDesc.trim()
-        ? `<${resourceUri}> dcterms:description "${esc(newDesc)}"@en .`
+        ? `<${resourceUri}> rdfs:comment "${esc(newDesc)}"@en .`
         : ''
       return `
-        DELETE { <${resourceUri}> dcterms:title ?t . <${resourceUri}> dcterms:description ?d }
-        INSERT { <${resourceUri}> dcterms:title "${esc(newTitle)}"@en . ${descInsert} }
-        WHERE  { OPTIONAL { <${resourceUri}> dcterms:title ?t }
-                 OPTIONAL { <${resourceUri}> dcterms:description ?d } }`
+        DELETE { <${resourceUri}> rdfs:label ?t . <${resourceUri}> rdfs:comment ?d }
+        INSERT { <${resourceUri}> rdfs:label "${esc(newTitle)}"@en . ${descInsert} }
+        WHERE  { OPTIONAL { <${resourceUri}> rdfs:label ?t }
+                 OPTIONAL { <${resourceUri}> rdfs:comment ?d } }`
     }
 
     function ssnOp(resourceUri: string, systemUri: string | undefined, inputUri: string | undefined): string {
@@ -936,6 +947,7 @@ ${insertLines.join('\n')}
     const update = `
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX ssn:     <http://www.w3.org/ns/ssn/>
+      PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
       ${ops.join(' ;\n')}
     `
 
@@ -978,9 +990,9 @@ ${insertLines.join('\n')}
     const lines: string[] = []
 
     lines.push(`  <${workflowUri}> a wild:WorkflowModel .`)
-    lines.push(`  <${workflowUri}> dcterms:title "${esc(form.title)}"@en .`)
+    lines.push(`  <${workflowUri}> rdfs:label "${esc(form.title)}"@en .`)
     if (form.description.trim()) {
-      lines.push(`  <${workflowUri}> dcterms:description "${esc(form.description)}"@en .`)
+      lines.push(`  <${workflowUri}> rdfs:comment "${esc(form.description)}"@en .`)
     }
     lines.push(`  <${workflowUri}> dcterms:issued "${now}"^^xsd:dateTime .`)
     lines.push(`  <${workflowUri}> wild:hasBehaviour <${rootUri}> .`)
@@ -990,9 +1002,9 @@ ${insertLines.join('\n')}
       lines.push(`  <${nodeUri}> a wild:${step.type} .`)
       if (step.type === 'AtomicActivity') {
         const title = step.title.trim()
-        lines.push(`  <${nodeUri}> dcterms:title "${esc(title)}"@en .`)
+        lines.push(`  <${nodeUri}> rdfs:label "${esc(title)}"@en .`)
         if (step.description.trim()) {
-          lines.push(`  <${nodeUri}> dcterms:description "${esc(step.description)}"@en .`)
+          lines.push(`  <${nodeUri}> rdfs:comment "${esc(step.description)}"@en .`)
         }
         lines.push(`  <${nodeUri}> a sosa:Procedure .`)
         lines.push(`  <${nodeUri}> dcterms:issued "${now}"^^xsd:dateTime .`)
@@ -1025,6 +1037,7 @@ ${insertLines.join('\n')}
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
       PREFIX ssn:     <http://www.w3.org/ns/ssn/>
+      PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
       PREFIX xsd:     <http://www.w3.org/2001/XMLSchema#>
 
       INSERT DATA {
@@ -1074,9 +1087,9 @@ ${lines.join('\n')}
     // WorkflowInstance
     lines.push(`  <${instanceUri}> a wild:WorkflowInstance .`)
     lines.push(`  <${instanceUri}> wild:workflowInstanceOf <${modelUri}> .`)
-    lines.push(`  <${instanceUri}> dcterms:title "${esc(title)}"@en .`)
+    lines.push(`  <${instanceUri}> rdfs:label "${esc(title)}"@en .`)
     if (description.trim()) {
-      lines.push(`  <${instanceUri}> dcterms:description "${esc(description)}"@en .`)
+      lines.push(`  <${instanceUri}> rdfs:comment "${esc(description)}"@en .`)
     }
     lines.push(`  <${instanceUri}> prov:startedAtTime "${now}"^^xsd:dateTime .`)
     lines.push(`  <${instanceUri}> wild:hasState wild:done .`)
@@ -1098,6 +1111,7 @@ ${lines.join('\n')}
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX prov:    <http://www.w3.org/ns/prov#>
+      PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
       PREFIX xsd:     <http://www.w3.org/2001/XMLSchema#>
 
       INSERT DATA {
@@ -1116,17 +1130,18 @@ ${lines.join('\n')}
       PREFIX ssn:     <http://www.w3.org/ns/ssn/>
       PREFIX sosa:    <http://www.w3.org/ns/sosa/>
       PREFIX dcterms: <http://purl.org/dc/terms/>
+      PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
 
       SELECT ?uri ?type ?title ?identifier ?description ?parent ?actUri ?actTitle WHERE {
         ?uri a ?type .
         FILTER(?type IN (ssn:System, sosa:Sensor, sosa:Actuator))
-        OPTIONAL { ?uri dcterms:title ?title }
+        OPTIONAL { ?uri rdfs:label ?title }
         OPTIONAL { ?uri dcterms:identifier ?identifier }
-        OPTIONAL { ?uri dcterms:description ?description }
+        OPTIONAL { ?uri rdfs:comment ?description }
         OPTIONAL { ?parent ssn:hasSubSystem ?uri }
         OPTIONAL {
           ?uri ssn:implements ?actUri .
-          OPTIONAL { ?actUri dcterms:title ?actTitle }
+          OPTIONAL { ?actUri rdfs:label ?actTitle }
         }
       }
       ORDER BY ?title ?actTitle
@@ -1241,10 +1256,10 @@ ${lines.join('\n')}
 
     function writeNode(nodeUri: string, node: { type: SystemNodeType; title: string; identifier: string; description: string; children: SystemNodeForm[] }, parentUri: string | null, counter: { n: number }) {
       lines.push(`  <${nodeUri}> a ${typeClass(node.type)} .`)
-      lines.push(`  <${nodeUri}> dcterms:title "${esc(node.title)}"@en .`)
+      lines.push(`  <${nodeUri}> rdfs:label "${esc(node.title)}"@en .`)
       lines.push(`  <${nodeUri}> dcterms:identifier "${esc(node.identifier)}" .`)
       if (node.description.trim()) {
-        lines.push(`  <${nodeUri}> dcterms:description "${esc(node.description)}"@en .`)
+        lines.push(`  <${nodeUri}> rdfs:comment "${esc(node.description)}"@en .`)
       }
       if (parentUri) {
         lines.push(`  <${parentUri}> ssn:hasSubSystem <${nodeUri}> .`)
@@ -1265,6 +1280,7 @@ ${lines.join('\n')}
       PREFIX ssn:     <http://www.w3.org/ns/ssn/>
       PREFIX sosa:    <http://www.w3.org/ns/sosa/>
       PREFIX dcterms: <http://purl.org/dc/terms/>
+      PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
 
       INSERT DATA {
 ${lines.join('\n')}
@@ -1296,10 +1312,10 @@ ${lines.join('\n')}
 
     function writeNode(nodeUri: string, node: { type: SystemNodeType; title: string; identifier: string; description: string; children: SystemNodeForm[] }, parentUri: string | null, counter: { n: number }) {
       insertLines.push(`  <${nodeUri}> a ${typeClass(node.type)} .`)
-      insertLines.push(`  <${nodeUri}> dcterms:title "${esc(node.title)}"@en .`)
+      insertLines.push(`  <${nodeUri}> rdfs:label "${esc(node.title)}"@en .`)
       insertLines.push(`  <${nodeUri}> dcterms:identifier "${esc(node.identifier)}" .`)
       if (node.description.trim()) {
-        insertLines.push(`  <${nodeUri}> dcterms:description "${esc(node.description)}"@en .`)
+        insertLines.push(`  <${nodeUri}> rdfs:comment "${esc(node.description)}"@en .`)
       }
       if (parentUri) {
         insertLines.push(`  <${parentUri}> ssn:hasSubSystem <${nodeUri}> .`)
@@ -1320,6 +1336,7 @@ ${lines.join('\n')}
       PREFIX ssn:     <http://www.w3.org/ns/ssn/>
       PREFIX sosa:    <http://www.w3.org/ns/sosa/>
       PREFIX dcterms: <http://purl.org/dc/terms/>
+      PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
 
       DELETE { ?node ?p ?o }
       WHERE {
@@ -1357,12 +1374,13 @@ ${insertLines.join('\n')}
       PREFIX ssn:     <http://www.w3.org/ns/ssn/>
       PREFIX sosa:    <http://www.w3.org/ns/sosa/>
       PREFIX dcterms: <http://purl.org/dc/terms/>
+      PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
 
       SELECT DISTINCT ?uri ?title ?description WHERE {
         ?uri a ?type .
         FILTER(?type IN (ssn:System, sosa:Sensor, sosa:Actuator))
-        OPTIONAL { ?uri dcterms:title ?title }
-        OPTIONAL { ?uri dcterms:description ?description }
+        OPTIONAL { ?uri rdfs:label ?title }
+        OPTIONAL { ?uri rdfs:comment ?description }
       }
       ORDER BY ?title
     `
@@ -1378,11 +1396,12 @@ ${insertLines.join('\n')}
     const query = `
       PREFIX ssn:     <http://www.w3.org/ns/ssn/>
       PREFIX dcterms: <http://purl.org/dc/terms/>
+      PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
 
       SELECT ?uri ?title ?description WHERE {
         ?uri a ssn:Input .
-        OPTIONAL { ?uri dcterms:title ?title }
-        OPTIONAL { ?uri dcterms:description ?description }
+        OPTIONAL { ?uri rdfs:label ?title }
+        OPTIONAL { ?uri rdfs:comment ?description }
       }
       ORDER BY ?title
     `
@@ -1412,13 +1431,14 @@ ${insertLines.join('\n')}
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+      PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
 
       SELECT DISTINCT ?step ?stepTitle ?stepType ?wfModel ?wfTitle ?wfInst WHERE {
         ${instanceJoin}
-        OPTIONAL { ?wfModel dcterms:title ?wfTitle }
+        OPTIONAL { ?wfModel rdfs:label ?wfTitle }
         ?wfModel wild:hasBehaviour ?root .
         ?root wild:hasChildActivities/rdf:rest*/rdf:first ?step .
-        OPTIONAL { ?step dcterms:title ?stepTitle }
+        OPTIONAL { ?step rdfs:label ?stepTitle }
         OPTIONAL {
           ?step a ?stepType .
           FILTER(STRSTARTS(STR(?stepType), 'http://purl.org/wild/vocab#'))
@@ -1431,16 +1451,17 @@ ${insertLines.join('\n')}
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+      PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
 
       SELECT DISTINCT ?leaf ?leafTitle ?parentStep ?parentTitle ?wfModel ?wfTitle ?wfInst WHERE {
         ${instanceJoin}
-        OPTIONAL { ?wfModel dcterms:title ?wfTitle }
+        OPTIONAL { ?wfModel rdfs:label ?wfTitle }
         ?wfModel wild:hasBehaviour ?root .
         ?root wild:hasChildActivities/rdf:rest*/rdf:first ?parentStep .
         ?parentStep a wild:ParallelActivity ;
                     wild:hasChildActivities/rdf:rest*/rdf:first ?leaf .
-        OPTIONAL { ?parentStep dcterms:title ?parentTitle }
-        OPTIONAL { ?leaf dcterms:title ?leafTitle }
+        OPTIONAL { ?parentStep rdfs:label ?parentTitle }
+        OPTIONAL { ?leaf rdfs:label ?leafTitle }
       }
       ORDER BY ?wfTitle ?parentTitle ?leafTitle
     `
@@ -1518,19 +1539,20 @@ ${insertLines.join('\n')}
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX ssn:     <http://www.w3.org/ns/ssn/>
+      PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
 
       SELECT ?activity ?title ?description ?system ?systemTitle ?input ?inputTitle WHERE {
         ?activity a wild:AtomicActivity ;
                   dcterms:issued ?_ .
-        OPTIONAL { ?activity dcterms:title ?title }
-        OPTIONAL { ?activity dcterms:description ?description }
+        OPTIONAL { ?activity rdfs:label ?title }
+        OPTIONAL { ?activity rdfs:comment ?description }
         OPTIONAL {
           ?activity ssn:implementedBy ?system .
-          OPTIONAL { ?system dcterms:title ?systemTitle }
+          OPTIONAL { ?system rdfs:label ?systemTitle }
         }
         OPTIONAL {
           ?activity ssn:hasInput ?input .
-          OPTIONAL { ?input dcterms:title ?inputTitle }
+          OPTIONAL { ?input rdfs:label ?inputTitle }
         }
       }
       ORDER BY ?title
@@ -1552,12 +1574,13 @@ ${insertLines.join('\n')}
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX ssn:     <http://www.w3.org/ns/ssn/>
+      PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
 
       SELECT ?activity ?title ?description ?system ?input WHERE {
         ?activity a wild:AtomicActivity ;
                   dcterms:issued ?_ .
-        OPTIONAL { ?activity dcterms:title ?title }
-        OPTIONAL { ?activity dcterms:description ?description }
+        OPTIONAL { ?activity rdfs:label ?title }
+        OPTIONAL { ?activity rdfs:comment ?description }
         OPTIONAL { ?activity ssn:implementedBy ?system }
         OPTIONAL { ?activity ssn:hasInput ?input }
       }
@@ -1590,9 +1613,9 @@ ${insertLines.join('\n')}
 
     const lines: string[] = []
     lines.push(`  <${uri}> a wild:AtomicActivity, sosa:Procedure .`)
-    lines.push(`  <${uri}> dcterms:title "${esc(form.title)}"@en .`)
+    lines.push(`  <${uri}> rdfs:label "${esc(form.title)}"@en .`)
     if (form.description.trim()) {
-      lines.push(`  <${uri}> dcterms:description "${esc(form.description)}"@en .`)
+      lines.push(`  <${uri}> rdfs:comment "${esc(form.description)}"@en .`)
     }
     lines.push(`  <${uri}> dcterms:issued "${now}"^^xsd:dateTime .`)
     if (form.systemUri) lines.push(`  <${uri}> ssn:implementedBy <${form.systemUri}> .`)
@@ -1603,6 +1626,7 @@ ${insertLines.join('\n')}
       PREFIX sosa:    <http://www.w3.org/ns/sosa/>
       PREFIX ssn:     <http://www.w3.org/ns/ssn/>
       PREFIX dcterms: <http://purl.org/dc/terms/>
+      PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
       PREFIX xsd:     <http://www.w3.org/2001/XMLSchema#>
 
       INSERT DATA {
@@ -1618,7 +1642,7 @@ ${lines.join('\n')}
       return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
     }
     const descInsert = form.description.trim()
-      ? `<${uri}> dcterms:description "${esc(form.description)}"@en .`
+      ? `<${uri}> rdfs:comment "${esc(form.description)}"@en .`
       : ''
     const sysInsert = form.systemUri ? `<${uri}> ssn:implementedBy <${form.systemUri}> .` : ''
     const inpInsert = form.inputUri ? `<${uri}> ssn:hasInput <${form.inputUri}> .` : ''
@@ -1626,22 +1650,23 @@ ${lines.join('\n')}
     const update = `
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX ssn:     <http://www.w3.org/ns/ssn/>
+      PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
 
       DELETE {
-        <${uri}> dcterms:title ?t .
-        <${uri}> dcterms:description ?d .
+        <${uri}> rdfs:label ?t .
+        <${uri}> rdfs:comment ?d .
         <${uri}> ssn:implementedBy ?sys .
         <${uri}> ssn:hasInput ?inp .
       }
       INSERT {
-        <${uri}> dcterms:title "${esc(form.title)}"@en .
+        <${uri}> rdfs:label "${esc(form.title)}"@en .
         ${descInsert}
         ${sysInsert}
         ${inpInsert}
       }
       WHERE {
-        OPTIONAL { <${uri}> dcterms:title ?t }
-        OPTIONAL { <${uri}> dcterms:description ?d }
+        OPTIONAL { <${uri}> rdfs:label ?t }
+        OPTIONAL { <${uri}> rdfs:comment ?d }
         OPTIONAL { <${uri}> ssn:implementedBy ?sys }
         OPTIONAL { <${uri}> ssn:hasInput ?inp }
       }
