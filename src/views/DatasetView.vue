@@ -45,20 +45,6 @@ onMounted(async () => {
 
       <p v-if="dataset.description" class="dataset-description">{{ dataset.description }}</p>
 
-      <section class="metadata-section">
-        <h2>Details</h2>
-        <dl class="metadata-grid">
-          <template v-if="dataset.mediaType">
-            <dt>Media type</dt>
-            <dd>{{ dataset.mediaType }}</dd>
-          </template>
-          <template v-if="dataset.temporalResolution">
-            <dt>Temporal resolution</dt>
-            <dd>{{ dataset.temporalResolution }}</dd>
-          </template>
-        </dl>
-      </section>
-
       <section v-if="workflowContext" class="workflow-context-section">
         <h2>Workflow Context</h2>
         <div class="wc-workflow-row">
@@ -82,27 +68,30 @@ onMounted(async () => {
       </section>
 
       <section v-if="dataset.distributions.length > 0" class="distributions-section">
-        <h2>Downloads</h2>
+        <h2>Distributions</h2>
         <ul class="distribution-list">
-          <li
-            v-for="(dist, i) in dataset.distributions"
-            :key="i"
-            class="distribution-item"
-          >
-            <div class="dist-info">
-              <div class="dist-meta">
-                <span v-if="dist.mediaType" class="dist-format">{{ dist.mediaType }}</span>
-              </div>
-            </div>
-            <a
-              v-if="dist.downloadURL"
-              :href="dist.downloadURL"
-              class="download-btn"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Download
-            </a>
+          <li v-for="(dist, i) in dataset.distributions" :key="i" class="distribution-item">
+            <dl class="dist-details">
+              <template v-if="dist.mediaType">
+                <dt>Media type</dt>
+                <dd>{{ dist.mediaType }}</dd>
+              </template>
+              <template v-if="dist.temporalResolution">
+                <dt>Temporal resolution</dt>
+                <dd>{{ dist.temporalResolution }}</dd>
+              </template>
+              <template v-if="dist.downloadURL">
+                <dt>Download</dt>
+                <dd>
+                  <a
+                    :href="dist.downloadURL"
+                    class="download-link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >{{ dist.downloadURL }}</a>
+                </dd>
+              </template>
+            </dl>
           </li>
         </ul>
       </section>
@@ -215,54 +204,39 @@ section h2 {
   border: 1px solid var(--color-border);
   border-radius: 6px;
   padding: 0.875rem 1.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
 }
 
-.dist-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+.dist-details {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 0.5rem 1rem;
+  margin: 0;
 }
 
-.dist-title {
-  font-size: 0.9rem;
+.dist-details dt {
+  font-size: 0.875rem;
   font-weight: 500;
+  color: #6b7280;
+}
+
+.dist-details dd {
+  font-size: 0.875rem;
   color: var(--color-text);
-}
-
-.dist-meta {
-  display: flex;
-  gap: 0.75rem;
-}
-
-.dist-format {
-  font-size: 0.8rem;
-  color: #6b7280;
+  margin: 0;
   font-family: monospace;
+  word-break: break-all;
 }
 
-.dist-size {
-  font-size: 0.8rem;
-  color: #6b7280;
-}
-
-.download-btn {
-  flex-shrink: 0;
-  background: var(--color-primary);
-  color: #fff;
-  border-radius: 5px;
-  padding: 0.4rem 0.9rem;
-  font-size: 0.85rem;
-  font-weight: 500;
+.download-link {
+  color: var(--color-primary);
   text-decoration: none;
-  transition: background 0.15s;
+  font-family: monospace;
+  font-size: 0.8rem;
+  word-break: break-all;
 }
 
-.download-btn:hover {
-  background: var(--color-primary-dark);
+.download-link:hover {
+  text-decoration: underline;
 }
 
 /* Workflow context section */

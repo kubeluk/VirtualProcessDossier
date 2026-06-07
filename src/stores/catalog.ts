@@ -33,11 +33,10 @@ export interface Dataset {
 export interface Distribution {
   downloadURL: string | null
   mediaType: string | null
+  temporalResolution: string | null
 }
 
 export interface DatasetDetail extends Dataset {
-  temporalResolution: string | null
-  mediaType: string | null
   distributions: Distribution[]
 }
 
@@ -160,16 +159,15 @@ export const useCatalogStore = defineStore('catalog', () => {
       PREFIX dcat:    <http://www.w3.org/ns/dcat#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
 
-      SELECT ?title ?description ?temporalResolution ?mediaType ?dist ?downloadURL ?distMediaType WHERE {
+      SELECT ?title ?description ?dist ?downloadURL ?mediaType ?temporalResolution WHERE {
         BIND(<${uri}> AS ?dataset)
         ?dataset dcterms:title ?title .
         OPTIONAL { ?dataset dcterms:description ?description }
-        OPTIONAL { ?dataset dcat:temporalResolution ?temporalResolution }
-        OPTIONAL { ?dataset dcat:mediaType ?mediaType }
         OPTIONAL {
           ?dataset dcat:distribution ?dist .
           OPTIONAL { ?dist dcat:downloadURL ?downloadURL }
-          OPTIONAL { ?dist dcat:mediaType ?distMediaType }
+          OPTIONAL { ?dist dcat:mediaType ?mediaType }
+          OPTIONAL { ?dist dcat:temporalResolution ?temporalResolution }
         }
       }
     `
@@ -183,7 +181,8 @@ export const useCatalogStore = defineStore('catalog', () => {
       if (b.dist) {
         distributions.push({
           downloadURL: b.downloadURL?.value ?? null,
-          mediaType: b.distMediaType?.value ?? first.mediaType?.value ?? null,
+          mediaType: b.mediaType?.value ?? null,
+          temporalResolution: b.temporalResolution?.value ?? null,
         })
       }
     }
@@ -193,8 +192,6 @@ export const useCatalogStore = defineStore('catalog', () => {
       title: first.title.value,
       description: first.description?.value ?? '',
       distributionCount: distributions.length,
-      temporalResolution: first.temporalResolution?.value ?? null,
-      mediaType: first.mediaType?.value ?? null,
       distributions,
     }
   }
@@ -249,15 +246,15 @@ export const useCatalogStore = defineStore('catalog', () => {
       `  dcterms:title "${esc(form.title)}"`,
     ]
     if (form.description) datasetTriples.push(`  dcterms:description "${esc(form.description)}"`)
-    if (form.mediaType) datasetTriples.push(`  dcat:mediaType "${esc(form.mediaType)}"`)
-    if (form.temporalResolution)
-      datasetTriples.push(`  dcat:temporalResolution "${esc(form.temporalResolution)}"^^xsd:duration`)
     if (form.workflowInstanceUri)
       datasetTriples.push(`  prov:wasGeneratedBy <${form.workflowInstanceUri}>`)
-    if (form.downloadUrl)
-      datasetTriples.push(
-        `  dcat:distribution [\n    a dcat:Distribution ;\n    dcat:downloadURL <${form.downloadUrl}>\n  ]`,
-      )
+    if (form.downloadUrl) {
+      const distLines = [`    a dcat:Distribution`, `    dcat:downloadURL <${form.downloadUrl}>`]
+      if (form.mediaType) distLines.push(`    dcat:mediaType "${esc(form.mediaType)}"`)
+      if (form.temporalResolution)
+        distLines.push(`    dcat:temporalResolution "${esc(form.temporalResolution)}"^^xsd:duration`)
+      datasetTriples.push(`  dcat:distribution [\n${distLines.join(' ;\n')}\n  ]`)
+    }
 
     const update = `
 PREFIX dcat:    <http://www.w3.org/ns/dcat#>
