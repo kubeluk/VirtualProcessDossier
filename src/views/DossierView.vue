@@ -199,6 +199,24 @@ const atomicActivities = computed<DossierActivity[]>(
         </div>
       </section>
 
+      <!-- ── DATASETS ────────────────────────────────────────────────── -->
+      <section class="dossier-section">
+        <h2 class="section-title">Datasets</h2>
+        <div v-if="dossier.datasets.length === 0" class="no-datasets">No datasets recorded for this run.</div>
+        <ul v-else class="dataset-list">
+          <li
+            v-for="ds in dossier.datasets"
+            :key="ds.uri"
+            class="dataset-item"
+            @click="router.push({ name: 'dataset', query: { uri: ds.uri } })"
+          >
+            <span class="ds-icon">◉</span>
+            <span class="ds-title">{{ ds.title ?? ds.uri.split(/[#/]/).pop() }}</span>
+            <span class="ds-arrow">→</span>
+          </li>
+        </ul>
+      </section>
+
       <!-- ── NAVIGATION FOOTER ─────────────────────────────────────── -->
       <div class="dossier-footer">
         <button class="footer-link" @click="router.push({ name: 'parts' })">
@@ -207,13 +225,6 @@ const atomicActivities = computed<DossierActivity[]>(
         <span class="footer-divider"></span>
         <button class="footer-link" @click="router.push({ name: 'run', query: { uri: dossier.runUri } })">
           How it was made →
-        </button>
-        <span class="footer-divider"></span>
-        <button
-          class="footer-link footer-link--datasets"
-          @click="router.push({ name: 'catalog', query: { run: dossier.runUri } })"
-        >
-          {{ dossier.datasetCount }} {{ dossier.datasetCount === 1 ? 'dataset' : 'datasets' }} →
         </button>
       </div>
 
@@ -533,6 +544,58 @@ const atomicActivities = computed<DossierActivity[]>(
   border-radius: 20px;
 }
 
+/* ── Datasets ── */
+.no-datasets {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.dataset-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.dataset-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  background: #fafafa;
+}
+
+.dataset-item:hover {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.ds-icon {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+.ds-title {
+  flex: 1;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.ds-arrow {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
 /* ── Footer navigation ── */
 .dossier-footer {
   display: flex;
@@ -559,9 +622,6 @@ const atomicActivities = computed<DossierActivity[]>(
 }
 
 .footer-link:hover { background: #f0fdf4; }
-
-.footer-link--datasets { color: #6b7280; }
-.footer-link--datasets:hover { background: #f9fafb; color: var(--color-text); }
 
 .footer-divider {
   width: 1px;
