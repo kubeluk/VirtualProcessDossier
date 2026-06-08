@@ -168,13 +168,17 @@ export const useDossierStore = defineStore('dossier', () => {
       PREFIX wild:  <http://purl.org/wild/vocab#>
       PREFIX rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
       PREFIX rdfs:  <http://www.w3.org/2000/01/rdf-schema#>
-      SELECT DISTINCT ?parent ?child ?childTitle ?childType WHERE {
+      SELECT DISTINCT ?parent ?parentType ?child ?childTitle ?childType WHERE {
         <${modelUri}> wild:hasBehaviour/(wild:hasChildActivities/rdf:rest*/rdf:first)* ?parent .
         ?parent wild:hasChildActivities/rdf:rest*/rdf:first ?child .
         OPTIONAL { ?child rdfs:label ?childTitle }
         OPTIONAL {
           ?child a ?childType .
           FILTER(STRSTARTS(STR(?childType), 'http://purl.org/wild/vocab#'))
+        }
+        OPTIONAL {
+          ?parent a ?parentType .
+          FILTER(STRSTARTS(STR(?parentType), 'http://purl.org/wild/vocab#'))
         }
       }
     ` : null
@@ -316,13 +320,16 @@ export const useDossierStore = defineStore('dossier', () => {
       for (const b of r_tree.results.bindings) {
         const parent = b.parent.value
         const child = b.child.value
-        const rawType = b.childType?.value?.replace('http://purl.org/wild/vocab#', '') ?? null
+        const rawParentType = b.parentType?.value?.replace('http://purl.org/wild/vocab#', '') ?? null
+        const rawChildType = b.childType?.value?.replace('http://purl.org/wild/vocab#', '') ?? null
 
         if (!childrenMap.has(parent)) childrenMap.set(parent, [])
         const siblings = childrenMap.get(parent)!
         if (!siblings.includes(child)) siblings.push(child)
 
-        if (!typeMap.has(child)) typeMap.set(child, rawType ?? 'AtomicActivity')
+        // Store parent type so collectAtomics can correctly drill into composite roots
+        if (!typeMap.has(parent)) typeMap.set(parent, rawParentType ?? 'SequentialActivity')
+        if (!typeMap.has(child)) typeMap.set(child, rawChildType ?? 'AtomicActivity')
         if (!titleMap.has(child)) titleMap.set(child, b.childTitle?.value ?? null)
       }
     }

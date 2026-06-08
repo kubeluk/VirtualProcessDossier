@@ -97,7 +97,10 @@ const atomicActivities = computed<DossierActivity[]>(
         <p class="header-eyebrow">Virtual Process Dossier</p>
         <h1 class="header-title">{{ partLabel(dossier.partUri) }}</h1>
         <div class="header-meta">
-          <span class="header-run">{{ dossier.runLabel ?? 'Unnamed Run' }}</span>
+          <button
+            class="header-run"
+            @click="router.push({ name: 'run', query: { uri: dossier.runUri } })"
+          >{{ dossier.runLabel ?? 'Unnamed Run' }} →</button>
           <span v-if="dossier.runDate" class="header-sep">·</span>
           <span v-if="dossier.runDate" class="header-date">{{ formatDate(dossier.runDate) }}</span>
           <span
@@ -282,9 +285,21 @@ const atomicActivities = computed<DossierActivity[]>(
 }
 
 .header-run {
+  background: none;
+  border: none;
+  padding: 0;
   font-size: 0.95rem;
   font-weight: 500;
   color: #e2e8f0;
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: rgba(226, 232, 240, 0.4);
+}
+.header-run:hover {
+  color: #f59e0b;
+  text-decoration-color: #f59e0b;
 }
 
 .header-sep {
