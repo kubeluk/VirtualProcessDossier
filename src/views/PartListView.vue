@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, nextTick } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useMaterialStore, type PartDetail } from '@/stores/material'
 
 const router = useRouter()
+const route = useRoute()
 const materialStore = useMaterialStore()
 
 const parts = ref<PartDetail[]>([])
@@ -23,6 +24,15 @@ onMounted(async () => {
     error.value = 'Failed to load parts. Make sure the triple store is running.'
   } finally {
     loading.value = false
+  }
+
+  const targetUri = route.query.part as string | undefined
+  if (targetUri) {
+    expanded.value = { ...expanded.value, [targetUri]: new Set(['props', 'plies', 'needles']) }
+    await nextTick()
+    requestAnimationFrame(() => {
+      document.getElementById(`part-${localName(targetUri)}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
   }
 })
 
@@ -98,7 +108,7 @@ function formatValue(value: number): string {
     <div v-else-if="parts.length === 0" class="state-message">No parts found in the triple store.</div>
 
     <ul v-else class="part-cards">
-      <li v-for="part in parts" :key="part.uri" class="part-card">
+      <li v-for="part in parts" :key="part.uri" :id="`part-${localName(part.uri)}`" class="part-card">
 
         <!-- ── Card header ─────────────────────────────────────────── -->
         <div class="part-header">

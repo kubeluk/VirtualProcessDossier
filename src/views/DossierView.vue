@@ -219,7 +219,7 @@ const atomicActivities = computed<DossierActivity[]>(
 
       <!-- ── NAVIGATION FOOTER ─────────────────────────────────────── -->
       <div class="dossier-footer">
-        <button class="footer-link" @click="router.push({ name: 'parts' })">
+        <button class="footer-link" @click="router.push({ name: 'parts', query: { part: dossier.partUri } })">
           ← What it's made of
         </button>
         <span class="footer-divider"></span>
