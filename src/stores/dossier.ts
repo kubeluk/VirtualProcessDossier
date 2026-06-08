@@ -7,6 +7,21 @@ import { QUDT_UNIT_LABELS } from '@/stores/workflow'
 // Interfaces
 // ---------------------------------------------------------------------------
 
+// Lightweight card data for the HomeView gallery — fetched in 2 batch queries
+export interface DossierSummary {
+  partUri: string
+  runUri: string
+  runLabel: string | null
+  runDate: string | null
+  runState: string | null
+  workflowLabel: string | null
+  length: number | null
+  width: number | null
+  thickness: number | null
+  dimUnit: string
+  plies: Array<{ fiberType: string | null; polymer: string | null; orientation: number | null }>
+}
+
 export interface DossierHeadlineParam {
   label: string
   value: string
@@ -448,5 +463,106 @@ export const useDossierStore = defineStore('dossier', () => {
     }
   }
 
-  return { fetchDossier }
+  // Fetches card-level data for ALL parts in 2 batch queries instead of N×7
+  async function fetchAllPartSummaries(): Promise<DossierSummary[]> {
+    const q_meta = `
+      PREFIX sosa:    <http://www.w3.org/ns/sosa/>
+      PREFIX prov:    <http://www.w3.org/ns/prov#>
+      PREFIX wild:    <http://purl.org/wild/vocab#>
+      PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+      PREFIX geo:     <http://www.opengis.net/ont/geosparql#>
+      PREFIX qudt:    <http://qudt.org/schema/qudt/>
+      SELECT DISTINCT ?part ?runUri ?runLabel ?runState ?runDate ?modelLabel ?qk ?unit ?dimValue WHERE {
+        ?part a sosa:Sample ;
+              sosa:isResultOf ?runUri .
+        OPTIONAL { ?runUri rdfs:label ?runLabel }
+        OPTIONAL { ?runUri wild:hasState ?runState }
+        OPTIONAL { ?runUri prov:startedAtTime ?runDate }
+        OPTIONAL {
+          ?runUri wild:workflowInstanceOf ?modelUri .
+          OPTIONAL { ?modelUri rdfs:label ?modelLabel }
+        }
+        OPTIONAL {
+          ?part prov:wasDerivedFrom ?laminat .
+          ?laminat a geo:Feature ;
+                   geo:hasSize ?node .
+          ?node qudt:hasQuantityKind ?qk ; qudt:hasUnit ?unit ; qudt:value ?dimValue .
+        }
+      }
+    `
+
+    const q_plies = `
+      PREFIX sosa:  <http://www.w3.org/ns/sosa/>
+      PREFIX prov:  <http://www.w3.org/ns/prov#>
+      PREFIX geo:   <http://www.opengis.net/ont/geosparql#>
+      PREFIX qudt:  <http://qudt.org/schema/qudt/>
+      PREFIX param: <http://purl.org/for/param#>
+      SELECT ?part ?tape ?polymer ?fiberType ?orientation WHERE {
+        ?part a sosa:Sample ;
+              prov:wasDerivedFrom ?laminat .
+        ?laminat a geo:Feature ;
+                 prov:wasDerivedFrom ?layup .
+        ?layup prov:qualifiedDerivation ?deriv .
+        ?deriv prov:entity ?tape .
+        OPTIONAL { ?deriv param:fiberOrientation ?orientNode . ?orientNode qudt:value ?orientation }
+        OPTIONAL { ?tape param:polymer ?polymer }
+        OPTIONAL { ?tape param:fiberType ?fiberType }
+      }
+      ORDER BY ?part ?tape
+    `
+
+    const [r_meta, r_plies] = await Promise.all([
+      querySparql(graphStore.endpoint, q_meta),
+      querySparql(graphStore.endpoint, q_plies),
+    ])
+
+    const summaries = new Map<string, DossierSummary>()
+
+    for (const b of r_meta.results.bindings) {
+      const partUri = b.part.value
+      if (!summaries.has(partUri)) {
+        summaries.set(partUri, {
+          partUri,
+          runUri: b.runUri.value,
+          runLabel: b.runLabel?.value ?? null,
+          runDate: b.runDate?.value ?? null,
+          runState: b.runState?.value?.replace('http://purl.org/wild/vocab#', '') ?? null,
+          workflowLabel: b.modelLabel?.value ?? null,
+          length: null,
+          width: null,
+          thickness: null,
+          dimUnit: 'mm',
+          plies: [],
+        })
+      }
+      if (b.qk && b.dimValue) {
+        const s = summaries.get(partUri)!
+        const kind = b.qk.value.split(/[/#]/).pop() ?? ''
+        const val = parseFloat(b.dimValue.value)
+        const uSym = unitSym(b.unit?.value)
+        if (kind === 'Length') { s.length = val; s.dimUnit = uSym || 'mm' }
+        else if (kind === 'Width') s.width = val
+        else if (kind === 'Thickness') s.thickness = val
+      }
+    }
+
+    const seenTape = new Set<string>()
+    for (const b of r_plies.results.bindings) {
+      const partUri = b.part.value
+      const s = summaries.get(partUri)
+      if (!s) continue
+      const key = `${partUri}|${b.tape.value}`
+      if (seenTape.has(key)) continue
+      seenTape.add(key)
+      s.plies.push({
+        fiberType: b.fiberType?.value ?? null,
+        polymer: b.polymer?.value ?? null,
+        orientation: b.orientation != null ? parseFloat(b.orientation.value) : null,
+      })
+    }
+
+    return [...summaries.values()]
+  }
+
+  return { fetchDossier, fetchAllPartSummaries }
 })

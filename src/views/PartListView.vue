@@ -1,36 +1,27 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useMaterialStore, type PartSummary, type PartDetail } from '@/stores/material'
+import { useMaterialStore, type PartDetail } from '@/stores/material'
 
 const router = useRouter()
 const materialStore = useMaterialStore()
 
-const parts = ref<PartSummary[]>([])
-const details = ref<Record<string, PartDetail | null>>({})
-const detailLoading = ref<Record<string, boolean>>({})
+const parts = ref<PartDetail[]>([])
+const details = ref<Record<string, PartDetail>>({})
 const loading = ref(true)
 const error = ref<string | null>(null)
 const expanded = ref<Record<string, Set<string>>>({})
 
 onMounted(async () => {
   try {
-    const summaries = await materialStore.fetchParts()
-    parts.value = summaries
-    loading.value = false
-    await Promise.all(
-      summaries.map(async (p) => {
-        detailLoading.value = { ...detailLoading.value, [p.uri]: true }
-        try {
-          const detail = await materialStore.fetchPartDetail(p)
-          details.value = { ...details.value, [p.uri]: detail }
-        } finally {
-          detailLoading.value = { ...detailLoading.value, [p.uri]: false }
-        }
-      }),
-    )
+    const allParts = await materialStore.fetchAllParts()
+    parts.value = allParts
+    for (const p of allParts) {
+      details.value[p.uri] = p
+    }
   } catch {
     error.value = 'Failed to load parts. Make sure the triple store is running.'
+  } finally {
     loading.value = false
   }
 })
@@ -173,8 +164,7 @@ function formatValue(value: number): string {
               <span v-if="part.laminatLabel" class="section-hint">{{ part.laminatLabel }}</span>
             </button>
             <div v-if="isExpanded(part.uri, 'props')" class="section-body">
-              <div v-if="detailLoading[part.uri]" class="section-loading">Loading…</div>
-              <div v-else-if="details[part.uri]" class="props-grid">
+              <div v-if="details[part.uri]" class="props-grid">
                 <dl class="prop-list">
                   <div class="prop-row" v-if="part.laminatLabel">
                     <dt>Material</dt>
@@ -202,8 +192,7 @@ function formatValue(value: number): string {
               <span v-if="details[part.uri]" class="section-count">{{ details[part.uri]!.plies.length }} layers</span>
             </button>
             <div v-if="isExpanded(part.uri, 'plies')" class="section-body">
-              <div v-if="detailLoading[part.uri]" class="section-loading">Loading…</div>
-              <div v-else-if="details[part.uri]">
+              <div v-if="details[part.uri]">
                 <p v-if="part.layupLabel" class="layup-notation">Layup notation: <strong>{{ part.layupLabel }}</strong></p>
                 <table class="ply-table">
                   <thead>
@@ -246,8 +235,7 @@ function formatValue(value: number): string {
               <span class="section-hint">gripper contact coordinates</span>
             </button>
             <div v-if="isExpanded(part.uri, 'needles')" class="section-body">
-              <div v-if="detailLoading[part.uri]" class="section-loading">Loading…</div>
-              <div v-else-if="details[part.uri]" class="needle-layout">
+              <div v-if="details[part.uri]" class="needle-layout">
                 <!-- SVG footprint visualization -->
                 <div class="needle-viz-wrap">
                   <svg class="needle-svg" viewBox="-215 -215 430 430" xmlns="http://www.w3.org/2000/svg">

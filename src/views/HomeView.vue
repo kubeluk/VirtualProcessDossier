@@ -1,22 +1,18 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useMaterialStore } from '@/stores/material'
-import { useDossierStore, type DossierData } from '@/stores/dossier'
+import { useDossierStore, type DossierSummary } from '@/stores/dossier'
 
 const router = useRouter()
-const materialStore = useMaterialStore()
 const dossierStore = useDossierStore()
 
-const dossiers = ref<DossierData[]>([])
+const dossiers = ref<DossierSummary[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 
 onMounted(async () => {
   try {
-    const parts = await materialStore.fetchParts()
-    const results = await Promise.all(parts.map((p) => dossierStore.fetchDossier(p.uri)))
-    dossiers.value = results.filter((d): d is DossierData => d !== null)
+    dossiers.value = await dossierStore.fetchAllPartSummaries()
   } catch {
     error.value = 'Failed to load production data. Make sure the triple store is running.'
   } finally {
@@ -42,12 +38,12 @@ function fmtNum(v: number): string {
   return Number.isInteger(v) ? String(v) : v.toFixed(1).replace(/\.?0+$/, '')
 }
 
-function plyMaterial(d: DossierData): string | null {
+function plyMaterial(d: DossierSummary): string | null {
   const ply = d.plies.find((p) => p.fiberType && p.polymer)
   return ply ? `${ply.fiberType}/${ply.polymer}` : null
 }
 
-function dimString(d: DossierData): string | null {
+function dimString(d: DossierSummary): string | null {
   const parts = [d.length, d.width, d.thickness].filter((v) => v !== null)
   if (!parts.length) return null
   return parts.map((v) => fmtNum(v!)).join(' × ') + ` ${d.dimUnit}`
