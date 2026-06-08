@@ -71,27 +71,19 @@ onMounted(async () => {
         <h2>Distributions</h2>
         <ul class="distribution-list">
           <li v-for="(dist, i) in dataset.distributions" :key="i" class="distribution-item">
-            <dl class="dist-details">
-              <template v-if="dist.mediaType">
-                <dt>Media type</dt>
-                <dd>{{ dist.mediaType }}</dd>
-              </template>
-              <template v-if="dist.temporalResolution">
-                <dt>Temporal resolution</dt>
-                <dd>{{ dist.temporalResolution }}</dd>
-              </template>
-              <template v-if="dist.downloadURL">
-                <dt>Download</dt>
-                <dd>
-                  <a
-                    :href="dist.downloadURL"
-                    class="download-link"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >{{ dist.downloadURL }}</a>
-                </dd>
-              </template>
-            </dl>
+            <div class="dist-meta">
+              <span v-if="dist.mediaType" class="dist-badge">{{ dist.mediaType }}</span>
+              <span v-if="dist.temporalResolution" class="dist-badge dist-badge--secondary">
+                Δt {{ dist.temporalResolution }}
+              </span>
+            </div>
+            <a
+              v-if="dist.downloadURL"
+              :href="dist.downloadURL"
+              class="download-btn"
+              target="_blank"
+              rel="noopener noreferrer"
+            >↓ Download</a>
           </li>
         </ul>
       </section>
@@ -201,42 +193,50 @@ section h2 {
 }
 
 .distribution-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   border: 1px solid var(--color-border);
   border-radius: 6px;
-  padding: 0.875rem 1.25rem;
+  padding: 0.75rem 1rem;
 }
 
-.dist-details {
-  display: grid;
-  grid-template-columns: 160px 1fr;
-  gap: 0.5rem 1rem;
-  margin: 0;
+.dist-meta {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  flex: 1;
 }
 
-.dist-details dt {
-  font-size: 0.875rem;
+.dist-badge {
+  font-size: 0.78rem;
   font-weight: 500;
-  color: #6b7280;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  background: #f3f4f6;
+  color: #374151;
 }
 
-.dist-details dd {
-  font-size: 0.875rem;
-  color: var(--color-text);
-  margin: 0;
-  font-family: monospace;
-  word-break: break-all;
+.dist-badge--secondary {
+  background: #eff6ff;
+  color: #1d4ed8;
 }
 
-.download-link {
-  color: var(--color-primary);
+.download-btn {
+  flex-shrink: 0;
+  display: inline-block;
+  padding: 0.4rem 0.9rem;
+  border-radius: 6px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
   text-decoration: none;
-  font-family: monospace;
-  font-size: 0.8rem;
-  word-break: break-all;
+  transition: background 0.15s;
 }
 
-.download-link:hover {
-  text-decoration: underline;
+.download-btn:hover {
+  background: var(--color-primary-dark);
 }
 
 /* Workflow context section */
