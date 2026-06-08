@@ -118,7 +118,7 @@ const atomicActivities = computed<DossierActivity[]>(
 
       <!-- ── MANUFACTURING PROCESS ─────────────────────────────────── -->
       <section class="dossier-section">
-        <h2 class="section-title">Manufacturing Process</h2>
+        <h2 class="section-title">Manufacturing Process <span class="section-count">({{ atomicActivities.length }})</span></h2>
 
         <div class="timeline">
           <template v-for="(act, i) in atomicActivities" :key="act.actInstUri">
@@ -201,7 +201,7 @@ const atomicActivities = computed<DossierActivity[]>(
 
       <!-- ── DATASETS ────────────────────────────────────────────────── -->
       <section class="dossier-section">
-        <h2 class="section-title">Datasets</h2>
+        <h2 class="section-title">Datasets <span class="section-count">({{ dossier.datasets.length }})</span></h2>
         <div v-if="dossier.datasets.length === 0" class="no-datasets">No datasets recorded for this run.</div>
         <ul v-else class="dataset-list">
           <li
@@ -357,6 +357,14 @@ const atomicActivities = computed<DossierActivity[]>(
   margin: 0 0 1.25rem;
   padding-bottom: 0.6rem;
   border-bottom: 1px solid var(--color-border);
+}
+
+.section-count {
+  font-size: 0.68rem;
+  font-weight: 400;
+  color: #9ca3af;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 /* ── Activity timeline ── */
@@ -573,8 +581,8 @@ const atomicActivities = computed<DossierActivity[]>(
 }
 
 .dataset-item:hover {
-  background: #f0fdf4;
-  border-color: #bbf7d0;
+  background: #eef1fd;
+  border-color: #c7d2f7;
 }
 
 .ds-icon {
@@ -612,16 +620,19 @@ const atomicActivities = computed<DossierActivity[]>(
   background: none;
   border: none;
   padding: 0.85rem 1rem;
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--color-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
   cursor: pointer;
   font-family: inherit;
   text-align: center;
-  transition: background 0.15s;
+  transition: background 0.15s, color 0.15s;
 }
 
-.footer-link:hover { background: #f0fdf4; }
+.footer-link:hover {
+  background: #eef1fd;
+  color: var(--color-primary);
+}
 
 .footer-divider {
   width: 1px;

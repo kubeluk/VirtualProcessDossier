@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDossierStore, type DossierSummary } from '@/stores/dossier'
 
@@ -20,6 +20,29 @@ onMounted(async () => {
   }
 })
 
+// ── Search ────────────────────────────────────────────────────────────────
+const searchText = ref('')
+const searchQuery = ref('')
+let searchTimer: ReturnType<typeof setTimeout>
+
+function onSearchInput(e: Event) {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    searchQuery.value = (e.target as HTMLInputElement).value
+  }, 300)
+}
+
+const filtered = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return dossiers.value
+  return dossiers.value.filter(
+    (d) =>
+      partLabel(d.partUri).toLowerCase().includes(q) ||
+      (d.runLabel ?? '').toLowerCase().includes(q),
+  )
+})
+
+// ── Helpers ───────────────────────────────────────────────────────────────
 function partLabel(uri: string): string {
   const m = uri.match(/[#/]([^#/]+)$/)
   return m ? `Part ${m[1]}` : uri
@@ -33,33 +56,6 @@ function formatDate(iso: string | null): string {
     day: 'numeric',
   })
 }
-
-function fmtNum(v: number): string {
-  return Number.isInteger(v) ? String(v) : v.toFixed(1).replace(/\.?0+$/, '')
-}
-
-function plyMaterial(d: DossierSummary): string | null {
-  const ply = d.plies.find((p) => p.fiberType && p.polymer)
-  return ply ? `${ply.fiberType}/${ply.polymer}` : null
-}
-
-function dimString(d: DossierSummary): string | null {
-  const parts = [d.length, d.width, d.thickness].filter((v) => v !== null)
-  if (!parts.length) return null
-  return parts.map((v) => fmtNum(v!)).join(' × ') + ` ${d.dimUnit}`
-}
-
-const ORIENT_STYLES: Record<number, [string, string]> = {
-  0: ['#d1fae5', '#065f46'],
-  60: ['#dbeafe', '#1e40af'],
-  120: ['#ede9fe', '#5b21b6'],
-}
-function orientBg(deg: number | null): string {
-  return deg !== null ? (ORIENT_STYLES[deg]?.[0] ?? '#f3f4f6') : '#f3f4f6'
-}
-function orientFg(deg: number | null): string {
-  return deg !== null ? (ORIENT_STYLES[deg]?.[1] ?? '#374151') : '#6b7280'
-}
 </script>
 
 <template>
@@ -69,7 +65,7 @@ function orientFg(deg: number | null): string {
     <header class="page-header">
       <div>
         <h1>Virtual Process Dossier</h1>
-        <p class="subtitle">Scroll through the production records. Open a record to see the full process and material detail.</p>
+        <p class="subtitle">Browse manufactured parts. Open a record to see the full provenance and material detail.</p>
       </div>
     </header>
 
@@ -77,10 +73,10 @@ function orientFg(deg: number | null): string {
     <nav class="page-nav">
       <RouterLink to="/" class="nav-tab nav-tab--active">Dossier</RouterLink>
       <RouterLink to="/catalog" class="nav-tab">Datasets</RouterLink>
-      <RouterLink to="/workflows" class="nav-tab">Workflows</RouterLink>
-      <RouterLink to="/activities" class="nav-tab">Activities</RouterLink>
-      <RouterLink to="/systems" class="nav-tab">Systems</RouterLink>
-      <RouterLink to="/parts" class="nav-tab">Parts</RouterLink>
+      <span class="nav-divider" aria-hidden="true"></span>
+      <RouterLink to="/workflows" class="nav-tab nav-tab--secondary">Workflows</RouterLink>
+      <RouterLink to="/systems" class="nav-tab nav-tab--secondary">Systems</RouterLink>
+      <RouterLink to="/parts" class="nav-tab nav-tab--secondary">Parts</RouterLink>
     </nav>
 
     <!-- ── States ── -->
@@ -90,63 +86,59 @@ function orientFg(deg: number | null): string {
       No production records found. Register a workflow run to create the first record.
     </div>
 
-    <!-- ── Product record cards ── -->
-    <ul v-else class="record-cards">
-      <li
-        v-for="d in dossiers"
-        :key="d.partUri"
-        class="record-card"
-        @click="router.push({ name: 'dossier', query: { part: d.partUri } })"
-      >
-        <div class="card-inner">
+    <template v-else>
 
-          <!-- Left: identifying info -->
-          <div class="card-body">
-            <div class="card-title-row">
-              <span class="card-icon">◆</span>
-              <h2 class="card-title">{{ partLabel(d.partUri) }}</h2>
-              <span
-                v-if="d.runState"
-                class="state-badge"
-                :class="d.runState === 'done' ? 'state-badge--done' : 'state-badge--active'"
-              >
-                {{ d.runState }}
-              </span>
+      <!-- ── Search bar ── -->
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input
+          class="search-input"
+          type="search"
+          placeholder="Search parts and runs…"
+          :value="searchText"
+          @input="(e) => { searchText = (e.target as HTMLInputElement).value; onSearchInput(e) }"
+        />
+      </div>
+
+      <!-- ── Results count ── -->
+      <p class="results-count">
+        <template v-if="searchQuery.trim()">Showing {{ filtered.length }} of {{ dossiers.length }} records</template>
+        <template v-else>{{ dossiers.length }} record{{ dossiers.length !== 1 ? 's' : '' }}</template>
+      </p>
+
+      <!-- ── Empty search state ── -->
+      <div v-if="filtered.length === 0" class="state-message">
+        No records match your search.
+      </div>
+
+      <!-- ── Product record cards ── -->
+      <ul v-else class="record-cards">
+        <li
+          v-for="d in filtered"
+          :key="d.partUri"
+          class="record-card"
+          @click="router.push({ name: 'dossier', query: { part: d.partUri } })"
+        >
+          <div class="card-inner">
+            <div class="card-body">
+              <div class="card-title-row">
+                <span class="card-icon">◆</span>
+                <h2 class="card-title">{{ partLabel(d.partUri) }}</h2>
+              </div>
+
+              <p class="card-meta">
+                <span class="card-run">{{ d.runLabel ?? '(untitled run)' }}</span>
+                <span v-if="d.runDate" class="card-sep">·</span>
+                <span v-if="d.runDate" class="card-date">{{ formatDate(d.runDate) }}</span>
+              </p>
             </div>
 
-            <p class="card-meta">
-              <span class="card-run">{{ d.runLabel ?? '(untitled run)' }}</span>
-              <span v-if="d.runDate" class="card-sep">·</span>
-              <span v-if="d.runDate" class="card-date">{{ formatDate(d.runDate) }}</span>
-            </p>
-
-            <p v-if="d.workflowLabel" class="card-workflow">{{ d.workflowLabel }}</p>
-
-            <!-- Material brief -->
-            <div class="mat-brief">
-              <span v-if="plyMaterial(d)" class="mat-chip mat-chip--material">{{ plyMaterial(d) }}</span>
-              <span v-if="d.plies.length" class="mat-chip">{{ d.plies.length }} plies</span>
-              <span
-                v-for="(ply, i) in d.plies"
-                :key="i"
-                class="ply-badge"
-                :style="{ background: orientBg(ply.orientation), color: orientFg(ply.orientation) }"
-              >
-                {{ ply.orientation !== null ? `${ply.orientation}°` : '?°' }}
-              </span>
-              <span v-if="dimString(d)" class="mat-chip mat-chip--dims">{{ dimString(d) }}</span>
-            </div>
+            <span class="card-arrow">→</span>
           </div>
+        </li>
+      </ul>
 
-          <!-- Right: open button -->
-          <div class="card-action">
-            <span class="open-label">Open record</span>
-            <span class="open-arrow">→</span>
-          </div>
-
-        </div>
-      </li>
-    </ul>
+    </template>
   </main>
 </template>
 
@@ -178,9 +170,10 @@ function orientFg(deg: number | null): string {
 /* ── Tab nav ── */
 .page-nav {
   display: flex;
+  align-items: center;
   gap: 0;
   border-bottom: 1px solid var(--color-border);
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .nav-tab {
@@ -201,6 +194,26 @@ function orientFg(deg: number | null): string {
   border-bottom-color: var(--color-primary);
 }
 
+.nav-divider {
+  display: inline-block;
+  width: 1px;
+  height: 1.1rem;
+  background: var(--color-border);
+  align-self: center;
+  margin: 0 0.2rem;
+  flex-shrink: 0;
+}
+
+.nav-tab--secondary {
+  font-size: 0.82rem;
+  color: #9ca3af;
+}
+.nav-tab--secondary:hover { color: var(--color-text); }
+.nav-tab--secondary.nav-tab--active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
 /* ── State messages ── */
 .state-message {
   padding: 3rem;
@@ -209,6 +222,47 @@ function orientFg(deg: number | null): string {
 }
 .state-message--error { color: #dc2626; }
 
+/* ── Search bar ── */
+.search-wrap {
+  position: relative;
+  margin-bottom: 0.65rem;
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.7rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  pointer-events: none;
+  font-size: 1rem;
+}
+
+.search-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.52rem 0.75rem 0.52rem 2rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-family: inherit;
+  color: var(--color-text);
+  background: var(--color-surface);
+  outline: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+.search-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(59, 91, 219, 0.1);
+}
+
+/* ── Results count ── */
+.results-count {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin: 0 0 0.75rem;
+}
+
 /* ── Record card list ── */
 .record-cards {
   list-style: none;
@@ -216,23 +270,22 @@ function orientFg(deg: number | null): string {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 0.65rem;
 }
 
 /* ── Record card ── */
 .record-card {
-  background: #fff;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-top: 4px solid #f59e0b;
+  border-left: 4px solid var(--color-accent);
   border-radius: 10px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   cursor: pointer;
-  transition: box-shadow 0.15s, border-color 0.15s, transform 0.1s;
+  transition: box-shadow 0.15s, transform 0.1s;
 }
 
 .record-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  border-color: #fbbf24;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
   transform: translateY(-1px);
 }
 
@@ -240,7 +293,7 @@ function orientFg(deg: number | null): string {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 1.1rem 1.4rem;
+  padding: 1rem 1.25rem;
 }
 
 /* ── Card body ── */
@@ -249,38 +302,27 @@ function orientFg(deg: number | null): string {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.2rem;
 }
 
 .card-title-row {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  flex-wrap: wrap;
 }
 
 .card-icon {
-  color: #f59e0b;
+  color: var(--color-accent);
   font-size: 0.75rem;
   flex-shrink: 0;
 }
 
 .card-title {
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--color-text);
   margin: 0;
 }
-
-.state-badge {
-  font-size: 0.65rem;
-  font-weight: 700;
-  padding: 0.1rem 0.45rem;
-  border-radius: 20px;
-  letter-spacing: 0.04em;
-}
-.state-badge--done  { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
-.state-badge--active { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
 
 .card-meta {
   display: flex;
@@ -296,77 +338,23 @@ function orientFg(deg: number | null): string {
   color: var(--color-text);
 }
 
-.card-sep { color: #d1d5db; font-size: 0.85rem; }
+.card-sep  { color: #d1d5db; font-size: 0.85rem; }
 
 .card-date {
   font-size: 0.82rem;
   color: #6b7280;
 }
 
-.card-workflow {
-  font-size: 0.78rem;
-  color: #9ca3af;
-  margin: 0;
-}
-
-/* ── Material brief ── */
-.mat-brief {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-  margin-top: 0.2rem;
-}
-
-.mat-chip {
-  font-size: 0.75rem;
-  color: #4b5563;
-  padding: 0.15rem 0.5rem;
-  background: #f3f4f6;
-  border-radius: 20px;
-  white-space: nowrap;
-}
-
-.mat-chip--material {
-  background: #fef3c7;
-  color: #92400e;
-  font-weight: 600;
-}
-
-.mat-chip--dims {
-  font-variant-numeric: tabular-nums;
-}
-
-.ply-badge {
-  font-size: 0.7rem;
-  font-weight: 700;
-  padding: 0.12rem 0.4rem;
-  border-radius: 20px;
-}
-
-/* ── Card action ── */
-.card-action {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.15rem;
+/* ── Arrow ── */
+.card-arrow {
+  font-size: 1rem;
+  color: #d1d5db;
   flex-shrink: 0;
-  padding: 0.5rem 0.75rem;
-  border-left: 1px solid #fef3c7;
+  transition: color 0.15s, transform 0.15s;
 }
 
-.open-label {
-  font-size: 0.68rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: #d97706;
-  white-space: nowrap;
-}
-
-.open-arrow {
-  font-size: 1.1rem;
-  color: #f59e0b;
-  line-height: 1;
+.record-card:hover .card-arrow {
+  color: var(--color-accent);
+  transform: translateX(2px);
 }
 </style>

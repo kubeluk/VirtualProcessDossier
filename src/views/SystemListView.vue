@@ -79,10 +79,10 @@ function toggleExpand(uri: string) {
     <nav class="page-nav">
       <RouterLink to="/" class="nav-tab">Dossier</RouterLink>
       <RouterLink to="/catalog" class="nav-tab">Datasets</RouterLink>
-      <RouterLink to="/workflows" class="nav-tab">Workflows</RouterLink>
-      <RouterLink to="/activities" class="nav-tab">Activities</RouterLink>
-      <RouterLink to="/systems" class="nav-tab nav-tab--active">Systems</RouterLink>
-      <RouterLink to="/parts" class="nav-tab">Parts</RouterLink>
+      <span class="nav-divider" aria-hidden="true"></span>
+      <RouterLink to="/workflows" class="nav-tab nav-tab--secondary">Workflows</RouterLink>
+      <RouterLink to="/systems" class="nav-tab nav-tab--secondary nav-tab--active">Systems</RouterLink>
+      <RouterLink to="/parts" class="nav-tab nav-tab--secondary">Parts</RouterLink>
     </nav>
 
     <div v-if="loading" class="state-message">Loading systems…</div>
@@ -175,6 +175,7 @@ function toggleExpand(uri: string) {
 
 .page-nav {
   display: flex;
+  align-items: center;
   gap: 0;
   border-bottom: 1px solid var(--color-border);
   margin-bottom: 2rem;
@@ -194,6 +195,23 @@ function toggleExpand(uri: string) {
 .nav-tab:hover { color: var(--color-text); }
 
 .nav-tab--active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+.nav-divider {
+  display: inline-block;
+  width: 1px;
+  height: 1.1rem;
+  background: var(--color-border);
+  align-self: center;
+  margin: 0 0.2rem;
+  flex-shrink: 0;
+}
+
+.nav-tab--secondary { font-size: 0.82rem; color: #9ca3af; }
+.nav-tab--secondary:hover { color: var(--color-text); }
+.nav-tab--secondary.nav-tab--active {
   color: var(--color-primary);
   border-bottom-color: var(--color-primary);
 }

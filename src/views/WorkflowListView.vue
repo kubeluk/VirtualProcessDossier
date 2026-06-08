@@ -52,10 +52,10 @@ function openWorkflow(uri: string) {
     <nav class="page-nav">
       <RouterLink to="/" class="nav-tab">Dossier</RouterLink>
       <RouterLink to="/catalog" class="nav-tab">Datasets</RouterLink>
-      <RouterLink to="/workflows" class="nav-tab nav-tab--active">Workflows</RouterLink>
-      <RouterLink to="/activities" class="nav-tab">Activities</RouterLink>
-      <RouterLink to="/systems" class="nav-tab">Systems</RouterLink>
-      <RouterLink to="/parts" class="nav-tab">Parts</RouterLink>
+      <span class="nav-divider" aria-hidden="true"></span>
+      <RouterLink to="/workflows" class="nav-tab nav-tab--secondary nav-tab--active">Workflows</RouterLink>
+      <RouterLink to="/systems" class="nav-tab nav-tab--secondary">Systems</RouterLink>
+      <RouterLink to="/parts" class="nav-tab nav-tab--secondary">Parts</RouterLink>
     </nav>
 
     <div v-if="loading" class="state-message">Loading workflows…</div>
@@ -118,6 +118,7 @@ function openWorkflow(uri: string) {
 
 .page-nav {
   display: flex;
+  align-items: center;
   gap: 0;
   border-bottom: 1px solid var(--color-border);
   margin-bottom: 2rem;
@@ -139,6 +140,23 @@ function openWorkflow(uri: string) {
 }
 
 .nav-tab--active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+.nav-divider {
+  display: inline-block;
+  width: 1px;
+  height: 1.1rem;
+  background: var(--color-border);
+  align-self: center;
+  margin: 0 0.2rem;
+  flex-shrink: 0;
+}
+
+.nav-tab--secondary { font-size: 0.82rem; color: #9ca3af; }
+.nav-tab--secondary:hover { color: var(--color-text); }
+.nav-tab--secondary.nav-tab--active {
   color: var(--color-primary);
   border-bottom-color: var(--color-primary);
 }
@@ -173,7 +191,7 @@ function openWorkflow(uri: string) {
 
 .workflow-card:hover {
   border-color: var(--color-primary);
-  box-shadow: 0 2px 8px rgba(66, 184, 131, 0.15);
+  box-shadow: 0 2px 8px rgba(59, 91, 219, 0.12);
 }
 
 .card-title {

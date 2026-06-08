@@ -1,9 +1,12 @@
 :root {
-  --color-background: #ffffff;
-  --color-text: #213547;
-  --color-primary: #42b883;
-  --color-primary-dark: #33a06f;
-  --color-border: #dde1e7;
+  --color-background: #f8f9fb;
+  --color-surface: #ffffff;
+  --color-text: #1a2332;
+  --color-primary: #3b5bdb;
+  --color-primary-dark: #2f4ac7;
+  --color-accent: #f59e0b;
+  --color-accent-dark: #d97706;
+  --color-border: #e2e6ed;
   --font-sans: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
 
