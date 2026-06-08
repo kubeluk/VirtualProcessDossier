@@ -25,10 +25,30 @@
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix ssn: <http://www.w3.org/ns/ssn/> .
+@prefix extract: <http://purl.org/for/extract#> .
 
-# Material
+# Extraction Changelog
 
-## Part
+extract:1 a prov:Activity ;
+    rdfs:label "RDF Triple Construction 1" ;
+    rdfs:comment "Construction of RDF triples related to part 1." ;
+    rdfs:comment "No issues were encountered during the extraction process." ;
+    prov:wasAssociatedWith [
+        a prov:Person 
+    ] ;
+    prov:generated part:1, laminat:1, pos:1, pos:2, pos:3, pos:4, pos:5, pos:6, pos:7, pos:8, layup:1, tape:1, tape:2, tape:3, tape:4, tape:5, tape:6 .
+
+# Extracted Triples
+
+## Static Common Knowledge
+
+pos:laminatReferencePoint a pos:Origin ;
+    rdfs:label "Laminat Reference Point"@en ;
+    rdfs:comment "Die Mitte des Laminats bildet den Bezugspunkt für die Positionen der Greiferpunkte."@de .
+
+## Extracted Material Triples
+
+### Part 1
 
 part:1 a prov:Entity, sosa:Sample ;
     sosa:isResultOf run:1 ;
@@ -40,7 +60,7 @@ part:1 a prov:Entity, sosa:Sample ;
         prov:hadActivity run:1
     ] .
 
-## Laminat
+#### Laminat
 
 laminat:1 a geo:Feature, prov:Entity ;
     rdfs:label "BASF PA6-GF60" ;
@@ -72,10 +92,6 @@ laminat:1 a geo:Feature, prov:Entity ;
     ] ;
     pos:hasPositionalReference pos:laminatReferencePoint ;
     param:hasNeedlePoint pos:1, pos:2, pos:3, pos:4, pos:5, pos:6, pos:7, pos:8 .
-
-pos:laminatReferencePoint a pos:Origin ;
-    rdfs:label "Laminat Reference Point"@en ;
-    rdfs:comment "Die Mitte des Laminats bildet den Bezugspunkt für die Positionen der Greiferpunkte."@de .
 
 pos:1 a qudt:Quantity, prov:Entity ;
     qudt:hasQuantityKind quantitykind:PositionVector ;
@@ -149,7 +165,7 @@ pos:8 a qudt:Quantity, prov:Entity ;
     ] ;
     prov:wasDerivedFrom pos:laminatReferencePoint .
 
-## Layup
+#### Layup
 
 layup:1 a prov:Entity ;
     rdfs:label "[0/60/120]s" ;
@@ -210,7 +226,7 @@ layup:1 a prov:Entity ;
         ]
     ] .
 
-## Tape
+#### Tape
 
 tape:1 a prov:Entity ;
     param:polymer "PA6" ;
@@ -235,3 +251,238 @@ tape:5 a prov:Entity ;
 tape:6 a prov:Entity ;
     param:polymer "PA6" ;
     param:fiberType "GF" .
+
+### Part 2
+
+extract:prompt2 a prov:Entity ;
+    rdfs:label "User Prompt – Part 2 Material Extraction" ;
+    dcterms:description """Have a close look at the material.ttl file. I have created the RDF triples about part 1 and its whole lineage down to the tapes from source data in line 2 of the CSV file material.csv located in the data/sources/studie-1 folder. After creation, I added the provenance information about the extraction process itself, marked as comments relevant information about the process and stated which instances were created. Now there is a part 2 comment with no data. The job is to add the RDF triples about the second part. For that look again at the material.ttl file and the triples created and the source data (line 2 in the CSV). Make a plan and describe how the construction process from the line in the CSV to the final RDF triples happened. Present a plan how to construct the triples about the second part using the data from line 3 in the CSV. Always produce correct RDF Turtle syntax and always create the extraction changelog provenance information after the extraction process where you mark whether everything worked correctly or what assumptions were made or whether there was a problem. State as the associated agent a prov:SoftwareAgent.""" .
+
+extract:plan2 a prov:Plan ;
+    rdfs:label "Material RDF Extraction Plan – Part 2" ;
+    dcterms:description """CSV to RDF mapping rules applied: (1) Panel Denotation → dcterms:identifier on laminat; (2) Material string → rdfs:label on laminat; polymer and fiber type parsed from name (PA6, GF); fiber mass fraction extracted from numeric suffix (GF60 → 60%); (3) Layup configuration → rdfs:label on layup; symmetric notation decoded to 6-ply stack [0,60,120,120,60,0]°; each ply becomes a tape instance and a prov:qualifiedDerivation blank node carrying param:fiberOrientation as a qudt:Quantity in unit:DEG; ordered prov:value RDF list encodes ply sequence; (4) Thickness → geo:hasSize qudt:Quantity with quantitykind:Thickness; (5) Dimensions (400x400) → two geo:hasSize qudt:Quantity nodes for quantitykind:Length and quantitykind:Width; (6) 8 needle points from domain knowledge (gripper frame positions for 400x400 laminat) at XY coordinates ±190/±100 mm relative to pos:laminatReferencePoint. Run association (sosa:isResultOf run:2) set by convention; run:2 not yet present in runs.ttl.""" ;
+    prov:wasDerivedFrom extract:prompt2 .
+
+extract:2 a prov:Activity ;
+    rdfs:label "RDF Triple Construction 2" ;
+    rdfs:comment "Construction of RDF triples related to part 2 from material.csv line 3." ;
+    rdfs:comment "Assumption: part:2 is associated with run:2 by convention; run:2 not yet present in runs.ttl and must be cross-referenced from run.csv." ;
+    rdfs:comment "Thickness value 1.55 required no conversion (decimal notation, no ambiguity)." ;
+    rdfs:comment "All other fields (material, layup, dimensions) identical to part 1; mapping applied without modification." ;
+    prov:qualifiedAssociation [
+        a prov:Association ;
+        prov:agent [
+            a prov:SoftwareAgent ;
+            rdfs:label "Claude Sonnet 4.6" ;
+            rdfs:comment "Anthropic large language model; model ID claude-sonnet-4-6." ;
+            dcterms:identifier "claude-sonnet-4-6"
+        ] ;
+        prov:hadPlan extract:plan2
+    ] ;
+    prov:generated part:2, laminat:2, pos:9, pos:10, pos:11, pos:12, pos:13, pos:14, pos:15, pos:16,
+                  layup:2, tape:7, tape:8, tape:9, tape:10, tape:11, tape:12 .
+
+## Extracted Material Triples
+
+part:2 a prov:Entity, sosa:Sample ;
+    sosa:isResultOf run:2 ;
+    sosa:isSampleOf feature:processMaturityLevel ;
+    prov:wasDerivedFrom laminat:2 ;
+    prov:qualifiedDerivation [
+        a prov:Derivation ;
+        prov:entity laminat:2 ;
+        prov:hadActivity run:2
+    ] .
+
+#### Laminat
+
+laminat:2 a geo:Feature, prov:Entity ;
+    rdfs:label "BASF PA6-GF60" ;
+    dcterms:identifier "1_2" ;
+    prov:wasDerivedFrom layup:2 ;
+    geo:hasSize [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Length ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value 400.0
+    ] ;
+    geo:hasSize [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Width ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value 400.0
+    ] ;
+    geo:hasSize [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Thickness ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value 1.55
+    ] ;
+    param:hasFiberMassFraction [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:MassFraction ;
+        qudt:hasUnit unit:PERCENT ;
+        qudt:value 60
+    ] ;
+    pos:hasPositionalReference pos:laminatReferencePoint ;
+    param:hasNeedlePoint pos:9, pos:10, pos:11, pos:12, pos:13, pos:14, pos:15, pos:16 .
+
+pos:9 a qudt:Quantity, prov:Entity ;
+    qudt:hasQuantityKind quantitykind:PositionVector ;
+    qudt:quantityValue [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( 190.0 100.0 )
+    ] ;
+    prov:wasDerivedFrom pos:laminatReferencePoint .
+
+pos:10 a qudt:Quantity, prov:Entity ;
+    qudt:hasQuantityKind quantitykind:PositionVector ;
+    qudt:quantityValue [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( 190.0 -100.0 )
+    ] ;
+    prov:wasDerivedFrom pos:laminatReferencePoint .
+
+pos:11 a qudt:Quantity, prov:Entity ;
+    qudt:hasQuantityKind quantitykind:PositionVector ;
+    qudt:quantityValue [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( -190.0 100.0 )
+    ] ;
+    prov:wasDerivedFrom pos:laminatReferencePoint .
+
+pos:12 a qudt:Quantity, prov:Entity ;
+    qudt:hasQuantityKind quantitykind:PositionVector ;
+    qudt:quantityValue [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( -190.0 -100.0 )
+    ] ;
+    prov:wasDerivedFrom pos:laminatReferencePoint .
+
+pos:13 a qudt:Quantity, prov:Entity ;
+    qudt:hasQuantityKind quantitykind:PositionVector ;
+    qudt:quantityValue [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( 100.0 190.0 )
+    ] ;
+    prov:wasDerivedFrom pos:laminatReferencePoint .
+
+pos:14 a qudt:Quantity, prov:Entity ;
+    qudt:hasQuantityKind quantitykind:PositionVector ;
+    qudt:quantityValue [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( -100.0 190.0 )
+    ] ;
+    prov:wasDerivedFrom pos:laminatReferencePoint .
+
+pos:15 a qudt:Quantity, prov:Entity ;
+    qudt:hasQuantityKind quantitykind:PositionVector ;
+    qudt:quantityValue [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( 100.0 -190.0 )
+    ] ;
+    prov:wasDerivedFrom pos:laminatReferencePoint .
+
+pos:16 a qudt:Quantity, prov:Entity ;
+    qudt:hasQuantityKind quantitykind:PositionVector ;
+    qudt:quantityValue [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( -100.0 -190.0 )
+    ] ;
+    prov:wasDerivedFrom pos:laminatReferencePoint .
+
+#### Layup
+
+layup:2 a prov:Entity ;
+    rdfs:label "[0/60/120]s" ;
+    prov:value ( tape:7 tape:8 tape:9 tape:10 tape:11 tape:12 ) ;
+    prov:wasDerivedFrom tape:7, tape:8, tape:9, tape:10, tape:11, tape:12 ;
+    prov:qualifiedDerivation [
+        a prov:Derivation ;
+        prov:entity tape:7 ;
+        param:fiberOrientation [
+            a qudt:Quantity ;
+            qudt:hasUnit unit:DEG ;
+            qudt:value 0
+        ]
+    ] ;
+    prov:qualifiedDerivation [
+        a prov:Derivation ;
+        prov:entity tape:8 ;
+        param:fiberOrientation [
+            a qudt:Quantity ;
+            qudt:hasUnit unit:DEG ;
+            qudt:value 60
+        ]
+    ] ;
+    prov:qualifiedDerivation [
+        a prov:Derivation ;
+        prov:entity tape:9 ;
+        param:fiberOrientation [
+            a qudt:Quantity ;
+            qudt:hasUnit unit:DEG ;
+            qudt:value 120
+        ]
+    ] ;
+    prov:qualifiedDerivation [
+        a prov:Derivation ;
+        prov:entity tape:10 ;
+        param:fiberOrientation [
+            a qudt:Quantity ;
+            qudt:hasUnit unit:DEG ;
+            qudt:value 120
+        ]
+    ] ;
+    prov:qualifiedDerivation [
+        a prov:Derivation ;
+        prov:entity tape:11 ;
+        param:fiberOrientation [
+            a qudt:Quantity ;
+            qudt:hasUnit unit:DEG ;
+            qudt:value 60
+        ]
+    ] ;
+    prov:qualifiedDerivation [
+        a prov:Derivation ;
+        prov:entity tape:12 ;
+        param:fiberOrientation [
+            a qudt:Quantity ;
+            qudt:hasUnit unit:DEG ;
+            qudt:value 0
+        ]
+    ] .
+
+#### Tape
+
+tape:7 a prov:Entity ;
+    param:polymer "PA6" ;
+    param:fiberType "GF" .
+
+tape:8 a prov:Entity ;
+    param:polymer "PA6" ;
+    param:fiberType "GF" .
+
+tape:9 a prov:Entity ;
+    param:polymer "PA6" ;
+    param:fiberType "GF" .
+
+tape:10 a prov:Entity ;
+    param:polymer "PA6" ;
+    param:fiberType "GF" .
+
+tape:11 a prov:Entity ;
+    param:polymer "PA6" ;
+    param:fiberType "GF" .
+
+tape:12 a prov:Entity ;
+    param:polymer "PA6" ;
+    param:fiberType "GF" .
+
