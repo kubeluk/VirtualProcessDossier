@@ -53,13 +53,6 @@ function dimString(d: DossierData): string | null {
   return parts.map((v) => fmtNum(v!)).join(' × ') + ` ${d.dimUnit}`
 }
 
-function chipParams(act: DossierData['activities'][number]): string {
-  return act.keyParams
-    .slice(0, 2)
-    .map((p) => p.value)
-    .join(' · ')
-}
-
 const ORIENT_STYLES: Record<number, [string, string]> = {
   0: ['#d1fae5', '#065f46'],
   60: ['#dbeafe', '#1e40af'],
@@ -80,7 +73,7 @@ function orientFg(deg: number | null): string {
     <header class="page-header">
       <div>
         <h1>Virtual Process Dossier</h1>
-        <p class="subtitle">All manufactured parts — process parameters, material composition, and linked datasets.</p>
+        <p class="subtitle">Scroll through the production records. Open a record to see the full process and material detail.</p>
       </div>
     </header>
 
@@ -95,69 +88,48 @@ function orientFg(deg: number | null): string {
     </nav>
 
     <!-- ── States ── -->
-    <div v-if="loading" class="state-message">Loading production data…</div>
+    <div v-if="loading" class="state-message">Loading production records…</div>
     <div v-else-if="error" class="state-message state-message--error">{{ error }}</div>
     <div v-else-if="dossiers.length === 0" class="state-message">
-      No produced parts found. Start by registering a workflow run.
+      No production records found. Register a workflow run to create the first record.
     </div>
 
-    <!-- ── Dossier cards ── -->
-    <ul v-else class="dossier-cards">
-      <li v-for="d in dossiers" :key="d.partUri" class="dossier-card">
+    <!-- ── Product record cards ── -->
+    <ul v-else class="record-cards">
+      <li
+        v-for="d in dossiers"
+        :key="d.partUri"
+        class="record-card"
+        @click="router.push({ name: 'dossier', query: { part: d.partUri } })"
+      >
+        <div class="card-inner">
 
-        <!-- Header -->
-        <div class="card-header">
-          <div class="card-top-row">
-            <div>
-              <p class="card-eyebrow">Virtual Process Dossier</p>
+          <!-- Left: identifying info -->
+          <div class="card-body">
+            <div class="card-title-row">
+              <span class="card-icon">◆</span>
               <h2 class="card-title">{{ partLabel(d.partUri) }}</h2>
-            </div>
-            <button
-              class="card-permalink"
-              @click="router.push({ name: 'dossier', query: { part: d.partUri } })"
-            >
-              Open →
-            </button>
-          </div>
-          <div class="card-meta-row">
-            <span class="card-run">{{ d.runLabel ?? '(untitled run)' }}</span>
-            <span v-if="d.runDate" class="card-sep">·</span>
-            <span v-if="d.runDate" class="card-date">{{ formatDate(d.runDate) }}</span>
-            <span
-              v-if="d.runState"
-              class="card-state"
-              :class="d.runState === 'done' ? 'card-state--done' : 'card-state--active'"
-            >
-              {{ d.runState }}
-            </span>
-          </div>
-          <p v-if="d.workflowLabel" class="card-workflow">{{ d.workflowLabel }}</p>
-        </div>
-
-        <!-- Process strip -->
-        <div class="card-body-section">
-          <p class="body-label">Process</p>
-          <div class="process-strip">
-            <template v-for="(act, i) in d.activities" :key="act.actInstUri">
-              <div
-                class="proc-chip"
-                :class="act.hasPlan ? 'proc-chip--planned' : 'proc-chip--plain'"
+              <span
+                v-if="d.runState"
+                class="state-badge"
+                :class="d.runState === 'done' ? 'state-badge--done' : 'state-badge--active'"
               >
-                <span class="chip-name">{{ act.title ?? 'Activity' }}</span>
-                <span v-if="chipParams(act)" class="chip-params">{{ chipParams(act) }}</span>
-              </div>
-              <span v-if="i < d.activities.length - 1" class="proc-arrow">→</span>
-            </template>
-          </div>
-        </div>
+                {{ d.runState }}
+              </span>
+            </div>
 
-        <!-- Material strip -->
-        <div class="card-body-section card-body-section--material">
-          <p class="body-label">Material</p>
-          <div class="mat-strip">
-            <span v-if="plyMaterial(d)" class="mat-token mat-token--material">{{ plyMaterial(d) }}</span>
-            <span v-if="d.plies.length > 0" class="mat-token">{{ d.plies.length }} plies</span>
-            <div v-if="d.plies.length > 0" class="ply-badges-row">
+            <p class="card-meta">
+              <span class="card-run">{{ d.runLabel ?? '(untitled run)' }}</span>
+              <span v-if="d.runDate" class="card-sep">·</span>
+              <span v-if="d.runDate" class="card-date">{{ formatDate(d.runDate) }}</span>
+            </p>
+
+            <p v-if="d.workflowLabel" class="card-workflow">{{ d.workflowLabel }}</p>
+
+            <!-- Material brief -->
+            <div class="mat-brief">
+              <span v-if="plyMaterial(d)" class="mat-chip mat-chip--material">{{ plyMaterial(d) }}</span>
+              <span v-if="d.plies.length" class="mat-chip">{{ d.plies.length }} plies</span>
               <span
                 v-for="(ply, i) in d.plies"
                 :key="i"
@@ -166,32 +138,17 @@ function orientFg(deg: number | null): string {
               >
                 {{ ply.orientation !== null ? `${ply.orientation}°` : '?°' }}
               </span>
+              <span v-if="dimString(d)" class="mat-chip mat-chip--dims">{{ dimString(d) }}</span>
             </div>
-            <span v-if="dimString(d)" class="mat-token mat-token--dims">{{ dimString(d) }}</span>
-            <span v-if="d.fiberMassFraction !== null" class="mat-token">
-              {{ fmtNum(d.fiberMassFraction) }}% fiber
-            </span>
           </div>
-        </div>
 
-        <!-- Footer links -->
-        <div class="card-footer">
-          <button class="footer-btn" @click="router.push({ name: 'parts' })">
-            ← Parts detail
-          </button>
-          <span class="footer-sep"></span>
-          <button
-            class="footer-btn"
-            @click="router.push({ name: 'run', query: { uri: d.runUri } })"
-          >
-            Run detail →
-          </button>
-          <span class="footer-sep"></span>
-          <button class="footer-btn footer-btn--datasets" @click="router.push({ name: 'catalog' })">
-            {{ d.datasetCount }} {{ d.datasetCount === 1 ? 'dataset' : 'datasets' }}
-          </button>
-        </div>
+          <!-- Right: open button -->
+          <div class="card-action">
+            <span class="open-label">Open record</span>
+            <span class="open-arrow">→</span>
+          </div>
 
+        </div>
       </li>
     </ul>
   </main>
@@ -199,7 +156,7 @@ function orientFg(deg: number | null): string {
 
 <style scoped>
 .dossier-home {
-  max-width: 900px;
+  max-width: 860px;
   margin: 0 auto;
   padding: 2rem 1.5rem 3rem;
 }
@@ -219,7 +176,7 @@ function orientFg(deg: number | null): string {
 .subtitle {
   color: #6b7280;
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 /* ── Tab nav ── */
@@ -256,108 +213,99 @@ function orientFg(deg: number | null): string {
 }
 .state-message--error { color: #dc2626; }
 
-/* ── Card list ── */
-.dossier-cards {
+/* ── Record card list ── */
+.record-cards {
   list-style: none;
   padding: 0;
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 0.85rem;
 }
 
-/* ── Card ── */
-.dossier-card {
+/* ── Record card ── */
+.record-card {
   background: #fff;
   border: 1px solid var(--color-border);
   border-top: 4px solid #f59e0b;
   border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-}
-
-/* ── Card header ── */
-.card-header {
-  padding: 1.25rem 1.5rem 1rem;
-  background: linear-gradient(135deg, #fffbf0 0%, #ffffff 60%);
-  border-bottom: 1px solid #fef3c7;
-}
-
-.card-top-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 0.5rem;
-}
-
-.card-eyebrow {
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #d97706;
-  margin: 0 0 0.2rem;
-}
-
-.card-title {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: var(--color-text);
-  margin: 0;
-  line-height: 1.2;
-}
-
-.card-permalink {
-  background: none;
-  border: 1px solid #fde68a;
-  border-radius: 6px;
-  padding: 0.3rem 0.7rem;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #b45309;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   cursor: pointer;
-  font-family: inherit;
-  flex-shrink: 0;
-  margin-top: 0.25rem;
-  transition: background 0.15s, border-color 0.15s;
+  transition: box-shadow 0.15s, border-color 0.15s, transform 0.1s;
 }
 
-.card-permalink:hover {
-  background: #fef3c7;
-  border-color: #f59e0b;
+.record-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: #fbbf24;
+  transform: translateY(-1px);
 }
 
-.card-meta-row {
+.card-inner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.1rem 1.4rem;
+}
+
+/* ── Card body ── */
+.card-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.card-title-row {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
-  margin-bottom: 0.2rem;
+}
+
+.card-icon {
+  color: #f59e0b;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.card-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.state-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+  border-radius: 20px;
+  letter-spacing: 0.04em;
+}
+.state-badge--done  { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+.state-badge--active { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin: 0;
 }
 
 .card-run {
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   font-weight: 500;
   color: var(--color-text);
 }
 
-.card-sep { color: #d1d5db; }
+.card-sep { color: #d1d5db; font-size: 0.85rem; }
 
 .card-date {
   font-size: 0.82rem;
   color: #6b7280;
 }
-
-.card-state {
-  font-size: 0.65rem;
-  font-weight: 700;
-  padding: 0.12rem 0.5rem;
-  border-radius: 20px;
-  letter-spacing: 0.04em;
-}
-.card-state--done  { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
-.card-state--active { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
 
 .card-workflow {
   font-size: 0.78rem;
@@ -365,151 +313,64 @@ function orientFg(deg: number | null): string {
   margin: 0;
 }
 
-/* ── Card body sections ── */
-.card-body-section {
-  padding: 0.9rem 1.5rem;
-  border-bottom: 1px solid #f3f4f6;
-}
-
-.card-body-section--material {
-  background: #fafafa;
-}
-
-.body-label {
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #9ca3af;
-  margin: 0 0 0.6rem;
-}
-
-/* ── Process strip ── */
-.process-strip {
+/* ── Material brief ── */
+.mat-brief {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.25rem;
-  overflow-x: auto;
+  gap: 0.3rem;
+  margin-top: 0.2rem;
 }
 
-.proc-chip {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  padding: 0.45rem 0.7rem;
-  border-radius: 7px;
-  border-left: 3px solid transparent;
-  min-width: 90px;
-}
-
-.proc-chip--planned {
-  background: #fffdf7;
-  border: 1px solid #fde68a;
-  border-left-color: #f59e0b;
-}
-
-.proc-chip--plain {
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-left-color: #e5e7eb;
-}
-
-.chip-name {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--color-text);
-  white-space: nowrap;
-}
-
-.chip-params {
-  font-size: 0.7rem;
-  color: #b45309;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.proc-arrow {
-  color: #d1d5db;
-  font-size: 0.9rem;
-  flex-shrink: 0;
-  padding: 0 0.1rem;
-}
-
-/* ── Material strip ── */
-.mat-strip {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-
-.mat-token {
-  font-size: 0.82rem;
+.mat-chip {
+  font-size: 0.75rem;
   color: #4b5563;
-  padding: 0.2rem 0.55rem;
+  padding: 0.15rem 0.5rem;
   background: #f3f4f6;
   border-radius: 20px;
   white-space: nowrap;
 }
 
-.mat-token--material {
+.mat-chip--material {
   background: #fef3c7;
   color: #92400e;
   font-weight: 600;
 }
 
-.mat-token--dims {
+.mat-chip--dims {
   font-variant-numeric: tabular-nums;
-}
-
-.ply-badges-row {
-  display: flex;
-  gap: 0.2rem;
 }
 
 .ply-badge {
   font-size: 0.7rem;
   font-weight: 700;
-  padding: 0.15rem 0.45rem;
+  padding: 0.12rem 0.4rem;
   border-radius: 20px;
 }
 
-/* ── Card footer ── */
-.card-footer {
+/* ── Card action ── */
+.card-action {
   display: flex;
+  flex-direction: column;
   align-items: center;
-}
-
-.footer-btn {
-  flex: 1;
-  background: none;
-  border: none;
-  padding: 0.75rem 1rem;
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--color-primary);
-  cursor: pointer;
-  font-family: inherit;
-  text-align: center;
-  transition: background 0.15s;
-}
-
-.footer-btn:hover { background: #f0fdf4; }
-
-.footer-btn--datasets {
-  color: #6b7280;
-}
-
-.footer-btn--datasets:hover {
-  background: #f9fafb;
-  color: var(--color-text);
-}
-
-.footer-sep {
-  width: 1px;
-  height: 2rem;
-  background: var(--color-border);
+  gap: 0.15rem;
   flex-shrink: 0;
+  padding: 0.5rem 0.75rem;
+  border-left: 1px solid #fef3c7;
+}
+
+.open-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #d97706;
+  white-space: nowrap;
+}
+
+.open-arrow {
+  font-size: 1.1rem;
+  color: #f59e0b;
+  line-height: 1;
 }
 </style>

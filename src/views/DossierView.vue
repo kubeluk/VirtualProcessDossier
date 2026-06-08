@@ -199,18 +199,18 @@ const atomicActivities = computed<DossierActivity[]>(
       <!-- ── NAVIGATION FOOTER ─────────────────────────────────────── -->
       <div class="dossier-footer">
         <button class="footer-link" @click="router.push({ name: 'parts' })">
-          ← Full material detail
+          ← What it's made of
         </button>
         <span class="footer-divider"></span>
         <button class="footer-link" @click="router.push({ name: 'run', query: { uri: dossier.runUri } })">
-          Full run detail →
+          How it was made →
         </button>
         <span class="footer-divider"></span>
         <button
           class="footer-link footer-link--datasets"
-          @click="router.push({ name: 'catalog' })"
+          @click="router.push({ name: 'catalog', query: { run: dossier.runUri } })"
         >
-          {{ dossier.datasetCount }} {{ dossier.datasetCount === 1 ? 'dataset' : 'datasets' }}
+          {{ dossier.datasetCount }} {{ dossier.datasetCount === 1 ? 'dataset' : 'datasets' }} →
         </button>
       </div>
 

@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useCatalogStore } from '@/stores/catalog'
 import type { DatasetFilterOptions } from '@/stores/catalog'
 import AddDatasetModal from '@/components/AddDatasetModal.vue'
 
+const route = useRoute()
 const router = useRouter()
 const catalog = useCatalogStore()
 const showModal = ref(false)
@@ -67,7 +68,14 @@ watch(searchText, () => {
 watch([selectedRunUri, selectedModelUri], () => refetchWithFilters())
 
 onMounted(async () => {
-  catalog.fetchDatasets()
+  // Pre-filter by run if navigated from a dossier record
+  const preselectedRun = route.query.run as string | undefined
+  if (preselectedRun) {
+    selectedRunUri.value = preselectedRun
+    // selectedRunUri watcher will trigger the fetch; skip manual call
+  } else {
+    catalog.fetchDatasets()
+  }
   filterOptionsLoading.value = true
   try {
     filterOptions.value = await catalog.fetchFilterOptions()
