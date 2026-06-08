@@ -49,6 +49,30 @@ machine:gripperFrame a ssn:System, geo:Feature ;
     pos:hasPositionalReference pos:gripperFrameReferencePoint ;
     ssn:hasSubSystem gripper:1, gripper:2, gripper:3, gripper:4, gripper:5, gripper:6, gripper:7, gripper:8 .
 
+gripper:1 a ssn:System ;
+    rdfs:label "Gripper 1" .
+
+gripper:2 a ssn:System ;
+    rdfs:label "Gripper 2" .
+
+gripper:3 a ssn:System ;
+    rdfs:label "Gripper 3" .
+
+gripper:4 a ssn:System ;
+    rdfs:label "Gripper 4" .
+
+gripper:5 a ssn:System ;
+    rdfs:label "Gripper 5" .
+
+gripper:6 a ssn:System ;
+    rdfs:label "Gripper 6" .
+
+gripper:7 a ssn:System ;
+    rdfs:label "Gripper 7" .
+
+gripper:8 a ssn:System ;
+    rdfs:label "Gripper 8" .
+
 pos:gripperFrameReferencePoint a pos:Origin ;
     rdfs:label "Greiferrahmen Reference Point"@en ;
     rdfs:comment "Die linke, untere Ecke des Greiferrahmens bildet den Bezugspunkt für die Positionen der Greiferpunkte."@de .
@@ -69,6 +93,30 @@ machine:ir_bottom a ssn:System ;
     rdfs:label "IR Field (bottom)"@en ;
     rdfs:comment "The bottom IR field consists of three individually controllable zones: middle, edge and corner zones for the bottom part of the laminat."@en ;
     ssn:hasSubSystem machine:ir_bottom_middle, machine:ir_bottom_edge, machine:ir_bottom_corner .
+
+machine:ir_top_middle a ssn:System ;
+    rdfs:label "IR Zone (top middle)"@en ;
+    rdfs:comment "The middle zone of the top IR field."@en .
+
+machine:ir_top_edge a ssn:System ;
+    rdfs:label "IR Zone (top edge)"@en ;
+    rdfs:comment "The edge zone of the top IR field."@en .
+
+machine:ir_top_corner a ssn:System ;
+    rdfs:label "IR Zone (top corner)"@en ;
+    rdfs:comment "The corner zone of the top IR field."@en .
+
+machine:ir_bottom_middle a ssn:System ;
+    rdfs:label "IR Zone (bottom middle)"@en ;
+    rdfs:comment "The middle zone of the bottom IR field."@en .
+
+machine:ir_bottom_edge a ssn:System ;
+    rdfs:label "IR Zone (bottom edge)"@en ;
+    rdfs:comment "The edge zone of the bottom IR field."@en .
+
+machine:ir_bottom_corner a ssn:System ;
+    rdfs:label "IR Zone (bottom corner)"@en ;
+    rdfs:comment "The corner zone of the bottom IR field."@en .
 
 ## Press
 

@@ -1180,9 +1180,18 @@ ${lines.join('\n')}
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
 
-      SELECT ?uri ?type ?title ?identifier ?description ?parent ?actUri ?actTitle WHERE {
-        ?uri a ?type .
-        FILTER(?type IN (ssn:System, sosa:Sensor, sosa:Actuator))
+      SELECT DISTINCT ?uri ?type ?title ?identifier ?description ?parent ?actUri ?actTitle WHERE {
+        {
+          ?uri a ?type .
+          FILTER(?type IN (ssn:System, sosa:Sensor, sosa:Actuator))
+        } UNION {
+          ?anyParent ssn:hasSubSystem ?uri .
+          FILTER NOT EXISTS {
+            ?uri a ?declared .
+            FILTER(?declared IN (ssn:System, sosa:Sensor, sosa:Actuator))
+          }
+          BIND(ssn:System AS ?type)
+        }
         OPTIONAL { ?uri rdfs:label ?title }
         OPTIONAL { ?uri dcterms:identifier ?identifier }
         OPTIONAL { ?uri rdfs:comment ?description }

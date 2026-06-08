@@ -41,7 +41,7 @@ vpd:1 a dcat:Dataset ;
     dcterms:description "Sensordaten von der Inbetriebnahme des Heizfelds und Greiferrahmens am 30.03.2026" ;
     dcat:distribution [
         a dcat:Distribution ;
-        dcat:downloadURL <http://example.com/data/#1.1_BASF_Test_1_20260330_101925.txt> ;
+        dcat:downloadURL <https://os-webdav.lsdf.kit.edu/kit/iar/projects/FOR_5339/T1/Versuchsdaten/Versuchskampagne%202026_1/Pressendaten/%231.1_BASF_Test_1_20260330_101925.txt> ;
         dcat:mediaType "text/tab-separated-values" ;
         dcat:temporalResolution "PT0.02S"^^xsd:duration ;
     ] ;
