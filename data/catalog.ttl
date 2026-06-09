@@ -36,8 +36,10 @@ vpd:it a dcat:Catalog ;
 
 ## Datasets
 
-vpd:1 a dcat:Dataset ;
-    dcterms:title "Dataset 1" ;
+### Activity Observations
+
+vpd:1sensor a dcat:Dataset ;
+    dcterms:title "Sensordaten 1" ;
     dcterms:description "Sensordaten von der Inbetriebnahme des Heizfelds und Greiferrahmens am 30.03.2026" ;
     dcat:distribution [
         a dcat:Distribution ;
@@ -46,3 +48,14 @@ vpd:1 a dcat:Dataset ;
         dcat:temporalResolution "PT0.02S"^^xsd:duration ;
     ] ;
     prov:wasGeneratedBy run:1 .
+
+### Part 3D Scans
+
+vpd:12scan a dcat:Dataset ;
+    dcterms:title "Scan-Daten 12" ;
+    dcterms:description "3D-Scan des gefertigten Bauteils von Versuch No. 12" ;
+    dcat:distribution [
+        a dcat:Distribution ;
+        dcat:downloadURL <https://os-webdav.lsdf.kit.edu/kit/iar/projects/FOR_5339/T1/Versuchsdaten/Versuchskampagne%202026_1/3D-Scans/2.1.stl> ;
+    ] ;
+    prov:wasDerivedFrom part:12 .
