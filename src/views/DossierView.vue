@@ -173,10 +173,6 @@ const atomicActivities = computed<DossierActivity[]>(
             <span class="mat-fact-label">Dimensions</span>
             <span class="mat-fact-value">{{ dimString }}</span>
           </div>
-          <div v-if="dossier.fiberMassFraction !== null" class="mat-fact">
-            <span class="mat-fact-label">Fiber mass fraction</span>
-            <span class="mat-fact-value">{{ fmtNum(dossier.fiberMassFraction) }}%</span>
-          </div>
           <div v-if="dossier.plies.length > 0" class="mat-fact">
             <span class="mat-fact-label">Ply count</span>
             <span class="mat-fact-value">{{ dossier.plies.length }}</span>

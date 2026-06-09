@@ -275,14 +275,6 @@ def emit_part_block(n, tape_start, pos_start, thickness, flagged_thickness,
         laminat_preds.append(f'    dcterms:identifier "{ttl_str(panel_id)}"')
     laminat_preds.append(f"    prov:wasDerivedFrom layup:{n}")
     laminat_preds.extend(size_preds)
-    laminat_preds.append(
-        f"    param:hasFiberMassFraction [\n"
-        f"        a qudt:Quantity ;\n"
-        f"        qudt:hasQuantityKind quantitykind:MassFraction ;\n"
-        f"        qudt:hasUnit unit:PERCENT ;\n"
-        f"        qudt:value {fiber_fraction}\n"
-        f"    ]"
-    )
     laminat_preds.append("    pos:hasPositionalReference pos:laminatReferencePoint")
     laminat_preds.append(f'    param:hasNeedlePoint {", ".join(pos_uris)}')
     laminat_ttl = subject_block(f"laminat:{n} a geo:Feature, prov:Entity", laminat_preds)
@@ -339,6 +331,14 @@ def emit_part_block(n, tape_start, pos_start, thickness, flagged_thickness,
             [
                 f'    param:polymer "{polymer}"',
                 f'    param:fiberType "{fiber_type}"',
+                (
+                    f"    param:hasFiberMassFraction [\n"
+                    f"        a qudt:Quantity ;\n"
+                    f"        qudt:hasQuantityKind quantitykind:MassFraction ;\n"
+                    f"        qudt:hasUnit unit:PERCENT ;\n"
+                    f"        qudt:value {fiber_fraction}\n"
+                    f"    ]"
+                ),
             ],
         )
 

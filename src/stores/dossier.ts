@@ -53,7 +53,6 @@ export interface DossierData {
   width: number | null
   thickness: number | null
   dimUnit: string
-  fiberMassFraction: number | null
 
   layupLabel: string | null
   plies: Array<{ fiberType: string | null; polymer: string | null; orientation: number | null }>
@@ -144,20 +143,14 @@ export const useDossierStore = defineStore('dossier', () => {
 
     // ── Phase 2: parallel queries ───────────────────────────────────────────
 
-    // Laminat dimensions + fiber mass fraction
+    // Laminat dimensions
     const q_props = `
       PREFIX qudt:  <http://qudt.org/schema/qudt/>
       PREFIX geo:   <http://www.opengis.net/ont/geosparql#>
-      PREFIX param: <http://purl.org/for/param#>
       SELECT ?qk ?unit ?value WHERE {
         BIND(<${laminatUri}> AS ?laminat)
-        {
-          ?laminat geo:hasSize ?node .
-          ?node qudt:hasQuantityKind ?qk ; qudt:hasUnit ?unit ; qudt:value ?value .
-        } UNION {
-          ?laminat param:hasFiberMassFraction ?node .
-          ?node qudt:hasQuantityKind ?qk ; qudt:hasUnit ?unit ; qudt:value ?value .
-        }
+        ?laminat geo:hasSize ?node .
+        ?node qudt:hasQuantityKind ?qk ; qudt:hasUnit ?unit ; qudt:value ?value .
       }
     `
 
@@ -314,7 +307,6 @@ export const useDossierStore = defineStore('dossier', () => {
     let width: number | null = null
     let thickness: number | null = null
     let dimUnit = 'mm'
-    let fiberMassFraction: number | null = null
 
     for (const b of r_props.results.bindings) {
       const kind = b.qk.value.split(/[/#]/).pop() ?? ''
@@ -323,7 +315,6 @@ export const useDossierStore = defineStore('dossier', () => {
       if (kind === 'Length') { length = val; dimUnit = uSym || 'mm' }
       else if (kind === 'Width') width = val
       else if (kind === 'Thickness') thickness = val
-      else if (kind === 'MassFraction') fiberMassFraction = val
     }
 
     // ── Parse plies ──────────────────────────────────────────────────────────
@@ -455,7 +446,6 @@ export const useDossierStore = defineStore('dossier', () => {
       width,
       thickness,
       dimUnit,
-      fiberMassFraction,
       layupLabel: h.layupLabel?.value ?? null,
       plies,
       activities,

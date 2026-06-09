@@ -211,6 +211,7 @@ function formatValue(value: number): string {
                       <th>Tape</th>
                       <th>Fiber</th>
                       <th>Polymer</th>
+                      <th class="th-center">Fiber fraction</th>
                       <th class="th-center">Orientation</th>
                     </tr>
                   </thead>
@@ -221,6 +222,9 @@ function formatValue(value: number): string {
                       <td class="td-mono">{{ tapeLabel(ply.tapeId) }}</td>
                       <td>{{ ply.fiberType ?? '—' }}</td>
                       <td>{{ ply.polymer ?? '—' }}</td>
+                      <td class="td-center">
+                        {{ ply.fiberMassFraction !== null ? ply.fiberMassFraction + ' %' : '—' }}
+                      </td>
                       <td class="td-center">
                         <span
                           class="orient-badge"

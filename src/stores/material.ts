@@ -27,6 +27,7 @@ export interface PlySummary {
   polymer: string | null
   fiberType: string | null
   orientation: number | null
+  fiberMassFraction: number | null
 }
 
 export interface NeedlePoint {
@@ -46,7 +47,6 @@ const KIND_LABELS: Record<string, string> = {
   Length: 'Length',
   Width: 'Width',
   Thickness: 'Thickness',
-  MassFraction: 'Fiber mass fraction',
 }
 
 const UNIT_SYMBOLS: Record<string, string> = {
@@ -56,7 +56,7 @@ const UNIT_SYMBOLS: Record<string, string> = {
   UNITLESS: '',
 }
 
-const PROP_ORDER = ['Length', 'Width', 'Thickness', 'MassFraction']
+const PROP_ORDER = ['Length', 'Width', 'Thickness']
 
 function localName(uri: string): string {
   const m = uri.match(/[#/]([^#/]+)$/)
@@ -120,23 +120,13 @@ export const useMaterialStore = defineStore('material', () => {
     const propQuery = `
       PREFIX qudt:  <http://qudt.org/schema/qudt/>
       PREFIX geo:   <http://www.opengis.net/ont/geosparql#>
-      PREFIX param: <http://purl.org/for/param#>
 
       SELECT ?qk ?unit ?value WHERE {
         BIND(<${laminatUri}> AS ?laminat)
-        {
-          ?laminat geo:hasSize ?node .
-          ?node qudt:hasQuantityKind ?qk ;
-                qudt:hasUnit ?unit ;
-                qudt:value ?value .
-        }
-        UNION
-        {
-          ?laminat param:hasFiberMassFraction ?node .
-          ?node qudt:hasQuantityKind ?qk ;
-                qudt:hasUnit ?unit ;
-                qudt:value ?value .
-        }
+        ?laminat geo:hasSize ?node .
+        ?node qudt:hasQuantityKind ?qk ;
+              qudt:hasUnit ?unit ;
+              qudt:value ?value .
       }
     `
 
@@ -145,7 +135,7 @@ export const useMaterialStore = defineStore('material', () => {
       PREFIX qudt:  <http://qudt.org/schema/qudt/>
       PREFIX param: <http://purl.org/for/param#>
 
-      SELECT ?tape ?polymer ?fiberType ?orientation WHERE {
+      SELECT ?tape ?polymer ?fiberType ?orientation ?fiberMassFraction WHERE {
         BIND(<${laminatUri}> AS ?laminat)
         ?laminat prov:wasDerivedFrom ?layup .
         ?layup prov:qualifiedDerivation ?deriv .
@@ -156,6 +146,7 @@ export const useMaterialStore = defineStore('material', () => {
         }
         OPTIONAL { ?tape param:polymer ?polymer }
         OPTIONAL { ?tape param:fiberType ?fiberType }
+        OPTIONAL { ?tape param:hasFiberMassFraction ?fracNode . ?fracNode qudt:value ?fiberMassFraction }
       }
       ORDER BY ?tape
     `
@@ -197,6 +188,7 @@ export const useMaterialStore = defineStore('material', () => {
       polymer: b.polymer?.value ?? null,
       fiberType: b.fiberType?.value ?? null,
       orientation: b.orientation != null ? parseFloat(b.orientation.value) : null,
+      fiberMassFraction: b.fiberMassFraction != null ? parseFloat(b.fiberMassFraction.value) : null,
     }))
 
     const needlePoints: NeedlePoint[] = needleRes.results.bindings.map((b) => ({
@@ -237,19 +229,13 @@ export const useMaterialStore = defineStore('material', () => {
     const propQuery = `
       PREFIX qudt:  <http://qudt.org/schema/qudt/>
       PREFIX geo:   <http://www.opengis.net/ont/geosparql#>
-      PREFIX param: <http://purl.org/for/param#>
       PREFIX sosa:  <http://www.w3.org/ns/sosa/>
       PREFIX prov:  <http://www.w3.org/ns/prov#>
       SELECT ?laminat ?qk ?unit ?value WHERE {
         ?part a sosa:Sample ; prov:wasDerivedFrom ?laminat .
         ?laminat a geo:Feature .
-        {
-          ?laminat geo:hasSize ?node .
-          ?node qudt:hasQuantityKind ?qk ; qudt:hasUnit ?unit ; qudt:value ?value .
-        } UNION {
-          ?laminat param:hasFiberMassFraction ?node .
-          ?node qudt:hasQuantityKind ?qk ; qudt:hasUnit ?unit ; qudt:value ?value .
-        }
+        ?laminat geo:hasSize ?node .
+        ?node qudt:hasQuantityKind ?qk ; qudt:hasUnit ?unit ; qudt:value ?value .
       }
     `
 
@@ -259,7 +245,7 @@ export const useMaterialStore = defineStore('material', () => {
       PREFIX param: <http://purl.org/for/param#>
       PREFIX sosa:  <http://www.w3.org/ns/sosa/>
       PREFIX geo:   <http://www.opengis.net/ont/geosparql#>
-      SELECT ?laminat ?tape ?polymer ?fiberType ?orientation WHERE {
+      SELECT ?laminat ?tape ?polymer ?fiberType ?orientation ?fiberMassFraction WHERE {
         ?part a sosa:Sample ; prov:wasDerivedFrom ?laminat .
         ?laminat a geo:Feature ; prov:wasDerivedFrom ?layup .
         ?layup prov:qualifiedDerivation ?deriv .
@@ -267,6 +253,7 @@ export const useMaterialStore = defineStore('material', () => {
         OPTIONAL { ?deriv param:fiberOrientation ?orientNode . ?orientNode qudt:value ?orientation }
         OPTIONAL { ?tape param:polymer ?polymer }
         OPTIONAL { ?tape param:fiberType ?fiberType }
+        OPTIONAL { ?tape param:hasFiberMassFraction ?fracNode . ?fracNode qudt:value ?fiberMassFraction }
       }
       ORDER BY ?laminat ?tape
     `
@@ -336,6 +323,7 @@ export const useMaterialStore = defineStore('material', () => {
         polymer: b.polymer?.value ?? null,
         fiberType: b.fiberType?.value ?? null,
         orientation: b.orientation != null ? parseFloat(b.orientation.value) : null,
+        fiberMassFraction: b.fiberMassFraction != null ? parseFloat(b.fiberMassFraction.value) : null,
       })
     }
 

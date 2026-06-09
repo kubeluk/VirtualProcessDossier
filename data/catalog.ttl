@@ -32,7 +32,7 @@
 vpd:it a dcat:Catalog ;
     dcterms:title "Virtual Process Dossier (VPD)" ;
     dcterms:description "A FAIR, process-aware data catalog" ;
-    dcat:dataset vpd:1 .
+    dcat:dataset vpd:1sensor, vpd:12scan .
 
 ## Datasets
 
