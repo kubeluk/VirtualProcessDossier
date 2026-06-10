@@ -56,6 +56,32 @@ function gripperLabel(uri: string, label: string | null): string {
   return local.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
+const setpointColumns = computed<{ uri: string; label: string }[]>(() => {
+  const seen = new Map<string, string>()
+  for (const sp of plan.value?.subPlans ?? []) {
+    for (const p of sp.params) {
+      if (p.paramUri.endsWith('#setpoint') && p.sourceUri && !seen.has(p.sourceUri)) {
+        seen.set(p.sourceUri, p.sourceLabel ?? p.sourceUri)
+      }
+    }
+  }
+  return [...seen.entries()].map(([uri, label]) => ({ uri, label }))
+})
+
+const gripperRows = computed(() =>
+  (plan.value?.gripperPositions ?? []).map((pos) => {
+    const sp = plan.value!.subPlans.find((s) => s.machineUri === pos.machineUri)
+    const setpointMap: Record<string, number | null> = {}
+    for (const col of setpointColumns.value) {
+      const match = sp?.params.find(
+        (p) => p.paramUri.endsWith('#setpoint') && p.sourceUri === col.uri,
+      )
+      setpointMap[col.uri] = match?.value ?? null
+    }
+    return { pos, setpointMap }
+  }),
+)
+
 onMounted(async () => {
   loading.value = true
   try {
@@ -99,25 +125,31 @@ onMounted(async () => {
         </table>
       </div>
 
-      <!-- Gripper positions table -->
+      <!-- Gripper parameters: positions + per-activity setpoints -->
       <div v-if="showGripperPositions" class="plan-section">
-        <p class="section-label">Gripper Positions</p>
+        <p class="section-label">Gripper Parameters</p>
         <table class="grid-table">
           <thead>
             <tr>
               <th class="th-name">Gripper</th>
               <th class="th-num">X (mm)</th>
               <th class="th-num">Y (mm)</th>
+              <th v-for="col in setpointColumns" :key="col.uri" class="th-num">
+                Setpoint — {{ col.label }}
+              </th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="pos in plan!.gripperPositions" :key="pos.machineUri" class="grid-row">
-              <td class="td-name">{{ gripperLabel(pos.machineUri, pos.machineLabel) }}</td>
-              <td class="td-num" :class="pos.x < 0 ? 'val-neg' : 'val-pos'">
-                {{ pos.x > 0 ? '+' : '' }}{{ fmt(pos.x) }}
+            <tr v-for="row in gripperRows" :key="row.pos.machineUri" class="grid-row">
+              <td class="td-name">{{ gripperLabel(row.pos.machineUri, row.pos.machineLabel) }}</td>
+              <td class="td-num" :class="row.pos.x < 0 ? 'val-neg' : 'val-pos'">
+                {{ row.pos.x > 0 ? '+' : '' }}{{ fmt(row.pos.x) }}
               </td>
-              <td class="td-num" :class="pos.y < 0 ? 'val-neg' : 'val-pos'">
-                {{ pos.y > 0 ? '+' : '' }}{{ fmt(pos.y) }}
+              <td class="td-num" :class="row.pos.y < 0 ? 'val-neg' : 'val-pos'">
+                {{ row.pos.y > 0 ? '+' : '' }}{{ fmt(row.pos.y) }}
+              </td>
+              <td v-for="col in setpointColumns" :key="col.uri" class="td-num">
+                {{ row.setpointMap[col.uri] != null ? fmt(row.setpointMap[col.uri]!) : '—' }}
               </td>
             </tr>
           </tbody>

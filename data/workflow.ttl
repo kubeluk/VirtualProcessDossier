@@ -59,3 +59,7 @@ activity:transfering a wild:AtomicActivity ;
 activity:forming a wild:AtomicActivity ;
     rdfs:label "Forming" ;
     rdfs:comment "The forming activity involves the use of the press to shape the laminate." .
+
+activity:reworking a wild:AtomicActivity ;
+    rdfs:label "Reworking" ;
+    rdfs:comment "The reworking activity involves any additional processing steps that may be necessary to achieve the desired quality of the final part." .
