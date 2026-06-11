@@ -587,12 +587,18 @@ export const useWorkflowStore = defineStore('workflow', () => {
       }
     `
 
-    // Query 5: cross-cutting datasets linked directly to the run instance
+    // Query 5: cross-cutting datasets linked directly to the run instance.
+    // Covers both dcterms:isPartOf (user-added via UI) and prov:wasGeneratedBy (seeded data).
     const crossCuttingQuery = `
       PREFIX dcterms: <http://purl.org/dc/terms/>
+      PREFIX prov:    <http://www.w3.org/ns/prov#>
 
-      SELECT ?dataset ?datasetTitle ?datasetDesc WHERE {
-        ?dataset dcterms:isPartOf <${uri}> .
+      SELECT DISTINCT ?dataset ?datasetTitle ?datasetDesc WHERE {
+        {
+          ?dataset dcterms:isPartOf <${uri}> .
+        } UNION {
+          ?dataset prov:wasGeneratedBy <${uri}> .
+        }
         OPTIONAL { ?dataset dcterms:title ?datasetTitle }
         OPTIONAL { ?dataset dcterms:description ?datasetDesc }
       }
