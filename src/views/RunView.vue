@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useWorkflowStore, type RunDetail } from '@/stores/workflow'
 import { useMaterialStore } from '@/stores/material'
@@ -23,6 +23,9 @@ const runDescInput = ref('')
 const savingRun = ref(false)
 const saveRunError = ref<string | null>(null)
 
+// Activity to highlight/open from external navigation (e.g. dossier click)
+const openActivityUri = ref<string | undefined>(undefined)
+
 // Add dataset modal
 const showAddModal = ref(false)
 const addToStepUri = ref<string | undefined>(undefined)
@@ -33,9 +36,15 @@ onMounted(async () => {
     router.replace({ name: 'workflows' })
     return
   }
+  const targetActivity = route.query.openActivity as string | undefined
+  if (targetActivity) openActivityUri.value = targetActivity
   try {
     run.value = await workflowStore.fetchRun(uri)
     if (!run.value) error.value = 'Run not found.'
+    if (targetActivity) {
+      await nextTick()
+      document.querySelector(`[data-actinst]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
   } catch {
     error.value = 'Failed to load run.'
   } finally {
@@ -218,6 +227,7 @@ async function saveRun() {
               :index="i"
               :total="run.activityInstances.length"
               :context="run.rootType === 'ParallelActivity' ? 'parallel' : 'sequential'"
+              :open-activity-uri="openActivityUri"
               @open-dataset="openDataset"
               @add-dataset="openAddModal"
             />

@@ -10,6 +10,7 @@ const props = defineProps<{
   index: number
   total: number
   context: 'sequential' | 'parallel'
+  openActivityUri?: string
 }>()
 
 const emit = defineEmits<{
@@ -34,6 +35,7 @@ const structureLabel = computed(() =>
 const childCount = computed(() => props.inst.children.length)
 
 const stateLabel = computed(() => props.inst.state ?? null)
+const isOpenTarget = computed(() => !!props.openActivityUri && props.inst.uri === props.openActivityUri)
 </script>
 
 <template>
@@ -47,7 +49,7 @@ const stateLabel = computed(() => props.inst.state ?? null)
           <div v-if="context === 'sequential' && index < total - 1" class="act-connector-line"></div>
         </div>
 
-        <div class="act-content act-content--leaf">
+        <div class="act-content act-content--leaf" :data-actinst="isOpenTarget ? inst.uri : undefined">
           <div class="act-header">
             <h3 class="act-name">{{ inst.modelActivityTitle ?? 'Unnamed Activity' }}</h3>
             <span
@@ -79,7 +81,7 @@ const stateLabel = computed(() => props.inst.state ?? null)
           </div>
 
           <!-- Process parameters (PROV-O + QUDT) -->
-          <ActivityPlanPanel :act-inst-uri="inst.uri" />
+          <ActivityPlanPanel :act-inst-uri="inst.uri" :initial-expanded="isOpenTarget" />
         </div>
       </div>
     </template>
@@ -137,6 +139,7 @@ const stateLabel = computed(() => props.inst.state ?? null)
           :index="i"
           :total="inst.children.length"
           :context="isParallel ? 'parallel' : 'sequential'"
+          :open-activity-uri="openActivityUri"
           @open-dataset="emit('open-dataset', $event)"
           @add-dataset="emit('add-dataset', $event)"
         />

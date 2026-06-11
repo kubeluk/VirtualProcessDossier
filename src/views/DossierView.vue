@@ -79,6 +79,10 @@ const dimString = computed(() => {
 const atomicActivities = computed<DossierActivity[]>(
   () => dossier.value?.activities ?? [],
 )
+
+function goToActivity(act: DossierActivity) {
+  router.push({ name: 'run', query: { uri: dossier.value!.runUri, openActivity: act.actInstUri } })
+}
 </script>
 
 <template>
@@ -122,8 +126,18 @@ const atomicActivities = computed<DossierActivity[]>(
 
         <div class="timeline">
           <template v-for="(act, i) in atomicActivities" :key="act.actInstUri">
-            <div class="act-card" :class="act.hasPlan ? 'act-card--planned' : 'act-card--plain'">
-              <p class="act-name">{{ act.title ?? 'Unnamed Activity' }}</p>
+            <div
+              class="act-card"
+              :class="act.hasPlan ? 'act-card--planned' : 'act-card--plain'"
+              role="button"
+              tabindex="0"
+              @click="goToActivity(act)"
+              @keydown.enter="goToActivity(act)"
+            >
+              <div class="act-name-row">
+                <p class="act-name">{{ act.title ?? 'Unnamed Activity' }}</p>
+                <span class="act-link-hint">→</span>
+              </div>
               <p v-if="act.machineLabel" class="act-machine">{{ act.machineLabel }}</p>
               <ul v-if="act.keyParams.length > 0" class="act-params">
                 <li v-for="p in act.keyParams" :key="p.label" class="act-param">
@@ -396,13 +410,33 @@ const atomicActivities = computed<DossierActivity[]>(
   background: #fff;
 }
 
+.act-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+
+.act-card:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 .act-card--planned {
   border-left-color: #f59e0b;
   background: #fffdf7;
+  cursor: pointer;
 }
 
 .act-card--plain {
   border-left-color: #e5e7eb;
+  cursor: pointer;
+}
+
+.act-name-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.25rem;
 }
 
 .act-name {
@@ -411,6 +445,18 @@ const atomicActivities = computed<DossierActivity[]>(
   color: var(--color-text);
   margin: 0;
   line-height: 1.3;
+  flex: 1;
+}
+
+.act-link-hint {
+  font-size: 0.75rem;
+  color: #d1d5db;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+.act-card:hover .act-link-hint {
+  color: var(--color-primary);
 }
 
 .act-machine {

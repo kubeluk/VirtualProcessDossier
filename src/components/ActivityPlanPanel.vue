@@ -6,12 +6,12 @@ import {
   type SubPlanEntry,
 } from '@/stores/workflow'
 
-const props = defineProps<{ actInstUri: string }>()
+const props = defineProps<{ actInstUri: string; initialExpanded?: boolean }>()
 
 const store = useWorkflowStore()
 const plan = ref<ActivityPlanData | null>(null)
 const loading = ref(false)
-const expanded = ref(false)
+const expanded = ref(props.initialExpanded ?? false)
 
 const hasAnyData = computed(
   () =>
