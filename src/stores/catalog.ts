@@ -41,10 +41,11 @@ export interface DatasetDetail extends Dataset {
 }
 
 export interface WorkflowContext {
-  runUri: string
+  runUri: string | null
   runLabel: string | null
   workflowUri: string | null
   workflowLabel: string | null
+  partUri: string | null
 }
 
 export const useCatalogStore = defineStore('catalog', () => {
@@ -201,14 +202,22 @@ export const useCatalogStore = defineStore('catalog', () => {
       PREFIX prov:  <http://www.w3.org/ns/prov#>
       PREFIX wild:  <http://purl.org/wild/vocab#>
       PREFIX rdfs:  <http://www.w3.org/2000/01/rdf-schema#>
+      PREFIX sosa:  <http://www.w3.org/ns/sosa/>
 
-      SELECT ?run ?runLabel ?model ?modelLabel WHERE {
-        <${uri}> prov:wasGeneratedBy ?run .
-        OPTIONAL { ?run rdfs:label ?runLabel }
+      SELECT ?run ?runLabel ?model ?modelLabel ?part WHERE {
         OPTIONAL {
-          ?run wild:workflowInstanceOf ?model .
-          OPTIONAL { ?model rdfs:label ?modelLabel }
+          <${uri}> prov:wasGeneratedBy ?run .
+          OPTIONAL { ?run rdfs:label ?runLabel }
+          OPTIONAL {
+            ?run wild:workflowInstanceOf ?model .
+            OPTIONAL { ?model rdfs:label ?modelLabel }
+          }
         }
+        OPTIONAL {
+          <${uri}> prov:wasDerivedFrom ?part .
+          ?part a sosa:Sample .
+        }
+        FILTER(BOUND(?run) || BOUND(?part))
       }
       LIMIT 1
     `
@@ -217,10 +226,11 @@ export const useCatalogStore = defineStore('catalog', () => {
 
     const b = results.results.bindings[0]
     return {
-      runUri: b.run.value,
+      runUri: b.run?.value ?? null,
       runLabel: b.runLabel?.value ?? null,
       workflowUri: b.model?.value ?? null,
       workflowLabel: b.modelLabel?.value ?? null,
+      partUri: b.part?.value ?? null,
     }
   }
 

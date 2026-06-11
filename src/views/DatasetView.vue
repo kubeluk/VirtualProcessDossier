@@ -3,6 +3,14 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCatalogStore, type DatasetDetail, type WorkflowContext } from '@/stores/catalog'
 
+function localPartName(uri: string): string {
+  return uri.split(/[/#]/).pop() ?? uri
+}
+
+function partLabel(uri: string): string {
+  return `Part ${localPartName(uri)}`
+}
+
 const route = useRoute()
 const router = useRouter()
 const catalog = useCatalogStore()
@@ -46,25 +54,47 @@ onMounted(async () => {
       <p v-if="dataset.description" class="dataset-description">{{ dataset.description }}</p>
 
       <section v-if="workflowContext" class="workflow-context-section">
-        <h2>Workflow Context</h2>
-        <div class="wc-workflow-row">
-          <span class="wc-workflow-label">Part of run</span>
-          <button
-            class="wc-workflow-link"
-            @click="router.push({ name: 'run', query: { uri: workflowContext.runUri } })"
-          >
-            {{ workflowContext.runLabel ?? workflowContext.runUri }} →
-          </button>
-        </div>
-        <div v-if="workflowContext.workflowUri" class="wc-workflow-row">
-          <span class="wc-workflow-label">Workflow</span>
-          <button
-            class="wc-workflow-link"
-            @click="router.push({ name: 'workflow', query: { uri: workflowContext.workflowUri! } })"
-          >
-            {{ workflowContext.workflowLabel ?? workflowContext.workflowUri }}
-          </button>
-        </div>
+        <h2>Provenance</h2>
+        <template v-if="workflowContext.runUri">
+          <div class="wc-workflow-row">
+            <span class="wc-workflow-label">Part of run</span>
+            <button
+              class="wc-workflow-link"
+              @click="router.push({ name: 'run', query: { uri: workflowContext.runUri } })"
+            >
+              {{ workflowContext.runLabel ?? workflowContext.runUri }} →
+            </button>
+          </div>
+          <div v-if="workflowContext.workflowUri" class="wc-workflow-row">
+            <span class="wc-workflow-label">Workflow</span>
+            <button
+              class="wc-workflow-link"
+              @click="router.push({ name: 'workflow', query: { uri: workflowContext.workflowUri! } })"
+            >
+              {{ workflowContext.workflowLabel ?? workflowContext.workflowUri }}
+            </button>
+          </div>
+        </template>
+        <template v-if="workflowContext.partUri">
+          <div class="wc-workflow-row">
+            <span class="wc-workflow-label">Derived from part</span>
+            <button
+              class="wc-workflow-link"
+              @click="router.push({ name: 'parts', query: { part: workflowContext.partUri } })"
+            >
+              {{ partLabel(workflowContext.partUri) }} →
+            </button>
+          </div>
+          <div class="wc-workflow-row">
+            <span class="wc-workflow-label">Part dossier</span>
+            <button
+              class="wc-workflow-link"
+              @click="router.push({ name: 'dossier', query: { part: workflowContext.partUri } })"
+            >
+              Open dossier →
+            </button>
+          </div>
+        </template>
       </section>
 
       <section v-if="dataset.distributions.length > 0" class="distributions-section">

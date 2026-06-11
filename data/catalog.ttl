@@ -56,6 +56,7 @@ vpd:12scan a dcat:Dataset ;
     dcterms:description "3D-Scan des gefertigten Bauteils von Versuch No. 12" ;
     dcat:distribution [
         a dcat:Distribution ;
+        dcat:mediaType "model/stl" ;
         dcat:downloadURL <https://os-webdav.lsdf.kit.edu/kit/iar/projects/FOR_5339/T1/Versuchsdaten/Versuchskampagne%202026_1/3D-Scans/2.1.stl> ;
     ] ;
     prov:wasDerivedFrom part:12 .
