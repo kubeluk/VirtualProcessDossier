@@ -64,7 +64,10 @@ function toggleExpand(uri: string) {
             Machines and stations that implement workflow activities.
           </p>
         </div>
-        <button class="btn btn--primary" @click="openCreate">+ Add System</button>
+        <div class="header-actions">
+          <RouterLink to="/sparql" class="sparql-btn" title="SPARQL Query — for advanced users">&lt;/&gt;</RouterLink>
+          <button class="btn btn--primary" @click="openCreate">+ Add System</button>
+        </div>
       </div>
     </header>
 
@@ -83,7 +86,6 @@ function toggleExpand(uri: string) {
       <RouterLink to="/workflows" class="nav-tab nav-tab--secondary">Workflows</RouterLink>
       <RouterLink to="/systems" class="nav-tab nav-tab--secondary nav-tab--active">Systems</RouterLink>
       <RouterLink to="/parts" class="nav-tab nav-tab--secondary">Parts</RouterLink>
-      <RouterLink to="/sparql" class="nav-tab nav-tab--secondary">SPARQL</RouterLink>
     </nav>
 
     <div v-if="loading" class="state-message">Loading systems…</div>
@@ -160,6 +162,34 @@ function toggleExpand(uri: string) {
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.sparql-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.78rem;
+  font-family: monospace;
+  color: #9ca3af;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.sparql-btn:hover {
+  color: #374151;
+  background: #e5e7eb;
+  border-color: #d1d5db;
 }
 
 .page-header h1 {

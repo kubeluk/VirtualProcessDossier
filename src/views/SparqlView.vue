@@ -51,7 +51,6 @@ onMounted(() => {
       <RouterLink to="/workflows" class="nav-tab nav-tab--secondary">Workflows</RouterLink>
       <RouterLink to="/systems" class="nav-tab nav-tab--secondary">Systems</RouterLink>
       <RouterLink to="/parts" class="nav-tab nav-tab--secondary">Parts</RouterLink>
-      <RouterLink to="/sparql" class="nav-tab nav-tab--secondary nav-tab--active">SPARQL</RouterLink>
     </nav>
 
     <div ref="container" class="yasgui-container"></div>
