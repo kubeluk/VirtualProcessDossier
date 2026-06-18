@@ -58,10 +58,7 @@ function onDeleted() {
             Reusable atomic activities that can be referenced in workflow models.
           </p>
         </div>
-        <div class="header-actions">
-          <RouterLink to="/sparql" class="sparql-btn" title="SPARQL Query — for advanced users">&lt;/&gt;</RouterLink>
-          <button class="btn btn--primary" @click="openCreate">+ Add Activity</button>
-        </div>
+        <button class="btn btn--primary" @click="openCreate">+ Add Activity</button>
       </div>
     </header>
 
@@ -131,34 +128,6 @@ function onDeleted() {
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-shrink: 0;
-}
-
-.sparql-btn {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.35rem 0.65rem;
-  font-size: 0.78rem;
-  font-family: monospace;
-  color: #9ca3af;
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
-  border-radius: 5px;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: color 0.15s, background 0.15s, border-color 0.15s;
-}
-
-.sparql-btn:hover {
-  color: #374151;
-  background: #e5e7eb;
-  border-color: #d1d5db;
 }
 
 .page-header h1 {
