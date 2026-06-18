@@ -9,6 +9,7 @@ import ActivityListView from '@/views/ActivityListView.vue'
 import SystemListView from '@/views/SystemListView.vue'
 import PartListView from '@/views/PartListView.vue'
 import DossierView from '@/views/DossierView.vue'
+import SparqlView from '@/views/SparqlView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -62,6 +63,11 @@ const router = createRouter({
       path: '/dossier',
       name: 'dossier',
       component: DossierView,
+    },
+    {
+      path: '/sparql',
+      name: 'sparql',
+      component: SparqlView,
     },
   ],
 })

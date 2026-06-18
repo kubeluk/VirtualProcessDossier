@@ -99,6 +99,7 @@ function formatValue(value: number): string {
       <RouterLink to="/workflows" class="nav-tab nav-tab--secondary">Workflows</RouterLink>
       <RouterLink to="/systems" class="nav-tab nav-tab--secondary">Systems</RouterLink>
       <RouterLink to="/parts" class="nav-tab nav-tab--secondary nav-tab--active">Parts</RouterLink>
+      <RouterLink to="/sparql" class="nav-tab nav-tab--secondary">SPARQL</RouterLink>
     </nav>
 
     <div v-if="loading" class="state-message">Loading parts…</div>

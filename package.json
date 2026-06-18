@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@ro-kit/ui-widgets": "^1.0.44",
+    "@triply/yasgui": "^4.2.28",
     "@ulb-darmstadt/shacl-form": "^3.0.5",
     "axios": "^1.9.0",
     "jsonld": "^9.0.0",

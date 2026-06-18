@@ -56,6 +56,7 @@ function openWorkflow(uri: string) {
       <RouterLink to="/workflows" class="nav-tab nav-tab--secondary nav-tab--active">Workflows</RouterLink>
       <RouterLink to="/systems" class="nav-tab nav-tab--secondary">Systems</RouterLink>
       <RouterLink to="/parts" class="nav-tab nav-tab--secondary">Parts</RouterLink>
+      <RouterLink to="/sparql" class="nav-tab nav-tab--secondary">SPARQL</RouterLink>
     </nav>
 
     <div v-if="loading" class="state-message">Loading workflows…</div>
