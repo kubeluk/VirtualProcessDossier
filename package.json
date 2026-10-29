@@ -8,7 +8,7 @@
     "build": "vue-tsc --build && vite build",
     "preview": "vite preview",
     "lint": "eslint . --fix",
-    "test:laminate": "node --test tests/laminate.test.mjs"
+    "test:laminate": "node --test tests/laminate.test.mjs tests/material-ui.test.mjs"
   },
   "dependencies": {
     "@ro-kit/ui-widgets": "^1.0.44",

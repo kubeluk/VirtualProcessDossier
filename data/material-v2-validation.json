@@ -1,0 +1,125 @@
+{
+  "source": "data/material.ttl",
+  "output": "data/material-v2.ttl",
+  "sourceTriples": 43488,
+  "outputTriples": 49521,
+  "laminates": 141,
+  "layups": 141,
+  "tapes": 1086,
+  "needlePoints": 1128,
+  "referencePoints": 141,
+  "preservation": "Every source triple verified against its defined rewrite; serialized graph round-trip checked.",
+  "conforms": false,
+  "violations": [
+    {
+      "focusNode": "http://purl.org/for/data/laminate/6#it",
+      "path": [
+        "http://purl.org/dc/terms/identifier"
+      ],
+      "messages": [
+        "Less than 1 values"
+      ],
+      "constraint": "http://www.w3.org/ns/shacl#MinCountConstraintComponent"
+    },
+    {
+      "focusNode": "http://purl.org/for/data/laminate/6#it",
+      "path": [
+        "http://www.opengis.net/ont/geosparql#hasSize"
+      ],
+      "messages": [
+        "Less than 3 values"
+      ],
+      "constraint": "http://www.w3.org/ns/shacl#MinCountConstraintComponent"
+    },
+    {
+      "focusNode": "http://purl.org/for/data/laminate/6#it",
+      "path": [
+        "http://www.opengis.net/ont/geosparql#hasSize"
+      ],
+      "messages": [
+        "Less than 1 values have shape _:n3-8643"
+      ],
+      "constraint": "http://www.w3.org/ns/shacl#QualifiedMinCountConstraintComponent"
+    },
+    {
+      "focusNode": "http://purl.org/for/data/laminate/7#it",
+      "path": [
+        "http://purl.org/dc/terms/identifier"
+      ],
+      "messages": [
+        "Less than 1 values"
+      ],
+      "constraint": "http://www.w3.org/ns/shacl#MinCountConstraintComponent"
+    },
+    {
+      "focusNode": "http://purl.org/for/data/laminate/7#it",
+      "path": [
+        "http://www.opengis.net/ont/geosparql#hasSize"
+      ],
+      "messages": [
+        "Less than 3 values"
+      ],
+      "constraint": "http://www.w3.org/ns/shacl#MinCountConstraintComponent"
+    },
+    {
+      "focusNode": "http://purl.org/for/data/laminate/7#it",
+      "path": [
+        "http://www.opengis.net/ont/geosparql#hasSize"
+      ],
+      "messages": [
+        "Less than 1 values have shape _:n3-8643"
+      ],
+      "constraint": "http://www.w3.org/ns/shacl#QualifiedMinCountConstraintComponent"
+    },
+    {
+      "focusNode": "http://purl.org/for/data/laminate/58#it",
+      "path": [
+        "http://www.opengis.net/ont/geosparql#hasSize"
+      ],
+      "messages": [
+        "Less than 3 values"
+      ],
+      "constraint": "http://www.w3.org/ns/shacl#MinCountConstraintComponent"
+    },
+    {
+      "focusNode": "http://purl.org/for/data/laminate/58#it",
+      "path": [
+        "http://www.opengis.net/ont/geosparql#hasSize"
+      ],
+      "messages": [
+        "Less than 1 values have shape _:n3-8643"
+      ],
+      "constraint": "http://www.w3.org/ns/shacl#QualifiedMinCountConstraintComponent"
+    },
+    {
+      "focusNode": "http://purl.org/for/data/laminate/118#it",
+      "path": [
+        "http://www.opengis.net/ont/geosparql#hasSize"
+      ],
+      "messages": [
+        "Less than 3 values"
+      ],
+      "constraint": "http://www.w3.org/ns/shacl#MinCountConstraintComponent"
+    },
+    {
+      "focusNode": "http://purl.org/for/data/laminate/118#it",
+      "path": [
+        "http://www.opengis.net/ont/geosparql#hasSize"
+      ],
+      "messages": [
+        "Less than 1 values have shape _:n3-8637"
+      ],
+      "constraint": "http://www.w3.org/ns/shacl#QualifiedMinCountConstraintComponent"
+    },
+    {
+      "focusNode": "http://purl.org/for/data/laminate/118#it",
+      "path": [
+        "http://www.opengis.net/ont/geosparql#hasSize"
+      ],
+      "messages": [
+        "Less than 1 values have shape _:n3-8640"
+      ],
+      "constraint": "http://www.w3.org/ns/shacl#QualifiedMinCountConstraintComponent"
+    }
+  ]
+}

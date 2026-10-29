@@ -143,7 +143,7 @@ function formatValue(value: number): string {
             <span class="lineage-arrow">←</span>
             <div class="lineage-node lineage-node--laminat">
               <span class="lineage-icon">▣</span>
-              <span class="lineage-text">{{ part.laminatLabel ?? 'Laminat' }}</span>
+              <span class="lineage-text">{{ part.laminatLabel ?? 'Laminate' }}</span>
               <span v-if="part.laminatId" class="lineage-sub">{{ part.laminatId }}</span>
             </div>
             <span class="lineage-arrow">←</span>
@@ -167,11 +167,11 @@ function formatValue(value: number): string {
         <!-- ── Collapsible sections ─────────────────────────────────── -->
         <div class="sections">
 
-          <!-- Section 1: Laminat Properties -->
+          <!-- Section 1: Laminate Properties -->
           <div class="section" :class="{ 'section--open': isExpanded(part.uri, 'props') }">
             <button class="section-toggle" @click="toggleSection(part.uri, 'props')">
               <span class="toggle-arrow" :class="{ 'toggle-arrow--open': isExpanded(part.uri, 'props') }">▶</span>
-              <span class="section-title">Laminat Properties</span>
+              <span class="section-title">Laminate Properties</span>
               <span v-if="part.laminatLabel" class="section-hint">{{ part.laminatLabel }}</span>
             </button>
             <div v-if="isExpanded(part.uri, 'props')" class="section-body">
@@ -275,13 +275,14 @@ function formatValue(value: number): string {
                       </text>
                     </g>
                   </svg>
-                  <p class="viz-caption">Origin: laminat center · coordinates in mm</p>
+                  <p class="viz-caption">Coordinates relative to the listed reference point · coordinates in mm</p>
                 </div>
                 <!-- Coordinate table -->
                 <table class="needle-table">
                   <thead>
                     <tr>
                       <th class="th-center">Pt.</th>
+                      <th>Reference point</th>
                       <th class="th-right">X (mm)</th>
                       <th class="th-right">Y (mm)</th>
                     </tr>
@@ -292,6 +293,7 @@ function formatValue(value: number): string {
                       <td class="td-center">
                         <span class="needle-num">{{ pt.pointId }}</span>
                       </td>
+                      <td>{{ pt.referenceLabel ?? pt.referenceUri }}</td>
                       <td class="td-right td-mono" :class="pt.x < 0 ? 'val-neg' : 'val-pos'">
                         {{ pt.x > 0 ? '+' : '' }}{{ formatValue(pt.x) }}
                       </td>

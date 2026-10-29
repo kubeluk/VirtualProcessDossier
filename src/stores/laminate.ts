@@ -1,3 +1,4 @@
+import { orderedStack } from '@/services/material'
 import { defineStore } from 'pinia'
 import { useGraphStore } from '@/stores/graph'
 import { askSparql, querySparql, updateSparql } from '@/services/sparql'
@@ -35,56 +36,49 @@ export const useLaminateStore = defineStore('laminate', () => {
   async function fetchLaminate(uri: string): Promise<LaminateForm> {
     const root = iri(uri)
     const [meta, dimensions, plies, points] = await Promise.all([
-      query(`SELECT ?label ?identifier ?layupLabel WHERE {
-        ${root} a for:Laminate ; rdfs:label ?label ; dcterms:identifier ?identifier ; prov:wasDerivedFrom ?layup .
+      query(`SELECT ?root ?label ?identifier ?layupLabel WHERE {
+        ${root} a for:Laminate .
+        BIND(${root} AS ?root)
+        OPTIONAL { ${root} rdfs:label ?label }
+        OPTIONAL { ${root} dcterms:identifier ?identifier }
+        ${root} prov:wasDerivedFrom ?layup .
+        ?layup a for:Layup .
         OPTIONAL { ?layup rdfs:label ?layupLabel }
       }`),
       query(
         `SELECT ?kind ?value WHERE { ${root} geo:hasSize [ qudt:hasQuantityKind ?kind ; qudt:value ?value ] }`,
       ),
-      query(`SELECT ?cell ?next ?polymer ?fiberType ?massFraction ?orientation WHERE {
+      query(`SELECT DISTINCT ?cell ?next ?polymer ?fiberType ?massFraction ?orientation WHERE {
         ${root} prov:wasDerivedFrom ?layup .
-        ?layup param:tapeStack/rdf:rest* ?cell ; prov:qualifiedDerivation ?derivation .
+        ?layup a for:Layup ; param:tapeStack/rdf:rest* ?cell ; prov:qualifiedDerivation ?derivation .
         ?cell rdf:first ?tape ; rdf:rest ?next .
         ?derivation prov:entity ?tape ; param:fiberOrientation/qudt:value ?orientation .
-        ?tape param:polymer ?polymer ; param:fiberType ?fiberType ; param:hasFiberMassFraction/qudt:value ?massFraction .
+        ?tape a for:Tape ; param:polymer ?polymer ; param:fiberType ?fiberType ; param:hasFiberMassFraction/qudt:value ?massFraction .
       }`),
-      query(`SELECT ?point ?x ?y ?reference ?referenceLabel WHERE {
+      query(`SELECT DISTINCT ?point ?x ?y ?reference ?referenceLabel WHERE {
         ${root} param:hasNeedlePoint ?point .
-        ?point param:referencePoint ?reference ; qudt:quantityValue/qudt:value ?list .
+        ?point a for:NeedlePoint ; param:referencePoint ?reference ; qudt:quantityValue/qudt:value ?list .
         ?list rdf:first ?x ; rdf:rest/rdf:first ?y .
         OPTIONAL { ?reference rdfs:label ?referenceLabel }
       } ORDER BY ?point`),
     ])
     const m = meta.results.bindings[0]
-    if (!m) throw new Error('Laminate was not found or has incomplete metadata.')
-    const size = (kind: string) =>
-      Number(
-        dimensions.results.bindings.find((b) => b.kind.value.endsWith('/' + kind))?.value.value ??
-          NaN,
-      )
-    // Recover stack order from the linked list, never from tape identifiers or angles.
-    const rows = plies.results.bindings
-    const successors = new Set(rows.map((b) => b.next.value))
-    let current = rows.find((b) => !successors.has(b.cell.value))
-    const ordered: LaminateForm['plies'] = []
-    const visited = new Set<string>()
-    while (current && !visited.has(current.cell.value)) {
-      visited.add(current.cell.value)
-      ordered.push({
-        polymer: current.polymer.value,
-        fiberType: current.fiberType.value,
-        massFraction: Number(current.massFraction.value),
-        orientation: Number(current.orientation.value),
-      })
-      const next = current.next.value
-      current = rows.find((b) => b.cell.value === next)
+    if (!m) throw new Error('Laminate was not found.')
+    const size = (kind: string) => {
+      const value = dimensions.results.bindings.find((b) => b.kind.value.endsWith('/' + kind))
+        ?.value.value
+      return value === undefined ? null : Number(value)
     }
-    if (!ordered.length || visited.size !== rows.length)
-      throw new Error('The laminate has an invalid or incomplete tape stack.')
+    const ordered: LaminateForm['plies'] = orderedStack(plies.results.bindings).map((row) => ({
+      polymer: row.polymer.value,
+      fiberType: row.fiberType.value,
+      massFraction: Number(row.massFraction.value),
+      orientation: Number(row.orientation.value),
+    }))
+    if (!ordered.length) throw new Error('The laminate has an empty tape stack.')
     return {
-      label: m.label.value,
-      identifier: m.identifier.value,
+      label: m.label?.value ?? '',
+      identifier: m.identifier?.value ?? '',
       layupLabel: m.layupLabel?.value ?? '',
       length: size('Length'),
       width: size('Width'),

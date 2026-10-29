@@ -165,7 +165,7 @@ function goToActivity(act: DossierActivity) {
           <span class="ln-arrow">←</span>
           <div class="lineage-node lineage-node--laminat">
             <span class="ln-icon">▣</span>
-            <span class="ln-text">{{ dossier.laminatLabel ?? 'Laminat' }}</span>
+            <span class="ln-text">{{ dossier.laminatLabel ?? 'Laminate' }}</span>
             <span v-if="dossier.laminatId" class="ln-sub">{{ dossier.laminatId }}</span>
           </div>
           <span class="ln-arrow">←</span>

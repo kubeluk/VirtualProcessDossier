@@ -1,4 +1,6 @@
 import { defineStore } from 'pinia'
+import { groupedStacks, orderedStack, materialResourceId } from '@/services/material'
+import { iri } from '@/services/laminate'
 import { querySparql } from '@/services/sparql'
 import { useGraphStore } from '@/stores/graph'
 
@@ -35,6 +37,8 @@ export interface NeedlePoint {
   pointId: string
   x: number
   y: number
+  referenceUri: string
+  referenceLabel: string | null
 }
 
 export interface PartDetail extends PartSummary {
@@ -78,6 +82,7 @@ export const useMaterialStore = defineStore('material', () => {
 
   async function fetchParts(): Promise<PartSummary[]> {
     const query = `
+      PREFIX for: <http://purl.org/for/terms#>
       PREFIX prov:    <http://www.w3.org/ns/prov#>
       PREFIX sosa:    <http://www.w3.org/ns/sosa/>
       PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
@@ -88,7 +93,7 @@ export const useMaterialStore = defineStore('material', () => {
         ?part a sosa:Sample ;
               sosa:isResultOf ?runUri ;
               prov:wasDerivedFrom ?laminatUri .
-        ?laminatUri a geo:Feature .
+        ?laminatUri a for:Laminate .
         OPTIONAL { ?runUri rdfs:label ?runLabel }
         OPTIONAL { ?runUri rdfs:comment ?runDesc }
         OPTIONAL { ?laminatUri rdfs:label ?laminatLabel }
@@ -101,7 +106,7 @@ export const useMaterialStore = defineStore('material', () => {
       ORDER BY ?part
     `
     const res = await querySparql(graphStore.endpoint, query)
-    return res.results.bindings.map((b) => ({
+    return [...new Map(res.results.bindings.map(b => [b.part.value, b])).values()].map((b) => ({
       uri: b.part.value,
       runUri: b.runUri.value,
       runLabel: b.runLabel?.value ?? null,
@@ -118,11 +123,12 @@ export const useMaterialStore = defineStore('material', () => {
     const { laminatUri } = summary
 
     const propQuery = `
+      PREFIX for: <http://purl.org/for/terms#>
       PREFIX qudt:  <http://qudt.org/schema/qudt/>
       PREFIX geo:   <http://www.opengis.net/ont/geosparql#>
 
       SELECT ?qk ?unit ?value WHERE {
-        BIND(<${laminatUri}> AS ?laminat)
+        BIND(${iri(laminatUri)} AS ?laminat)
         ?laminat geo:hasSize ?node .
         ?node qudt:hasQuantityKind ?qk ;
               qudt:hasUnit ?unit ;
@@ -131,14 +137,18 @@ export const useMaterialStore = defineStore('material', () => {
     `
 
     const plyQuery = `
+      PREFIX for: <http://purl.org/for/terms#>
       PREFIX prov:  <http://www.w3.org/ns/prov#>
       PREFIX qudt:  <http://qudt.org/schema/qudt/>
-      PREFIX param: <http://purl.org/for/param#>
+      PREFIX param: <http://purl.org/for/parameter#>
+      PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
-      SELECT ?tape ?polymer ?fiberType ?orientation ?fiberMassFraction WHERE {
-        BIND(<${laminatUri}> AS ?laminat)
+      SELECT DISTINCT ?cell ?next ?tape ?polymer ?fiberType ?orientation ?fiberMassFraction WHERE {
+        BIND(${iri(laminatUri)} AS ?laminat)
         ?laminat prov:wasDerivedFrom ?layup .
-        ?layup prov:qualifiedDerivation ?deriv .
+        ?layup a for:Layup ; param:tapeStack/rdf:rest* ?cell ; prov:qualifiedDerivation ?deriv .
+        ?cell rdf:first ?tape ; rdf:rest ?next .
+        ?tape a for:Tape .
         ?deriv prov:entity ?tape .
         OPTIONAL {
           ?deriv param:fiberOrientation ?orientNode .
@@ -148,18 +158,19 @@ export const useMaterialStore = defineStore('material', () => {
         OPTIONAL { ?tape param:fiberType ?fiberType }
         OPTIONAL { ?tape param:hasFiberMassFraction ?fracNode . ?fracNode qudt:value ?fiberMassFraction }
       }
-      ORDER BY ?tape
     `
 
     const needleQuery = `
+      PREFIX for: <http://purl.org/for/terms#>
       PREFIX qudt:  <http://qudt.org/schema/qudt/>
-      PREFIX param: <http://purl.org/for/param#>
-      PREFIX rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+      PREFIX param: <http://purl.org/for/parameter#>
+      PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
-      SELECT ?pos ?x ?y WHERE {
-        BIND(<${laminatUri}> AS ?laminat)
+      SELECT DISTINCT ?pos ?x ?y ?reference ?referenceLabel WHERE {
+        BIND(${iri(laminatUri)} AS ?laminat)
         ?laminat param:hasNeedlePoint ?pos .
-        ?pos qudt:quantityValue ?valNode .
+        ?pos a for:NeedlePoint ; param:referencePoint ?reference ; qudt:quantityValue ?valNode .
+        OPTIONAL { ?reference <http://www.w3.org/2000/01/rdf-schema#label> ?referenceLabel }
         ?valNode qudt:value ?coordList .
         ?coordList rdf:first ?x ;
                    rdf:rest/rdf:first ?y .
@@ -182,9 +193,9 @@ export const useMaterialStore = defineStore('material', () => {
       }))
       .sort((a, b) => PROP_ORDER.indexOf(a.kind) - PROP_ORDER.indexOf(b.kind))
 
-    const plies: PlySummary[] = plyRes.results.bindings.map((b) => ({
+    const plies: PlySummary[] = orderedStack(plyRes.results.bindings).map((b) => ({
       tapeUri: b.tape.value,
-      tapeId: localName(b.tape.value),
+      tapeId: materialResourceId(b.tape.value),
       polymer: b.polymer?.value ?? null,
       fiberType: b.fiberType?.value ?? null,
       orientation: b.orientation != null ? parseFloat(b.orientation.value) : null,
@@ -193,9 +204,11 @@ export const useMaterialStore = defineStore('material', () => {
 
     const needlePoints: NeedlePoint[] = needleRes.results.bindings.map((b) => ({
       uri: b.pos.value,
-      pointId: localName(b.pos.value),
+      pointId: materialResourceId(b.pos.value),
       x: parseFloat(b.x.value),
       y: parseFloat(b.y.value),
+      referenceUri: b.reference.value,
+      referenceLabel: b.referenceLabel?.value ?? null,
     }))
 
     return { ...summary, properties, plies, needlePoints }
@@ -204,6 +217,7 @@ export const useMaterialStore = defineStore('material', () => {
   // Fetches all parts with full detail in 4 parallel batch queries instead of 1+N×3
   async function fetchAllParts(): Promise<PartDetail[]> {
     const summaryQuery = `
+      PREFIX for: <http://purl.org/for/terms#>
       PREFIX prov:    <http://www.w3.org/ns/prov#>
       PREFIX sosa:    <http://www.w3.org/ns/sosa/>
       PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
@@ -213,7 +227,7 @@ export const useMaterialStore = defineStore('material', () => {
         ?part a sosa:Sample ;
               sosa:isResultOf ?runUri ;
               prov:wasDerivedFrom ?laminatUri .
-        ?laminatUri a geo:Feature .
+        ?laminatUri a for:Laminate .
         OPTIONAL { ?runUri rdfs:label ?runLabel }
         OPTIONAL { ?runUri rdfs:comment ?runDesc }
         OPTIONAL { ?laminatUri rdfs:label ?laminatLabel }
@@ -227,48 +241,54 @@ export const useMaterialStore = defineStore('material', () => {
     `
 
     const propQuery = `
+      PREFIX for: <http://purl.org/for/terms#>
       PREFIX qudt:  <http://qudt.org/schema/qudt/>
       PREFIX geo:   <http://www.opengis.net/ont/geosparql#>
       PREFIX sosa:  <http://www.w3.org/ns/sosa/>
       PREFIX prov:  <http://www.w3.org/ns/prov#>
       SELECT ?laminat ?qk ?unit ?value WHERE {
         ?part a sosa:Sample ; prov:wasDerivedFrom ?laminat .
-        ?laminat a geo:Feature .
+        ?laminat a for:Laminate .
         ?laminat geo:hasSize ?node .
         ?node qudt:hasQuantityKind ?qk ; qudt:hasUnit ?unit ; qudt:value ?value .
       }
     `
 
     const plyQuery = `
+      PREFIX for: <http://purl.org/for/terms#>
       PREFIX prov:  <http://www.w3.org/ns/prov#>
       PREFIX qudt:  <http://qudt.org/schema/qudt/>
-      PREFIX param: <http://purl.org/for/param#>
+      PREFIX param: <http://purl.org/for/parameter#>
+      PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
       PREFIX sosa:  <http://www.w3.org/ns/sosa/>
       PREFIX geo:   <http://www.opengis.net/ont/geosparql#>
-      SELECT ?laminat ?tape ?polymer ?fiberType ?orientation ?fiberMassFraction WHERE {
+      SELECT DISTINCT ?laminat ?cell ?next ?tape ?polymer ?fiberType ?orientation ?fiberMassFraction WHERE {
         ?part a sosa:Sample ; prov:wasDerivedFrom ?laminat .
-        ?laminat a geo:Feature ; prov:wasDerivedFrom ?layup .
-        ?layup prov:qualifiedDerivation ?deriv .
+        ?laminat a for:Laminate ; prov:wasDerivedFrom ?layup .
+        ?layup a for:Layup ; param:tapeStack/rdf:rest* ?cell ; prov:qualifiedDerivation ?deriv .
+        ?cell rdf:first ?tape ; rdf:rest ?next .
+        ?tape a for:Tape .
         ?deriv prov:entity ?tape .
         OPTIONAL { ?deriv param:fiberOrientation ?orientNode . ?orientNode qudt:value ?orientation }
         OPTIONAL { ?tape param:polymer ?polymer }
         OPTIONAL { ?tape param:fiberType ?fiberType }
         OPTIONAL { ?tape param:hasFiberMassFraction ?fracNode . ?fracNode qudt:value ?fiberMassFraction }
       }
-      ORDER BY ?laminat ?tape
     `
 
     const needleQuery = `
+      PREFIX for: <http://purl.org/for/terms#>
       PREFIX qudt:  <http://qudt.org/schema/qudt/>
-      PREFIX param: <http://purl.org/for/param#>
-      PREFIX rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+      PREFIX param: <http://purl.org/for/parameter#>
+      PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
       PREFIX sosa:  <http://www.w3.org/ns/sosa/>
       PREFIX prov:  <http://www.w3.org/ns/prov#>
       PREFIX geo:   <http://www.opengis.net/ont/geosparql#>
-      SELECT ?laminat ?pos ?x ?y WHERE {
+      SELECT DISTINCT ?laminat ?pos ?x ?y ?reference ?referenceLabel WHERE {
         ?part a sosa:Sample ; prov:wasDerivedFrom ?laminat .
-        ?laminat a geo:Feature ; param:hasNeedlePoint ?pos .
-        ?pos qudt:quantityValue ?valNode .
+        ?laminat a for:Laminate ; param:hasNeedlePoint ?pos .
+        ?pos a for:NeedlePoint ; param:referencePoint ?reference ; qudt:quantityValue ?valNode .
+        OPTIONAL { ?reference <http://www.w3.org/2000/01/rdf-schema#label> ?referenceLabel }
         ?valNode qudt:value ?coordList .
         ?coordList rdf:first ?x ; rdf:rest/rdf:first ?y .
       }
@@ -282,7 +302,8 @@ export const useMaterialStore = defineStore('material', () => {
       querySparql(graphStore.endpoint, needleQuery),
     ])
 
-    const summaries: PartSummary[] = summaryRes.results.bindings.map((b) => ({
+    const summaryRows = [...new Map(summaryRes.results.bindings.map(b => [b.part.value, b])).values()]
+    const summaries: PartSummary[] = summaryRows.map((b) => ({
       uri: b.part.value,
       runUri: b.runUri.value,
       runLabel: b.runLabel?.value ?? null,
@@ -311,7 +332,7 @@ export const useMaterialStore = defineStore('material', () => {
 
     const seenTape = new Set<string>()
     const pliesByLaminat = new Map<string, PlySummary[]>()
-    for (const b of plyRes.results.bindings) {
+    for (const b of [...groupedStacks(plyRes.results.bindings, 'laminat').values()].flat()) {
       const laminat = b.laminat.value
       const key = `${laminat}|${b.tape.value}`
       if (seenTape.has(key)) continue
@@ -319,7 +340,7 @@ export const useMaterialStore = defineStore('material', () => {
       if (!pliesByLaminat.has(laminat)) pliesByLaminat.set(laminat, [])
       pliesByLaminat.get(laminat)!.push({
         tapeUri: b.tape.value,
-        tapeId: localName(b.tape.value),
+        tapeId: materialResourceId(b.tape.value),
         polymer: b.polymer?.value ?? null,
         fiberType: b.fiberType?.value ?? null,
         orientation: b.orientation != null ? parseFloat(b.orientation.value) : null,
@@ -333,9 +354,11 @@ export const useMaterialStore = defineStore('material', () => {
       if (!needlesByLaminat.has(laminat)) needlesByLaminat.set(laminat, [])
       needlesByLaminat.get(laminat)!.push({
         uri: b.pos.value,
-        pointId: localName(b.pos.value),
+        pointId: materialResourceId(b.pos.value),
         x: parseFloat(b.x.value),
         y: parseFloat(b.y.value),
+        referenceUri: b.reference.value,
+        referenceLabel: b.referenceLabel?.value ?? null,
       })
     }
 
@@ -349,8 +372,9 @@ export const useMaterialStore = defineStore('material', () => {
 
   async function fetchPartForRun(runUri: string): Promise<string | null> {
     const query = `
+      PREFIX for: <http://purl.org/for/terms#>
       PREFIX sosa: <http://www.w3.org/ns/sosa/>
-      SELECT ?part WHERE { ?part sosa:isResultOf <${runUri}> . } LIMIT 1
+      SELECT ?part WHERE { ?part sosa:isResultOf ${iri(runUri)} . } LIMIT 1
     `
     const res = await querySparql(graphStore.endpoint, query)
     return res.results.bindings[0]?.part?.value ?? null

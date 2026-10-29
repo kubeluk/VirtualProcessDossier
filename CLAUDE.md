@@ -239,8 +239,21 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 ### Laminate Library (implemented)
 - `/laminates` provides browse/search, create, detail/edit, and delete via `LaminateListView` and `LaminateEditor`.
 - `src/services/laminate.ts` builds RDF and validates form values; `src/stores/laminate.ts` handles queries and updates.
-- Follow `data/material-example.ttl`: `for: <http://purl.org/for/terms#>`, `param: <http://purl.org/for/parameter#>`. These differ from legacy material namespaces; the new view queries `for:Laminate` explicitly. Legacy material data is not migrated.
+- Follow `data/material-example.ttl`: `for: <http://purl.org/for/terms#>`, `param: <http://purl.org/for/parameter#>`. These differ from legacy material namespaces; the new view queries `for:Laminate` explicitly. The Parts and Dossier views also query these classes and predicates; use `data/material-v2.ttl` for migrated material data.
 - Dimensions are positive QUDT quantities in millimetres. Layups have a nonempty ordered `param:tapeStack` RDF list of distinct tapes, matching direct and qualified PROV derivations. Each derivation has a typed `for:FiberOrientation`; each tape has a typed `for:FiberMassFraction` (0–100%).
 - Up to 12 typed needle points use a reference point and a two-element RDF coordinate list. Existing reference point URIs and metadata are retained during edits.
 - Edits preserve the laminate URI and replace its material structure in one Fuseki update request. Shared descendants are preserved; a fresh layup and tapes avoid modifying other laminates. Referenced laminates cannot be deleted.
 - `npm run test:laminate` checks generated data against SHACL Core and SHACL-SPARQL constraints from the example, ordering, validation, SPARQL syntax, and deletion cleanup/shared-resource preservation.
+
+### Material v2 UI alignment
+- Parts detail/batch queries and Dossier detail/gallery queries use `for:Laminate`, `for:Layup`, `for:Tape`, and `param:tapeStack` from the updated material vocabulary. No superclass inference is required.
+- `src/services/material.ts` reconstructs ply order from RDF list cells and resolves IDs from material v2 document/fragment IRIs. Do not sort ply rows by URI or orientation.
+- Needle-point reads require `for:NeedlePoint` and `param:referencePoint`; Parts displays the reference point alongside coordinates.
+- The laminate editor accepts missing identifiers/dimensions on read (notably migrated laminates 6, 7, 58, 118); users must supply all required values before saving. Missing dimensions are `null`, not fabricated zeros or `NaN`.
+- New tape resources use `http://purl.org/for/data/tape/{id}#it`.
+- Machine plans still use the legacy `http://purl.org/for/param#` vocabulary; only material parameters moved to `parameter#`. Keep process-parameter queries unchanged.
+- `npm run test:laminate` covers material reads against the updated example without inferred superclass types, RDF-list order with deliberately unsorted tape IDs, incomplete-data editing, and SHACL-validated writes/deletion.
+
+- Optional full-graph query integration check: `VPD_FULL_GRAPH_TEST=1 node --test tests/material-ui.test.mjs`. The local JavaScript SPARQL engine is substantially slower on this graph than the focused fixtures.
+
+- Fresh Docker databases seed `data/material-v2.ttl`. Existing populated stores need the explicit backed-up migration in `data/transformations/migrate_material_store.mjs`; changing the seed script alone does not update their data. See `data/transformations/material-v2.md` for commands and the read-only Fuseki UI integration check.

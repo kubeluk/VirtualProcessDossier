@@ -92,6 +92,13 @@ async function remove() {
     <p v-if="loading" role="status">Loading laminate…</p>
     <form v-else @submit.prevent="save">
       <fieldset :disabled="busy || loadFailed">
+        <p
+          v-if="laminate && (!form.identifier || dimensions.some((d) => form[d] === null))"
+          class="hint"
+          role="status"
+        >
+          Some required values are missing. Fill in the identifier and all dimensions before saving.
+        </p>
         <div class="columns">
           <label>Name<input v-model="form.label" required /></label>
           <label>Identifier<input v-model="form.identifier" required /></label>

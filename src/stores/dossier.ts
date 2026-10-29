@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { orderedStack, groupedStacks } from '@/services/material'
 import { querySparql } from '@/services/sparql'
 import { useGraphStore } from '@/stores/graph'
 import { QUDT_UNIT_LABELS } from '@/stores/workflow'
@@ -110,6 +111,7 @@ export const useDossierStore = defineStore('dossier', () => {
       PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
       PREFIX dcterms: <http://purl.org/dc/terms/>
       PREFIX geo:     <http://www.opengis.net/ont/geosparql#>
+      PREFIX for: <http://purl.org/for/terms#>
       SELECT ?runUri ?runLabel ?runState ?runStarted
              ?modelUri ?modelLabel
              ?laminatUri ?laminatLabel ?laminatId
@@ -117,7 +119,7 @@ export const useDossierStore = defineStore('dossier', () => {
         BIND(<${partUri}> AS ?part)
         ?part sosa:isResultOf ?runUri ;
               prov:wasDerivedFrom ?laminatUri .
-        ?laminatUri a geo:Feature .
+        ?laminatUri a for:Laminate .
         OPTIONAL { ?runUri rdfs:label ?runLabel }
         OPTIONAL { ?runUri wild:hasState ?runState }
         OPTIONAL { ?runUri prov:startedAtTime ?runStarted }
@@ -147,6 +149,7 @@ export const useDossierStore = defineStore('dossier', () => {
     const q_props = `
       PREFIX qudt:  <http://qudt.org/schema/qudt/>
       PREFIX geo:   <http://www.opengis.net/ont/geosparql#>
+      PREFIX for: <http://purl.org/for/terms#>
       SELECT ?qk ?unit ?value WHERE {
         BIND(<${laminatUri}> AS ?laminat)
         ?laminat geo:hasSize ?node .
@@ -156,19 +159,22 @@ export const useDossierStore = defineStore('dossier', () => {
 
     // Ply stack
     const q_plies = `
+      PREFIX for: <http://purl.org/for/terms#>
       PREFIX prov:  <http://www.w3.org/ns/prov#>
       PREFIX qudt:  <http://qudt.org/schema/qudt/>
-      PREFIX param: <http://purl.org/for/param#>
-      SELECT ?tape ?polymer ?fiberType ?orientation WHERE {
+      PREFIX param: <http://purl.org/for/parameter#>
+      PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+      SELECT DISTINCT ?cell ?next ?tape ?polymer ?fiberType ?orientation WHERE {
         BIND(<${laminatUri}> AS ?laminat)
         ?laminat prov:wasDerivedFrom ?layup .
-        ?layup prov:qualifiedDerivation ?deriv .
+        ?layup a for:Layup ; param:tapeStack/rdf:rest* ?cell ; prov:qualifiedDerivation ?deriv .
+        ?cell rdf:first ?tape ; rdf:rest ?next .
+        ?tape a for:Tape .
         ?deriv prov:entity ?tape .
         OPTIONAL { ?deriv param:fiberOrientation ?orientNode . ?orientNode qudt:value ?orientation }
         OPTIONAL { ?tape param:polymer ?polymer }
         OPTIONAL { ?tape param:fiberType ?fiberType }
       }
-      ORDER BY ?tape
     `
 
     // Model activity tree for ordering (only if model URI is known)
@@ -318,7 +324,7 @@ export const useDossierStore = defineStore('dossier', () => {
     }
 
     // ── Parse plies ──────────────────────────────────────────────────────────
-    const plies = r_plies.results.bindings.map((b) => ({
+    const plies = orderedStack(r_plies.results.bindings).map((b) => ({
       fiberType: b.fiberType?.value ?? null,
       polymer: b.polymer?.value ?? null,
       orientation: b.orientation != null ? parseFloat(b.orientation.value) : null,
@@ -461,6 +467,7 @@ export const useDossierStore = defineStore('dossier', () => {
       PREFIX wild:    <http://purl.org/wild/vocab#>
       PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
       PREFIX geo:     <http://www.opengis.net/ont/geosparql#>
+      PREFIX for: <http://purl.org/for/terms#>
       PREFIX qudt:    <http://qudt.org/schema/qudt/>
       SELECT DISTINCT ?part ?runUri ?runLabel ?runState ?runDate ?modelLabel ?qk ?unit ?dimValue WHERE {
         ?part a sosa:Sample ;
@@ -474,7 +481,7 @@ export const useDossierStore = defineStore('dossier', () => {
         }
         OPTIONAL {
           ?part prov:wasDerivedFrom ?laminat .
-          ?laminat a geo:Feature ;
+          ?laminat a for:Laminate ;
                    geo:hasSize ?node .
           ?node qudt:hasQuantityKind ?qk ; qudt:hasUnit ?unit ; qudt:value ?dimValue .
         }
@@ -482,23 +489,26 @@ export const useDossierStore = defineStore('dossier', () => {
     `
 
     const q_plies = `
+      PREFIX for: <http://purl.org/for/terms#>
       PREFIX sosa:  <http://www.w3.org/ns/sosa/>
       PREFIX prov:  <http://www.w3.org/ns/prov#>
       PREFIX geo:   <http://www.opengis.net/ont/geosparql#>
       PREFIX qudt:  <http://qudt.org/schema/qudt/>
-      PREFIX param: <http://purl.org/for/param#>
-      SELECT ?part ?tape ?polymer ?fiberType ?orientation WHERE {
+      PREFIX param: <http://purl.org/for/parameter#>
+      PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+      SELECT DISTINCT ?part ?cell ?next ?tape ?polymer ?fiberType ?orientation WHERE {
         ?part a sosa:Sample ;
               prov:wasDerivedFrom ?laminat .
-        ?laminat a geo:Feature ;
+        ?laminat a for:Laminate ;
                  prov:wasDerivedFrom ?layup .
-        ?layup prov:qualifiedDerivation ?deriv .
+        ?layup a for:Layup ; param:tapeStack/rdf:rest* ?cell ; prov:qualifiedDerivation ?deriv .
+        ?cell rdf:first ?tape ; rdf:rest ?next .
+        ?tape a for:Tape .
         ?deriv prov:entity ?tape .
         OPTIONAL { ?deriv param:fiberOrientation ?orientNode . ?orientNode qudt:value ?orientation }
         OPTIONAL { ?tape param:polymer ?polymer }
         OPTIONAL { ?tape param:fiberType ?fiberType }
       }
-      ORDER BY ?part ?tape
     `
 
     const [r_meta, r_plies] = await Promise.all([
@@ -537,7 +547,7 @@ export const useDossierStore = defineStore('dossier', () => {
     }
 
     const seenTape = new Set<string>()
-    for (const b of r_plies.results.bindings) {
+    for (const b of [...groupedStacks(r_plies.results.bindings, 'part').values()].flat()) {
       const partUri = b.part.value
       const s = summaries.get(partUri)
       if (!s) continue

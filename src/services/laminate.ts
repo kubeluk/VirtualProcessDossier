@@ -16,9 +16,9 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 export interface LaminateForm {
   label: string
   identifier: string
-  length: number
-  width: number
-  thickness: number
+  length: number | null
+  width: number | null
+  thickness: number | null
   layupLabel: string
   plies: { polymer: string; fiberType: string; massFraction: number; orientation: number }[]
   points: { x: number; y: number; referenceUri?: string; referenceLabel: string }[]
@@ -30,12 +30,16 @@ export function iri(uri: string): string {
 }
 
 const literal = (value: string) => JSON.stringify(value)
-const numeric = (value: number) => `"${value}"^^xsd:double`
+const numeric = (value: number | null) => `"${value}"^^xsd:double`
 
 export function validateLaminate(form: LaminateForm): void {
   if (!form.label.trim() || !form.identifier.trim())
     throw new Error('Name and identifier are required.')
-  if (![form.length, form.width, form.thickness].every((v) => Number.isFinite(v) && v > 0)) {
+  if (
+    ![form.length, form.width, form.thickness].every(
+      (v) => typeof v === 'number' && Number.isFinite(v) && v > 0,
+    )
+  ) {
     throw new Error('Length, width, and thickness must be positive numbers.')
   }
   if (!form.plies.length) throw new Error('Add at least one ply.')
@@ -58,7 +62,9 @@ export function laminateTriples(uri: string, form: LaminateForm, revision: strin
   const root = iri(uri)
   const resource = (name: string) => iri(`http://purl.org/for/data/laminate/${revision}#${name}`)
   const layup = resource('layup')
-  const tapes = form.plies.map((_, i) => resource(`tape-${i + 1}`))
+  const tapes = form.plies.map((_, i) =>
+    iri(`http://purl.org/for/data/tape/${revision}-${i + 1}#it`),
+  )
   const triples = [
     `${root} a for:Laminate ; rdfs:label ${literal(form.label.trim())} ;
     dcterms:identifier ${literal(form.identifier.trim())} ; prov:wasDerivedFrom ${layup} .`,

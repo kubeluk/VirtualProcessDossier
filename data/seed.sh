@@ -33,7 +33,7 @@ COUNT=$(curl -sf -G "${FUSEKI}/${VPD_DATASET}/sparql" \
 
 if [ "${COUNT}" = "0" ]; then
   echo "Loading seed data into '${VPD_DATASET}'..."
-  for ttl in /data/catalog.ttl /data/workflow.ttl /data/systems.ttl /data/material.ttl /data/runs.ttl /data/plans.ttl; do
+  for ttl in /data/catalog.ttl /data/workflow.ttl /data/systems.ttl /data/material-v2.ttl /data/runs.ttl /data/plans.ttl; do
     if [ -f "${ttl}" ]; then
       echo "  Loading ${ttl}..."
       curl -sf -u admin:${ADMIN_PASSWORD} \

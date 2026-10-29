@@ -186,7 +186,7 @@ test('deletion preserves shared layups and all their descendants', async () => {
   )
   assert.ok(
     data.countQuads(
-      DataFactory.namedNode('http://purl.org/for/data/laminate/test#tape-1'),
+      DataFactory.namedNode('http://purl.org/for/data/tape/test-1#it'),
       null,
       null,
       null,

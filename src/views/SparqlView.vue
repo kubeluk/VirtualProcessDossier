@@ -21,7 +21,9 @@ const VPD_PREFIXES: Record<string, string> = {
   run: 'http://purl.org/for/run#',
   machine: 'http://purl.org/for/machine#',
   plan: 'http://purl.org/for/plan#',
-  param: 'http://purl.org/for/param#',
+  param: 'http://purl.org/for/parameter#',
+  for: 'http://purl.org/for/terms#',
+  legacyParam: 'http://purl.org/for/param#',
 }
 
 onMounted(() => {
