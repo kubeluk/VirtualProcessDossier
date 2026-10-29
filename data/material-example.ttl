@@ -1,0 +1,627 @@
+@base <http://purl.org/for/> .
+
+@prefix for: <http://purl.org/for/terms#> .
+@prefix qudt: <http://qudt.org/schema/qudt/> .
+@prefix param: <http://purl.org/for/parameter#> .
+@prefix quantitykind: <http://qudt.org/vocab/quantitykind/> .
+@prefix unit: <http://qudt.org/vocab/unit/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix geo: <http://www.opengis.net/ont/geosparql#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# Schema (TBox)
+
+for:Laminate a sh:NodeShape, rdfs:Class ;
+    rdfs:subClassOf prov:Entity, geo:Feature ;
+    sh:targetClass for:Laminate ;
+    sh:property [
+        sh:path rdfs:label ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path dcterms:identifier ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path prov:wasDerivedFrom ;
+        sh:class for:Layup ;
+        sh:node for:Layup ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path param:hasNeedlePoint ;
+        sh:class for:NeedlePoint ;
+        sh:node for:NeedlePoint ;
+        sh:maxCount 12
+    ] ;
+    # Exactly one length, width, and thickness, all positive and in millimetres.
+    sh:property [
+        sh:path geo:hasSize ;
+        sh:minCount 3 ;
+        sh:maxCount 3 ;
+        sh:class qudt:Quantity ;
+        sh:node [
+            sh:property [
+                sh:path qudt:hasQuantityKind ;
+                sh:in ( quantitykind:Length quantitykind:Width quantitykind:Thickness ) ;
+                sh:minCount 1 ;
+                sh:maxCount 1
+            ] ;
+            sh:property [
+                sh:path qudt:hasUnit ;
+                sh:hasValue unit:MilliM ;
+                sh:minCount 1 ;
+                sh:maxCount 1
+            ] ;
+            sh:property [
+                sh:path qudt:value ;
+                sh:node _:numericLiteralShape ;
+                sh:minExclusive 0 ;
+                sh:minCount 1 ;
+                sh:maxCount 1
+            ]
+        ]
+    ] ;
+    sh:property [
+        sh:path geo:hasSize ;
+        sh:qualifiedValueShape [
+            sh:property [ sh:path qudt:hasQuantityKind ; sh:hasValue quantitykind:Length ]
+        ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path geo:hasSize ;
+        sh:qualifiedValueShape [
+            sh:property [ sh:path qudt:hasQuantityKind ; sh:hasValue quantitykind:Width ]
+        ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path geo:hasSize ;
+        sh:qualifiedValueShape [
+            sh:property [ sh:path qudt:hasQuantityKind ; sh:hasValue quantitykind:Thickness ]
+        ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] .
+
+for:ReferencePoint a rdfs:Class .
+
+for:Point a rdfs:Class ;
+    rdfs:subClassOf qudt:Quantity .
+
+for:NeedlePoint a sh:NodeShape, rdfs:Class ;
+    rdfs:subClassOf for:Point ;
+    sh:targetClass for:NeedlePoint ;
+    sh:property [
+        sh:path qudt:hasQuantityKind ;
+        sh:hasValue quantitykind:PositionVector ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path param:referencePoint ;
+        sh:class for:ReferencePoint ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path qudt:quantityValue ;
+        sh:class qudt:Quantity ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:node [
+            sh:property [
+                sh:path qudt:hasUnit ;
+                sh:hasValue unit:MilliM ;
+                sh:minCount 1 ;
+                sh:maxCount 1
+            ] ;
+            # A two-element RDF list containing the x and y coordinates.
+            sh:property [
+                sh:path qudt:value ;
+                sh:minCount 1 ;
+                sh:maxCount 1 ;
+                sh:node [
+                    sh:nodeKind sh:BlankNodeOrIRI ;
+                    sh:not [ sh:in ( rdf:nil ) ] ;
+                    sh:property [
+                        sh:path rdf:first ;
+                        sh:node _:numericLiteralShape ;
+                        sh:minCount 1 ;
+                        sh:maxCount 1
+                    ] ;
+                    sh:property [
+                        sh:path rdf:rest ;
+                        sh:minCount 1 ;
+                        sh:maxCount 1 ;
+                        sh:node [
+                            sh:nodeKind sh:BlankNodeOrIRI ;
+                            sh:not [ sh:in ( rdf:nil ) ] ;
+                            sh:property [
+                                sh:path rdf:first ;
+                                sh:node _:numericLiteralShape ;
+                                sh:minCount 1 ;
+                                sh:maxCount 1
+                            ] ;
+                            sh:property [
+                                sh:path rdf:rest ;
+                                sh:hasValue rdf:nil ;
+                                sh:minCount 1 ;
+                                sh:maxCount 1 ;
+                                sh:node [
+                                    sh:property [ sh:path rdf:first ; sh:maxCount 0 ] ;
+                                    sh:property [ sh:path rdf:rest ; sh:maxCount 0 ]
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    ] .
+
+# Shared numeric constraint for dimensions and coordinate list entries.
+_:numericLiteralShape a sh:NodeShape ;
+    sh:or (
+        [ sh:datatype xsd:integer ]
+        [ sh:datatype xsd:decimal ]
+        [ sh:datatype xsd:float ]
+        [ sh:datatype xsd:double ]
+    ) .
+
+for:Layup a sh:NodeShape, rdfs:Class ;
+    # TODO: Shape generated; not validated yet
+    rdfs:subClassOf prov:Entity ;
+    sh:targetClass for:Layup ;
+    sh:property [
+        sh:path param:tapeStack ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:not [ sh:in ( rdf:nil ) ]
+    ] ;
+    # Every reachable list cell has one tape and one successor; rdf:nil terminates it.
+    sh:property [
+        sh:path ( param:tapeStack [ sh:zeroOrMorePath rdf:rest ] ) ;
+        sh:hasValue rdf:nil ;
+        sh:node [
+            sh:or (
+                [
+                    sh:in ( rdf:nil ) ;
+                    sh:property [ sh:path rdf:first ; sh:maxCount 0 ] ;
+                    sh:property [ sh:path rdf:rest ; sh:maxCount 0 ]
+                ]
+                [
+                    sh:not [ sh:in ( rdf:nil ) ] ;
+                    sh:nodeKind sh:BlankNodeOrIRI ;
+                    sh:property [
+                        sh:path rdf:first ;
+                        sh:class for:Tape ;
+                        sh:node for:Tape ;
+                        sh:minCount 1 ;
+                        sh:maxCount 1
+                    ] ;
+                    sh:property [
+                        sh:path rdf:rest ;
+                        sh:nodeKind sh:BlankNodeOrIRI ;
+                        sh:minCount 1 ;
+                        sh:maxCount 1
+                    ]
+                ]
+            )
+        ]
+    ] ;
+    # The stack, direct provenance, and qualified provenance name the same tapes.
+    sh:property [
+        sh:path ( param:tapeStack [ sh:zeroOrMorePath rdf:rest ] rdf:first ) ;
+        sh:equals prov:wasDerivedFrom
+    ] ;
+    sh:property [
+        sh:path ( prov:qualifiedDerivation prov:entity ) ;
+        sh:equals prov:wasDerivedFrom
+    ] ;
+    sh:property [
+        sh:path prov:qualifiedDerivation ;
+        sh:minCount 1 ;
+        sh:class prov:Derivation ;
+        sh:node [
+            sh:property [
+                sh:path prov:entity ;
+                sh:class for:Tape ;
+                sh:minCount 1 ;
+                sh:maxCount 1
+            ] ;
+            sh:property [
+                sh:path param:fiberOrientation ;
+                sh:class for:FiberOrientation ;
+                sh:node for:FiberOrientation ;
+                sh:minCount 1 ;
+                sh:maxCount 1
+            ]
+        ]
+    ] ;
+    # Requires SHACL-SPARQL; keep the related checks in one constraint.
+    sh:sparql [
+        sh:message "Stack tapes must be distinct and each must have exactly one qualified derivation."@en ;
+        sh:select """
+            PREFIX param: <http://purl.org/for/parameter#>
+            PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            PREFIX prov: <http://www.w3.org/ns/prov#>
+            SELECT DISTINCT $this ?value WHERE {
+                {
+                    $this param:tapeStack/rdf:rest*/rdf:first ?value .
+                    FILTER NOT EXISTS {
+                        $this prov:qualifiedDerivation ?derivation .
+                        ?derivation prov:entity ?value .
+                    }
+                }
+                UNION
+                {
+                    $this param:tapeStack/rdf:rest*/rdf:first ?value ;
+                        prov:qualifiedDerivation ?first, ?second .
+                    ?first prov:entity ?value .
+                    ?second prov:entity ?value .
+                    FILTER (?first != ?second)
+                }
+                UNION
+                {
+                    $this param:tapeStack/rdf:rest* ?firstCell, ?secondCell .
+                    ?firstCell rdf:first ?value .
+                    ?secondCell rdf:first ?value .
+                    FILTER (?firstCell != ?secondCell)
+                }
+            }
+        """
+    ] .
+
+for:Tape a sh:NodeShape, rdfs:Class ;
+    rdfs:subClassOf prov:Entity ;
+    sh:targetClass for:Tape ;
+    sh:property [
+        sh:path param:polymer ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path param:fiberType ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path param:hasFiberMassFraction ;
+        sh:class for:FiberMassFraction ;
+        sh:node for:FiberMassFraction ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] .
+
+for:FiberMassFraction a sh:NodeShape, rdfs:Class ;
+    rdfs:subClassOf qudt:Quantity ;
+    sh:targetClass for:FiberMassFraction ;
+    sh:property [
+        sh:path qudt:hasQuantityKind ;
+        sh:hasValue quantitykind:MassFraction ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path qudt:hasUnit ;
+        sh:hasValue unit:PERCENT ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path qudt:value ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:or (
+            [ sh:datatype xsd:integer ]
+            [ sh:datatype xsd:decimal ]
+            [ sh:datatype xsd:float ]
+            [ sh:datatype xsd:double ]
+        ) ;
+        sh:minInclusive 0 ;
+        sh:maxInclusive 100
+    ] .
+
+for:FiberOrientation a sh:NodeShape, rdfs:Class ;
+    rdfs:subClassOf qudt:Quantity ;
+    sh:targetClass for:FiberOrientation ;
+    sh:property [
+        sh:path qudt:hasQuantityKind ;
+        sh:hasValue quantitykind:PlaneAngle ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path qudt:hasUnit ;
+        sh:hasValue unit:DEG ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path qudt:value ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:or (
+            [ sh:datatype xsd:integer ]
+            [ sh:datatype xsd:decimal ]
+            [ sh:datatype xsd:float ]
+            [ sh:datatype xsd:double ]
+        )
+    ] .
+
+param:fiberOrientation a rdf:Property ;
+    rdfs:range for:FiberOrientation .
+
+param:hasFiberMassFraction a rdf:Property ;
+    rdfs:range for:FiberMassFraction .
+
+param:hasNeedlePoint a rdf:Property ;
+    rdfs:domain for:Laminate ;
+    rdfs:range for:NeedlePoint .
+
+param:referencePoint a rdf:Property ;
+    rdfs:domain for:Point ;
+    rdfs:range for:ReferencePoint .
+
+param:tapeStack a rdf:Property ;
+    rdfs:domain for:Layup ;
+    rdfs:range rdf:List .
+
+# Instances (ABox)
+
+## Reference point
+
+<data/laminate/1#origin> a for:ReferencePoint ;
+    rdfs:label "Laminate Reference Point"@en ;
+    rdfs:comment "Die Mitte des Laminats bildet den Bezugspunkt für die Positionen der Greiferpunkte."@de .
+
+## Laminate
+
+<data/laminate/1#it> a for:Laminate ;
+    rdfs:label "BASF PA6-GF60" ;
+    dcterms:identifier "1_1" ;
+    prov:wasDerivedFrom <data/laminate/1#layup> ;
+    geo:hasSize [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Length ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value 400.0
+    ] ;
+    geo:hasSize [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Width ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value 400.0
+    ] ;
+    geo:hasSize [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Thickness ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value 1.56
+    ] ;
+    param:hasNeedlePoint
+        <data/laminate/1#needle-point-1>,
+        <data/laminate/1#needle-point-2>,
+        <data/laminate/1#needle-point-3>,
+        <data/laminate/1#needle-point-4>,
+        <data/laminate/1#needle-point-5>,
+        <data/laminate/1#needle-point-6>,
+        <data/laminate/1#needle-point-7>,
+        <data/laminate/1#needle-point-8> .
+
+<data/laminate/1#needle-point-1> a for:NeedlePoint ;
+    qudt:hasQuantityKind quantitykind:PositionVector ;
+    qudt:quantityValue [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( 190.0 100.0 )
+    ] ;
+    param:referencePoint <data/laminate/1#origin> .
+
+<data/laminate/1#needle-point-2> a for:NeedlePoint ;
+    qudt:hasQuantityKind quantitykind:PositionVector ;
+    qudt:quantityValue [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( 190.0 -100.0 )
+    ] ;
+    param:referencePoint <data/laminate/1#origin> .
+
+<data/laminate/1#needle-point-3> a for:NeedlePoint ;
+    qudt:hasQuantityKind quantitykind:PositionVector ;
+    qudt:quantityValue [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( -190.0 100.0 )
+    ] ;
+    param:referencePoint <data/laminate/1#origin> .
+
+<data/laminate/1#needle-point-4> a for:NeedlePoint ;
+    qudt:hasQuantityKind quantitykind:PositionVector ;
+    qudt:quantityValue [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( -190.0 -100.0 )
+    ] ;
+    param:referencePoint <data/laminate/1#origin> .
+
+<data/laminate/1#needle-point-5> a for:NeedlePoint ;
+    qudt:hasQuantityKind quantitykind:PositionVector ;
+    qudt:quantityValue [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( 100.0 190.0 )
+    ] ;
+    param:referencePoint <data/laminate/1#origin> .
+
+<data/laminate/1#needle-point-6> a for:NeedlePoint ;
+    qudt:hasQuantityKind quantitykind:PositionVector ;
+    qudt:quantityValue [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( -100.0 190.0 )
+    ] ;
+    param:referencePoint <data/laminate/1#origin> .
+
+<data/laminate/1#needle-point-7> a for:NeedlePoint ;
+    qudt:hasQuantityKind quantitykind:PositionVector ;
+    qudt:quantityValue [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( 100.0 -190.0 )
+    ] ;
+    param:referencePoint <data/laminate/1#origin> .
+
+<data/laminate/1#needle-point-8> a for:NeedlePoint ;
+    qudt:hasQuantityKind quantitykind:PositionVector ;
+    qudt:quantityValue [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( -100.0 -190.0 )
+    ] ;
+    param:referencePoint <data/laminate/1#origin> .
+
+## Layup
+
+<data/laminate/1#layup> a for:Layup ;
+    rdfs:label "[0/60/120]s" ;
+    param:tapeStack ( <data/tape/1#it> <data/tape/2#it> <data/tape/3#it> <data/tape/4#it> <data/tape/5#it> <data/tape/6#it> ) ;
+    prov:wasDerivedFrom <data/tape/1#it>, <data/tape/2#it>, <data/tape/3#it>, <data/tape/4#it>, <data/tape/5#it>, <data/tape/6#it> ;
+    prov:qualifiedDerivation [
+        a prov:Derivation ;
+        prov:entity <data/tape/1#it> ;
+        param:fiberOrientation [
+            a for:FiberOrientation ;
+            qudt:hasQuantityKind quantitykind:PlaneAngle ;
+            qudt:hasUnit unit:DEG ;
+            qudt:value 0
+        ]
+    ] ;
+    prov:qualifiedDerivation [
+        a prov:Derivation ;
+        prov:entity <data/tape/2#it> ;
+        param:fiberOrientation [
+            a for:FiberOrientation ;
+            qudt:hasQuantityKind quantitykind:PlaneAngle ;
+            qudt:hasUnit unit:DEG ;
+            qudt:value 60
+        ]
+    ] ;
+    prov:qualifiedDerivation [
+        a prov:Derivation ;
+        prov:entity <data/tape/3#it> ;
+        param:fiberOrientation [
+            a for:FiberOrientation ;
+            qudt:hasQuantityKind quantitykind:PlaneAngle ;
+            qudt:hasUnit unit:DEG ;
+            qudt:value 120
+        ]
+    ] ;
+    prov:qualifiedDerivation [
+        a prov:Derivation ;
+        prov:entity <data/tape/4#it> ;
+        param:fiberOrientation [
+            a for:FiberOrientation ;
+            qudt:hasQuantityKind quantitykind:PlaneAngle ;
+            qudt:hasUnit unit:DEG ;
+            qudt:value 120
+        ]
+    ] ;
+    prov:qualifiedDerivation [
+        a prov:Derivation ;
+        prov:entity <data/tape/5#it> ;
+        param:fiberOrientation [
+            a for:FiberOrientation ;
+            qudt:hasQuantityKind quantitykind:PlaneAngle ;
+            qudt:hasUnit unit:DEG ;
+            qudt:value 60
+        ]
+    ] ;
+    prov:qualifiedDerivation [
+        a prov:Derivation ;
+        prov:entity <data/tape/6#it> ;
+        param:fiberOrientation [
+            a for:FiberOrientation ;
+            qudt:hasQuantityKind quantitykind:PlaneAngle ;
+            qudt:hasUnit unit:DEG ;
+            qudt:value 0
+        ]
+    ] .
+
+## Tapes
+
+<data/tape/1#it> a for:Tape ;
+    param:polymer "PA6" ;
+    param:fiberType "GF" ;
+    param:hasFiberMassFraction [
+        a for:FiberMassFraction ;
+        qudt:hasQuantityKind quantitykind:MassFraction ;
+        qudt:hasUnit unit:PERCENT ;
+        qudt:value 60
+    ] .
+
+<data/tape/2#it> a for:Tape ;
+    param:polymer "PA6" ;
+    param:fiberType "GF" ;
+    param:hasFiberMassFraction [
+        a for:FiberMassFraction ;
+        qudt:hasQuantityKind quantitykind:MassFraction ;
+        qudt:hasUnit unit:PERCENT ;
+        qudt:value 60
+    ] .
+
+<data/tape/3#it> a for:Tape ;
+    param:polymer "PA6" ;
+    param:fiberType "GF" ;
+    param:hasFiberMassFraction [
+        a for:FiberMassFraction ;
+        qudt:hasQuantityKind quantitykind:MassFraction ;
+        qudt:hasUnit unit:PERCENT ;
+        qudt:value 60
+    ] .
+
+<data/tape/4#it> a for:Tape ;
+    param:polymer "PA6" ;
+    param:fiberType "GF" ;
+    param:hasFiberMassFraction [
+        a for:FiberMassFraction ;
+        qudt:hasQuantityKind quantitykind:MassFraction ;
+        qudt:hasUnit unit:PERCENT ;
+        qudt:value 60
+    ] .
+
+<data/tape/5#it> a for:Tape ;
+    param:polymer "PA6" ;
+    param:fiberType "GF" ;
+    param:hasFiberMassFraction [
+        a for:FiberMassFraction ;
+        qudt:hasQuantityKind quantitykind:MassFraction ;
+        qudt:hasUnit unit:PERCENT ;
+        qudt:value 60
+    ] .
+
+<data/tape/6#it> a for:Tape ;
+    param:polymer "PA6" ;
+    param:fiberType "GF" ;
+    param:hasFiberMassFraction [
+        a for:FiberMassFraction ;
+        qudt:hasQuantityKind quantitykind:MassFraction ;
+        qudt:hasUnit unit:PERCENT ;
+        qudt:value 60
+    ] .

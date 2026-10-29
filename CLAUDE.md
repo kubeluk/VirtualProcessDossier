@@ -234,3 +234,13 @@ This UI abstracts RDF/SPARQL complexity from end users. Features are built aroun
 - **Datasets section**: pass raw URI to Vue Router — do NOT use `encodeURIComponent` (that double-encodes since the router already encodes query params)
 - `q_tree` in `fetchDossier` must fetch `?parentType` in addition to `?childType` so composite root nodes are correctly identified by `collectAtomics`; without it, the root `ParallelActivity` appears as `AtomicActivity` and renders as "Unnamed Activity"
 - **HomeView** (`/`) is the Dossier gallery — loads all parts then fires `fetchDossier` for each in parallel; `DossierView` (`/dossier?part=`) is the permalink/detail page
+
+
+### Laminate Library (implemented)
+- `/laminates` provides browse/search, create, detail/edit, and delete via `LaminateListView` and `LaminateEditor`.
+- `src/services/laminate.ts` builds RDF and validates form values; `src/stores/laminate.ts` handles queries and updates.
+- Follow `data/material-example.ttl`: `for: <http://purl.org/for/terms#>`, `param: <http://purl.org/for/parameter#>`. These differ from legacy material namespaces; the new view queries `for:Laminate` explicitly. Legacy material data is not migrated.
+- Dimensions are positive QUDT quantities in millimetres. Layups have a nonempty ordered `param:tapeStack` RDF list of distinct tapes, matching direct and qualified PROV derivations. Each derivation has a typed `for:FiberOrientation`; each tape has a typed `for:FiberMassFraction` (0–100%).
+- Up to 12 typed needle points use a reference point and a two-element RDF coordinate list. Existing reference point URIs and metadata are retained during edits.
+- Edits preserve the laminate URI and replace its material structure in one Fuseki update request. Shared descendants are preserved; a fresh layup and tapes avoid modifying other laminates. Referenced laminates cannot be deleted.
+- `npm run test:laminate` checks generated data against SHACL Core and SHACL-SPARQL constraints from the example, ordering, validation, SPARQL syntax, and deletion cleanup/shared-resource preservation.

@@ -9,6 +9,7 @@ import ActivityListView from '@/views/ActivityListView.vue'
 import SystemListView from '@/views/SystemListView.vue'
 import PartListView from '@/views/PartListView.vue'
 import DossierView from '@/views/DossierView.vue'
+import LaminateListView from '@/views/LaminateListView.vue'
 import SparqlView from '@/views/SparqlView.vue'
 
 const router = createRouter({
@@ -53,6 +54,11 @@ const router = createRouter({
       path: '/systems',
       name: 'systems',
       component: SystemListView,
+    },
+    {
+      path: '/laminates',
+      name: 'laminates',
+      component: LaminateListView,
     },
     {
       path: '/parts',
