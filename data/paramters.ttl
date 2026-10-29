@@ -1,0 +1,137 @@
+@prefix : <#> .
+@prefix qudt: <http://qudt.org/schema/qudt/> .
+@prefix part: <http://purl.org/for/part#> .
+@prefix laminat: <http://purl.org/for/laminat#> .
+@prefix layup: <http://purl.org/for/layup#> .
+@prefix tape: <http://purl.org/for/tape#> .
+@prefix run: <http://purl.org/for/run#> .
+@prefix workflow: <http://purl.org/for/workflow#> .
+@prefix feature: <http://purl.org/for/feature#> .
+@prefix activity: <http://purl.org/for/activity#> .
+@prefix machine: <http://purl.org/for/machine#> .
+@prefix gripper: <http://purl.org/for/gripper#> .
+@prefix plan: <http://purl.org/for/plan#> .
+@prefix param: <http://purl.org/for/param#> .
+@prefix input: <http://purl.org/for/input#> .
+@prefix tool: <http://purl.org/for/tool#> .
+@prefix pos: <http://purl.org/for/position#> .
+@prefix vpd: <http://purl.org/vpd/data#> .
+@prefix quantitykind: <http://qudt.org/vocab/quantitykind/> .
+@prefix unit: <http://qudt.org/vocab/unit/> .
+@prefix sosa: <http://www.w3.org/ns/sosa/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix wild: <http://purl.org/wild/vocab#> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix geo: <http://www.opengis.net/ont/geosparql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix ssn: <http://www.w3.org/ns/ssn/> .
+
+param:Parameter
+    a rdfs:Class ;
+    rdfs:subClassOf qudt:Quantity ;
+    rdfs:label "Parameter"@en ;
+    rdfs:comment "A parameter is a quantity that can be used to control the behavior of a process or system."@en .
+
+# Input Shapes
+
+## Oven
+
+input:oven
+    a sh:NodeShape ;
+    sh:targetClass ssn:Input ;
+    sh:node input:ir_top, input:ir_bottom ;
+    sh:property [
+        sh:path param:holdingTime ;
+        sh:node param:holdingTimeShape ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] .
+
+### Top
+
+input:ir_top
+    a sh:NodeShape ;
+    sh:node input:ir_top_middle, input:ir_top_edge, input:ir_top_corner ;
+    sh:property [
+        sh:path param:temperatureGoal ;
+        sh:node param:temperatureGoalShape ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] .
+
+input:ir_top_middle
+    a sh:NodeShape ;
+    sh:property [
+        sh:path param:zoneControl ;
+        sh:node param:zoneControlShape ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] .
+
+input:ir_top_edge
+    a sh:NodeShape ;
+    sh:property [
+        sh:path param:zoneControl ;
+        sh:node param:zoneControlShape ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] .
+
+input:ir_top_bottom
+    a sh:NodeShape ;
+    sh:property [
+        sh:path param:zoneControl ;
+        sh:node param:zoneControlShape ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] .
+
+### Bottom
+
+input:ir_bottom
+    a sh:NodeShape ;
+    sh:node input:ir_bottom_middle, input:ir_bottom_edge, input:ir_bottom_corner ;
+    sh:property [
+        sh:path param:temperatureGoal ;
+        sh:node param:temperatureGoalShape ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] .
+
+# Parameter Shapes
+
+## Holding Time
+
+param:HoldingTime
+    a param:Parameter ;
+    rdfs:label "Holding Time"@en ;
+    rdfs:comment "The holding time is the duration for which the laminate is held at a specific temperature during the heating process."@en ;
+
+param:holdingTimeShape a sh:NodeShape, ssn:Input ;
+    sh:targetClass param:HoldingTime ;
+    sh:property [
+        sh:path qudt:value ;
+        sh:datatype xsd:decimal ;
+        sh:minInclusive 0.0
+    ] ;
+    sh:property [
+        sh:path qudt:hasUnit ;
+        sh:hasValue unit:SEC ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path qudt:hasQuantityKind ;
+        sh:hasValue quantitykind:Time ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] .
+
+## Temperature Goal
+
+
+
+## Zone Control
+

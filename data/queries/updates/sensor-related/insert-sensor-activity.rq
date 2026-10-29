@@ -1,0 +1,44 @@
+BASE <http://purl.org/for/>
+
+PREFIX prov: <http://www.w3.org/ns/prov#>
+PREFIX wild: <http://purl.org/wild/vocab#>
+PREFIX sosa: <http://www.w3.org/ns/sosa/>
+
+INSERT DATA
+{
+    # every activity instance MUST have a unique identifier
+    BIND(<activity/instance/1#it> AS ?sensor_activity_instance)
+    
+    # start and end time of the individual sensor observation
+    BIND("2024-06-01T10:00:00Z"^^xsd:dateTime AS ?start_time)
+    BIND("2024-06-01T12:00:00Z"^^xsd:dateTime AS ?end_time)
+    
+    # the referenced activity from the workflow model
+    BIND(<activity/1#it> AS ?activity)
+
+    # each production run has its unique identifier
+    BIND(<workflow/instance/1#it> AS ?workflow_instance)
+    
+    # each sensor has its unique identifier
+    # e.g. the pyrometer
+    BIND(<sensor/pyrometer/1#it> AS ?sensor)
+    
+    # each thing that is being observed has its unique identifier
+    # e.g. the sheet in the oven or a specific gripper
+    BIND(<sheet/1#it> AS ?observed_entity)
+
+    # each aspect that is observed during a production run has its unique identifier
+    # e.g. the seets surface temperature in the oven or a grippers angle
+    BIND(<property/temperature/surface#top> AS ?observed_property_of_entity)
+    
+    # the query records a new sensor execution, attaches descriptive information, and links it to the corresponding production run
+    ?sensor_activity_instance
+        a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+        prov:startedAtTime ?start_time ;
+        prov:endedAtTime ?end_time ;
+        wild:activityInstanceOf ?activity ;
+        wild:inWorkflowInstance ?workflow_instance ;
+        sosa:madeBySensor ?sensor ;
+        sosa:featureOfInterest ?observed_entity ;
+        sosa:observedProperty ?observed_property_of_entity .
+}

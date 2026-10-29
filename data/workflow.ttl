@@ -1,48 +1,25 @@
-@prefix : <#> .
-@prefix qudt: <http://qudt.org/schema/qudt/> .
-@prefix part: <http://purl.org/for/part#> .
-@prefix laminat: <http://purl.org/for/laminat#> .
-@prefix layup: <http://purl.org/for/layup#> .
-@prefix tape: <http://purl.org/for/tape#> .
-@prefix run: <http://purl.org/for/run#> .
-@prefix workflow: <http://purl.org/for/workflow#> .
-@prefix feature: <http://purl.org/for/feature#> .
-@prefix activity: <http://purl.org/for/activity#> .
-@prefix machine: <http://purl.org/for/machine#> .
-@prefix gripper: <http://purl.org/for/gripper#> .
-@prefix plan: <http://purl.org/for/plan#> .
-@prefix param: <http://purl.org/for/param#> .
-@prefix tool: <http://purl.org/for/tool#> .
-@prefix pos: <http://purl.org/for/position#> .
-@prefix vpd: <http://purl.org/vpd/data#> .
-@prefix quantitykind: <http://qudt.org/vocab/quantitykind/> .
-@prefix unit: <http://qudt.org/vocab/unit/> .
-@prefix sosa: <http://www.w3.org/ns/sosa/> .
-@prefix prov: <http://www.w3.org/ns/prov#> .
-@prefix dcterms: <http://purl.org/dc/terms/> .
-@prefix wild: <http://purl.org/wild/vocab#> .
-@prefix dcat: <http://www.w3.org/ns/dcat#> .
-@prefix geo: <http://www.opengis.net/ont/geosparql#> .
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix ssn: <http://www.w3.org/ns/ssn/> .
+@base <http://purl.org/for/fofa/workflow/>
 
 # Workflow Model
 
 ## Stamp Forming Flow
 
-workflow:stampForming a wild:WorkflowModel ;
-    rdfs:label "Stamp Forming Flow" ;
+<model/1#it> a wild:WorkflowModel ;
+    rdfs:label "Stamp Forming Flow (v1)" ;
     rdfs:comment "Workflow for the stamp forming process of a composite laminate." ;
-    wild:hasBehaviour workflow:stampForming_root .
+    wild:hasBehaviour <model/1/behaviour#it> .
 
-workflow:stampForming_root a wild:ParallelActivity ;
+<model/1/behaviour#it> a wild:SequentialActivity ;
     rdfs:label "Stamp Forming Behaviour" ;
-    wild:hasChildActivities ( activity:gripping workflow:heatingTransferingForming ) .
+    wild:hasChildActivities ( <model/1/behaviour/1#loading> <model/1/behaviour/1#manufacturing> <model/1/behaviour/1#inspecting> ) .
 
 workflow:heatingTransferingForming a wild:SequentialActivity ;
     rdfs:label "Heating and Forming" ;
     wild:hasChildActivities ( activity:heating activity:transfering activity:forming ) .
+
+## Atomic Activities
+
+### Actuation
 
 activity:gripping a wild:AtomicActivity ;
     rdfs:label "Gripping" ;
@@ -60,6 +37,48 @@ activity:forming a wild:AtomicActivity ;
     rdfs:label "Forming" ;
     rdfs:comment "The forming activity involves the use of the press to shape the laminate." .
 
-activity:reworking a wild:AtomicActivity ;
-    rdfs:label "Reworking" ;
-    rdfs:comment "The reworking activity involves any additional processing steps that may be necessary to achieve the desired quality of the final part." .
+### Observation
+
+#### Gripper Angle
+
+<activity/observe/gripper/angle/1#it> a wild:AtomicActivity .
+<activity/observe/gripper/angle/2#it> a wild:AtomicActivity .
+<activity/observe/gripper/angle/3#it> a wild:AtomicActivity .
+<activity/observe/gripper/angle/4#it> a wild:AtomicActivity .
+<activity/observe/gripper/angle/5#it> a wild:AtomicActivity .
+<activity/observe/gripper/angle/6#it> a wild:AtomicActivity .
+<activity/observe/gripper/angle/7#it> a wild:AtomicActivity .
+<activity/observe/gripper/angle/8#it> a wild:AtomicActivity .
+
+#### Gripper Force
+
+<activity/observe/gripper/angle/1#it> a wild:AtomicActivity .
+<activity/observe/gripper/angle/2#it> a wild:AtomicActivity .
+<activity/observe/gripper/angle/3#it> a wild:AtomicActivity .
+<activity/observe/gripper/angle/4#it> a wild:AtomicActivity .
+<activity/observe/gripper/angle/5#it> a wild:AtomicActivity .
+<activity/observe/gripper/angle/6#it> a wild:AtomicActivity .
+<activity/observe/gripper/angle/7#it> a wild:AtomicActivity .
+<activity/observe/gripper/angle/8#it> a wild:AtomicActivity .
+
+#### Gripper Extension
+
+<activity/observe/gripper/extension/1#it> a wild:AtomicActivity .
+<activity/observe/gripper/extension/2#it> a wild:AtomicActivity .
+<activity/observe/gripper/extension/3#it> a wild:AtomicActivity .
+<activity/observe/gripper/extension/4#it> a wild:AtomicActivity .
+<activity/observe/gripper/extension/5#it> a wild:AtomicActivity .
+<activity/observe/gripper/extension/6#it> a wild:AtomicActivity .
+<activity/observe/gripper/extension/7#it> a wild:AtomicActivity .
+<activity/observe/gripper/extension/8#it> a wild:AtomicActivity .
+
+#### Temperature
+
+<activity/observe/sheet/temperature/1#it> a wild:AtomicActivity .
+
+#### Camera
+
+<activity/observe/part/shape/1#it> a wild:AtomicActivity .
+<activity/observe/part/shape/2#it> a wild:AtomicActivity .
+<activity/observe/part/shape/3#it> a wild:AtomicActivity .
+<activity/observe/part/shape/4#it> a wild:AtomicActivity .

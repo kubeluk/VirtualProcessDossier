@@ -1,0 +1,181 @@
+@base <http://purl.org/for/fofa/> .
+
+@prefix pos: <http://purl.org/for/position#> .
+@prefix sosa: <http://www.w3.org/ns/sosa/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix ssn: <http://www.w3.org/ns/ssn/> .
+@prefix geo: <http://www.opengis.net/ont/geosparql#> .
+@prefix quantitykind: <http://qudt.org/vocab/quantitykind/> .
+@prefix unit: <http://qudt.org/vocab/unit/> .
+@prefix qudt: <http://qudt.org/schema/qudt/> .
+
+# Setup FoFa
+
+<system/demonstrator#it> a ssn:System ;
+    rdfs:label "FoFa Demonstrator"@en ;
+    rdfs:comment "The demonstrator as set up at the Forschungsfabrik"@en ;
+    ssn:hasSubSystem <system/gripper-frame/1#it>, <system/oven/1#it>, <system/press/1#it> .
+
+# Systems
+
+## Gripper Frame
+
+<system/gripper-frame/1#it> a ssn:System, geo:Feature ;
+    rdfs:label "Gripper Frame"@en ;
+    rdfs:comment "The gripper frame is a base structure that is comprised of a range of grippers which are used for fixing a sheet of laminate in place."@en ;
+    geo:hasSize [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Length ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value 800.0
+    ] ;
+    geo:hasSize [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Width ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value 800.0
+    ] ;
+    pos:hasPositionalReference pos:gripperFrameReferencePoint ;
+    ssn:hasSubSystem <system/gripper/1#it>, <system/gripper/2#it>, <system/gripper/3#it>, <system/gripper/4#it>, <system/gripper/5#it>, <system/gripper/6#it>, <system/gripper/7#it>, <system/gripper/8#it> .
+
+<system/gripper/1#it> a ssn:System ;
+    rdfs:label "Gripper 1" ;
+    ssn:hasProperty <property/angle#it>, <property/force#it>, <property/extension#it> .
+
+<system/gripper/2#it> a ssn:System ;
+    rdfs:label "Gripper 2" ;
+    ssn:hasProperty <property/angle#it>, <property/force#it>, <property/extension#it> .
+
+<system/gripper/3#it> a ssn:System ;
+    rdfs:label "Gripper 3" ;
+    ssn:hasProperty <property/angle#it>, <property/force#it>, <property/extension#it> .
+
+<system/gripper/4#it> a ssn:System ;
+    rdfs:label "Gripper 4" ;
+    ssn:hasProperty <property/angle#it>, <property/force#it>, <property/extension#it> .
+
+<system/gripper/5#it> a ssn:System ;
+    rdfs:label "Gripper 5" ;
+    ssn:hasProperty <property/angle#it>, <property/force#it>, <property/extension#it> .
+
+<system/gripper/6#it> a ssn:System ;
+    rdfs:label "Gripper 6" ;
+    ssn:hasProperty <property/angle#it>, <property/force#it>, <property/extension#it> .
+
+<system/gripper/7#it> a ssn:System ;
+    rdfs:label "Gripper 7" ;
+    ssn:hasProperty <property/angle#it>, <property/force#it>, <property/extension#it> .
+
+<system/gripper/1#it> a ssn:System ;
+    rdfs:label "Gripper 8" ;
+    ssn:hasProperty <property/angle#it>, <property/force#it>, <property/extension#it> .
+
+pos:gripperFrameReferencePoint a pos:Origin ;
+    rdfs:label "Greiferrahmen Reference Point"@en ;
+    rdfs:comment "Die linke, untere Ecke des Greiferrahmens bildet den Bezugspunkt für die Positionen der Greiferpunkte."@de .
+
+## Oven
+
+<system/oven/1#it> a ssn:System ;
+    rdfs:label "Infrared (IR) Oven"@en ;
+    rdfs:comment "Infrared (IR) oven comprised of two parts (top and bottom)."@en ;
+    ssn:hasSubSystem <system/oven/1/top#it>, <system/oven/1/bottom#it> .
+
+<system/oven/1/top#it> a ssn:System ;
+    rdfs:label "IR Field (top)"@en ;
+    rdfs:comment "The top IR field consists of three individually controllable zones: middle, edge and corner zones for the top part of the laminat."@en ;
+    ssn:hasSubSystem <sytem/ir-field/1#it>, <sytem/ir-field/2#it>, <sytem/oven/ir-field/3#it>, <system/oven/ir-field/4#it> .
+
+<system/oven/1/bottom#it> a ssn:System ;
+    rdfs:label "IR Field (bottom)"@en ;
+    rdfs:comment "The bottom IR field consists of three individually controllable zones: middle, edge and corner zones for the bottom part of the laminat."@en ;
+    ssn:hasSubSystem <sytem/ir-field/5#it>, <sytem/ir-field/6#it>, <sytem/ir-field/7#it>, <system/ir-field/8#it> .
+
+<system/ir-field/1#it> a ssn:System .
+
+<system/ir-field/2#it> a ssn:System .
+
+<system/ir-field/3#it> a ssn:System .
+
+<system/ir-field/4#it> a ssn:System .
+
+<system/ir-field/5#it> a ssn:System .
+
+<system/ir-field/6#it> a ssn:System .
+
+<system/ir-field/7#it> a ssn:System .
+
+<system/ir-field/8#it> a ssn:System .
+
+## Press
+
+<system/press/1#it> a ssn:System ;
+    rdfs:label "Press"@en ;
+    rdfs:comment "The press is used for forming the laminat."@en ;
+    ssn:hasProperty <system/press/1#force> .
+
+# Sensors
+
+## Gripper
+
+### Angle
+
+<sensor/angle/1#it> a sosa:Sensor .
+
+<sensor/angle/2#it> a sosa:Sensor .
+
+<sensor/angle/3#it> a sosa:Sensor .
+
+<sensor/angle/4#it> a sosa:Sensor .
+
+<sensor/angle/5#it> a sosa:Sensor .
+
+<sensor/angle/6#it> a sosa:Sensor .
+
+<sensor/angle/7#it> a sosa:Sensor .
+
+<sensor/angle/8#it> a sosa:Sensor .
+
+### Force
+
+<sensor/force/1#it> a sosa:Sensor .
+
+<sensor/force/2#it> a sosa:Sensor .
+
+<sensor/force/3#it> a sosa:Sensor .
+
+<sensor/force/4#it> a sosa:Sensor .
+
+<sensor/force/5#it> a sosa:Sensor .
+
+<sensor/force/6#it> a sosa:Sensor .
+
+<sensor/force/7#it> a sosa:Sensor .
+
+<sensor/force/8#it> a sosa:Sensor .
+
+### Extension
+
+<sensor/extension/1#it> a sosa:Sensor .
+
+<sensor/extension/2#it> a sosa:Sensor .
+
+<sensor/extension/3#it> a sosa:Sensor .
+
+<sensor/extension/4#it> a sosa:Sensor .
+
+<sensor/extension/5#it> a sosa:Sensor .
+
+<sensor/extension/6#it> a sosa:Sensor .
+
+<sensor/extension/7#it> a sosa:Sensor .
+
+<sensor/extension/8#it> a sosa:Sensor .
+
+## Pyrometer
+
+<sensor/pyrometer/1#it> a sosa:Sensor .
+
+## Camera
+
+<sensor/camera/1#it> a sosa:Sensor .

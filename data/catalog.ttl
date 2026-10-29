@@ -1,3 +1,5 @@
+@base <http://purl.org/for/> 
+
 @prefix : <#> .
 @prefix qudt: <http://qudt.org/schema/qudt/> .
 @prefix part: <http://purl.org/for/part#> .
@@ -6,6 +8,7 @@
 @prefix tape: <http://purl.org/for/tape#> .
 @prefix run: <http://purl.org/for/run#> .
 @prefix workflow: <http://purl.org/for/workflow#> .
+@prefix workflowI: <http://purl.org/for/workflow/instance#> .
 @prefix feature: <http://purl.org/for/feature#> .
 @prefix activity: <http://purl.org/for/activity#> .
 @prefix machine: <http://purl.org/for/machine#> .
@@ -14,7 +17,11 @@
 @prefix param: <http://purl.org/for/param#> .
 @prefix tool: <http://purl.org/for/tool#> .
 @prefix pos: <http://purl.org/for/position#> .
-@prefix vpd: <http://purl.org/vpd/data#> .
+@prefix vpd: <http://purl.org/for/vpd#> .
+@prefix class: <http://purl.org/for/class#> .
+@prefix observation: <http://purl.org/for/observation#> .
+@prefix sensor: <http://purlg.org/for/sensor#> .
+@prefix dataset: <http://purl.org/for/dataset#> .
 @prefix quantitykind: <http://qudt.org/vocab/quantitykind/> .
 @prefix unit: <http://qudt.org/vocab/unit/> .
 @prefix sosa: <http://www.w3.org/ns/sosa/> .
@@ -32,13 +39,13 @@
 vpd:it a dcat:Catalog ;
     dcterms:title "Virtual Process Dossier (VPD)" ;
     dcterms:description "A FAIR, process-aware data catalog" ;
-    dcat:dataset vpd:1sensor, vpd:12scan .
+    dcat:dataset dataset:1, dataset:2 .
 
 ## Datasets
 
 ### Activity Observations
 
-vpd:1sensor a dcat:Dataset ;
+dataset:99 a dcat:Dataset ;
     dcterms:title "Sensordaten 1" ;
     dcterms:description "Sensordaten von der Inbetriebnahme des Heizfelds und Greiferrahmens am 30.03.2026" ;
     dcat:distribution [
@@ -47,11 +54,11 @@ vpd:1sensor a dcat:Dataset ;
         dcat:mediaType "text/tab-separated-values" ;
         dcat:temporalResolution "PT0.02S"^^xsd:duration ;
     ] ;
-    prov:wasGeneratedBy run:1 .
+    prov:wasGeneratedBy observation:99 .
 
 ### Part 3D Scans
 
-vpd:12scan a dcat:Dataset ;
+dataset:2 a dcat:Dataset ;
     dcterms:title "Scan-Daten 12" ;
     dcterms:description "3D-Scan des gefertigten Bauteils von Versuch No. 12" ;
     dcat:distribution [
@@ -59,4 +66,85 @@ vpd:12scan a dcat:Dataset ;
         dcat:mediaType "model/stl" ;
         dcat:downloadURL <https://os-webdav.lsdf.kit.edu/kit/iar/projects/FOR_5339/T1/Versuchsdaten/Versuchskampagne%202026_1/3D-Scans/2.1.stl> ;
     ] ;
-    prov:wasDerivedFrom part:12 .
+    prov:wasGeneratedBy observation:2 .
+
+# Observations
+
+observation:1 a sosa:Observation ;
+    wild:inWorkflowInstance workflowI:1 ;
+    wild:activityInstanceOf activity:heating ;
+    sosa:madeBySensor sensor:pyrometer ;
+    sosa:hasFeatureOfInterest <part/1#it> ;
+    sosa:observedProperty <part/1#upperSurfaceTemperature> ;
+    sosa:hasResult dataset:1 ;
+    prov:startedAtTime "2026-10-28T16:24:00+01:00"^^xsd:dateTime ;
+    prov:endedAtTime "2026-10-28T16:25:30+01:00"^^xsd:dateTime .
+
+observation:2 a sosa:Observation ;
+    wild:inWorkflowInstance workflowI:1 ;
+    wild:activityInstanceOf activity:inspectView1
+    sosa:madeBySensor sensor:camera ;
+    sosa:hasFeatureOfInterest <part/1#it> ;
+    sosa:observedProperty <part/1#shape> ;
+    sosa:hasResult dataset:2 ;
+    prov:startedAtTime "2026-10-28T16:26:00+01:00"^^xsd:dateTime ;
+    prov:endedAtTime "2026-10-28T16:27:30+01:00"^^xsd:dateTime .
+
+observation:3 a sosa:Observation ;
+    wild:inWorkflowInstance workflowI:1 ;
+    wild:activityInstanceOf activity:inspectView2 ;
+    sosa:madeBySensor sensor:camera ;
+    sosa:hasFeatureOfInterest <part/1#it> ;
+    sosa:observedProperty <part/1#shape> ;
+    sosa:hasResult dataset:3 ;
+    prov:startedAtTime "2026-10-28T16:28:00+01:00"^^xsd:dateTime ;
+    prov:endedAtTime "2026-10-28T16:28:30+01:00"^^xsd:dateTime .
+
+actuation:1 a sosa:Actuation ;
+    sosa:madeByActuator oven:1 ;
+    sosa:usedProcedure activity:pressing ;
+
+
+# Workflow Instance
+
+workflowI:1 a wild:WorkflowInstance ;
+    wild:worfklowInstanceOf workflow:stampForming .
+
+# Workflow
+
+workflow:stampForming a wild:WorkflowModel ;
+    wild:hasBehaviour activity:stampFormingFlow .
+
+## Activity
+
+### Composite
+
+activity:stampFormingFlow a wild:ParallelActivity ;
+    wild:hasChildActivities ( activity:gripping activity:transforming ) .
+
+activity:transforming a wild:SequentialActivity ;
+    wild:hasChildActivities ( activity:loading activity:move1 activity:heating activity:move2 activity:pressing activity:move3 activity:inspecting activity:move4 activity:unloading ) .
+
+### Atomic
+
+activity:gripping a wild:AtomicActivity ;
+    ssn:hasInput input:GripperFrameParameterizationShape ;
+    ssn:implementedBy gripper:1 .
+
+activity:loading a wild:AtomicActivity .
+
+activity:move1 a wild:AtomicActivity .
+
+activity:heating a wild:AtomicActivity .
+
+activity:move2 a wild:AtomicActivity .
+
+activity:pressing a wild:AtomicActivity .
+
+activity:move3 a wild:AtomicActivity .
+
+activity:inspecting a wild:AtomicActivity .
+
+activity:move4 a wild:AtomicActivity .
+
+activity:unloading a wild:AtomicActivity .

@@ -123,3 +123,10 @@ machine:ir_bottom_corner a ssn:System ;
 machine:press a ssn:System ;
     rdfs:label "Press"@en ;
     rdfs:comment "The press is used for forming the laminat."@en .
+
+# Setup FoFa
+
+machine:FoFaDemonstrator a ssn:System ;
+    rdfs:label "FoFa Demonstrator"@en ;
+    rdfs:comment "The demonstrator as set up at the Forschungsfabrik"@en ;
+    ssn:hasSubSystem machine:gripperFrame, machine:oven, machine:press .

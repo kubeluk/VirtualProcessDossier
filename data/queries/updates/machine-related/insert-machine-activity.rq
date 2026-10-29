@@ -1,0 +1,50 @@
+PREFIX prov: <http://www.w3.org/ns/prov#>
+PREFIX wild: <http://purl.org/wild/vocab#>
+PREFIX vpd: <http://purl.org/vpd/vocab#>
+BASE <http://purl.org/fofa/>
+
+INSERT DATA
+{    
+    # each activity instance MUST have a unique identifier
+    # TODO: generate new UUID whenever SPARQL query is used
+    BIND(<activity/instance/8be4df61-93ca-11d2-aa0d-00e098032b8c#it> AS ?activity_instance)
+    
+    # start and end time of the individual activity execution
+    # TODO: use correct start and end date
+    BIND("2026-09-24T10:00:00Z"^^xsd:dateTime AS ?start_time)
+    BIND("2026-09-24T10:02:34Z"^^xsd:dateTime AS ?end_time)
+    
+    # the referenced activity from the workflow model
+    # TODO: use respective activity URI
+    BIND(<activity/heating#it> AS ?activity)
+
+    # each production run has its unique identifier
+    # TODO: generate new UUID whenever SPARQL query is used
+    BIND(<workflow/instance/8be4df61-93ca-11d2-aa0d-00e098032b8d#it> AS ?workflow_instance)
+
+    # each relevant (sub-)system in the demonstrator has its unique identifier
+    # TODO: use respective system URI
+    BIND(<system/oven#it> AS ?executing_system)
+
+    # each parameterization for the individual (sub-)systems has its unique identifier
+    # TODO: specify used plan URI
+    BIND(<plan/1#it> AS ?system_parameterization)
+    
+    # the query records a new activity execution, attaches descriptive information, and links it to the corresponding production run
+    ?activity_instance
+        a prov:Activity, wild:ActivityInstance, sosa:Actuation ;
+        prov:startedAtTime ?start_time ;
+        # end time could also be part of a second update query
+        prov:endedAtTime ?end_time ;
+        # make sure that workflow model in VPD aligns with implemented workflow in demonstrator
+        wild:activityInstanceOf ?activity ; # sync
+        wild:inWorkflowInstance ?workflow_instance ; # sync
+        prov:wasAssociatedWith ?executing_system ; # sync
+        # associations may not always be needed
+        # they MUST be used whever a system is active that received a dedicated parameterization (plan)
+        prov:qualifiedAssociation [
+            a prov:Association ;
+            prov:agent ?executing_system ;
+            prov:hadPlan ?system_parameterization
+        ] .
+}
