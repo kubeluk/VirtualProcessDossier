@@ -1,0 +1,446 @@
+@base <http://purl.org/for/> .
+
+@prefix : <#> .
+@prefix for: <http://purl.org/for/terms#>
+@prefix qudt: <http://qudt.org/schema/qudt/> .
+@prefix part: <http://purl.org/for/part#> .
+@prefix laminat: <http://purl.org/for/laminat#> .
+@prefix layup: <http://purl.org/for/layup#> .
+@prefix tape: <http://purl.org/for/tape#> .
+@prefix run: <http://purl.org/for/run#> .
+@prefix workflow: <http://purl.org/for/workflow#> .
+@prefix feature: <http://purl.org/for/feature#> .
+@prefix activity: <http://purl.org/for/activity#> .
+@prefix machine: <http://purl.org/for/machine#> .
+@prefix gripper: <http://purl.org/for/gripper#> .
+@prefix plan: <http://purl.org/for/plan#> .
+@prefix param: <http://purl.org/for/param#> .
+@prefix tool: <http://purl.org/for/tool#> .
+@prefix pos: <http://purl.org/for/position#> .
+@prefix vpd: <http://purl.org/vpd/data#> .
+@prefix quantitykind: <http://qudt.org/vocab/quantitykind/> .
+@prefix unit: <http://qudt.org/vocab/unit/> .
+@prefix sosa: <http://www.w3.org/ns/sosa/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix wild: <http://purl.org/wild/vocab#> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix geo: <http://www.opengis.net/ont/geosparql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix ssn: <http://www.w3.org/ns/ssn/> .
+
+# T Box
+
+for:ManufacturingPlan a rdfs:Class ;
+    rdfs:subClassOf prov:Plan .
+
+for:GrippingPlan a for:ManufacturingPlan, rdfs:Class .
+
+for:HeatingPlan a for:ManufacturingPlan, rdfs:Class .
+
+for:FormingPlan a for:ManufacturingPlan, rdfs:Class .
+
+for:subPlan a rdfs:Property ;
+    rdfs:domain for:ManufacturingPlan ;
+    rdfs:range for:ManufacturingPlan .
+
+## Run 1
+
+plan:1 a for:ManufacturingPlan ;
+    for:useSystem machine:FoFaDemonstrator ;
+    for:useActivity workflow:stampFormingFlow ;
+    for:useInput <data/laminate/1#it> ;
+    for:subPlan plan:1_gripping, plan:1_heating, plan:1_forming .
+
+### Gripping
+
+plan:1_gripping a for:GrippingPlan ;
+    for:useSystem machine:gripperFrame ;
+    for:useActivity activity:gripping ;
+    for:subPlan [
+        a for:GrippingPlan ;
+        for:useSystem gripper:1 ;
+        for:useActivity activity:gripping ;
+        param:gripperPosition [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:PositionVector ;
+            qudt:hasUnit unit:MilliM ;
+            qudt:value ( 210.0 100.0 ) ;
+            prov:wasDerivedFrom pos:gripperFrameReferencePoint 
+        ] ;
+        for:subPlan [
+            for:useActivity activity:heating ;
+            param:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ]
+        ] ;
+        for:subPlan [
+            for:useActivity activity:forming ;
+            param:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ]
+        ]
+    ] ;
+    for:subPlan [
+        a for:GrippingPlan ;
+        for:useSystem gripper:2 ;
+        for:useActivity activity:gripping ;
+        param:gripperPosition [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:PositionVector ;
+            qudt:hasUnit unit:MilliM ;
+            qudt:value ( 210.0 -100.0 ) ;
+            prov:wasDerivedFrom pos:gripperFrameReferencePoint
+        ] ;
+        for:subPlan [
+            for:useActivity activity:heating ;
+            param:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ]
+        ] ;
+        for:subPlan [
+            for:useActivity activity:forming ;
+            param:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ]
+        ]
+    ] ;
+    for:subPlan [
+        a for:GrippingPlan ;
+        for:useSystem gripper:3 ;
+        for:useActivity activity:gripping ;
+        param:gripperPosition [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:PositionVector ;
+            qudt:hasUnit unit:MilliM ;
+            qudt:value ( -210.0 100.0 ) ;
+            prov:wasDerivedFrom pos:gripperFrameReferencePoint 
+        ] ;
+        for:subPlan [
+            for:useActivity activity:heating ;
+            param:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ]
+        ] ;
+        for:subPlan [
+            for:useActivity activity:forming ;
+            param:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ]
+        ]
+    ] ;
+    for:subPlan [
+        a for:GrippingPlan ;
+        for:useSystem gripper:4 ;
+        for:useActivity activity:gripping ;
+        param:gripperPosition [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:PositionVector ;
+            qudt:hasUnit unit:MilliM ;
+            qudt:value ( -210.0 -100.0 ) ;
+            prov:wasDerivedFrom pos:gripperFrameReferencePoint
+        ] ;
+        for:subPlan [
+            for:useActivity activity:heating ;
+            param:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ]
+        ] ;
+        for:subPlan [
+            for:useActivity activity:forming ;
+            param:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ]
+        ]
+    ] ;
+    for:subPlan [
+        a for:GrippingPlan ;
+        for:useSystem gripper:5 ;
+        for:useActivity activity:gripping ;
+        param:gripperPosition [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:PositionVector ;
+            qudt:hasUnit unit:MilliM ;
+            qudt:value ( 100.0 210.0 ) ;
+            prov:wasDerivedFrom pos:gripperFrameReferencePoint
+        ] ;
+        for:subPlan [
+            for:useActivity activity:heating ;
+            param:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ]
+        ] ;
+        for:subPlan [
+            for:useActivity activity:forming ;
+            param:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ]
+        ]
+    ] ;
+    for:subPlan [
+        a for:GrippingPlan ;
+        for:useSystem gripper:6 ;
+        for:useActivity activity:gripping ;
+        param:gripperPosition [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:PositionVector ;
+            qudt:hasUnit unit:MilliM ;
+            qudt:value ( -100.0 210.0 ) ;
+            prov:wasDerivedFrom pos:gripperFrameReferencePoint ;
+        ] ;
+        for:subPlan [
+            for:useActivity activity:heating ;
+            param:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ]
+        ] ;
+        for:subPlan [
+            for:useActivity activity:forming ;
+            param:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ]
+        ]
+    ] ;
+    for:subPlan [
+        a for:GrippingPlan ;
+        for:useSystem gripper:7 ;
+        for:useActivity activity:gripping ;
+        param:gripperPosition [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:PositionVector ;
+            qudt:hasUnit unit:MilliM ;
+            qudt:value ( 100.0 -210.0 ) ;
+            prov:wasDerivedFrom pos:gripperFrameReferencePoint ;
+        ] ;
+        for:subPlan [
+            for:useActivity activity:heating ;
+            param:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ]
+        ] ;
+        for:subPlan [
+            for:useActivity activity:forming ;
+            param:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ]
+        ]
+    ] ;
+    for:subPlan [
+        a for:GrippingPlan ;
+        for:useSystem gripper:8 ;
+        for:useActivity activity:gripping ;
+        param:gripperPosition [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:PositionVector ;
+            qudt:hasUnit unit:MilliM ;
+            qudt:value ( -100.0 -210.0 ) ;
+            prov:wasDerivedFrom pos:gripperFrameReferencePoint
+        ] ;
+        for:subPlan [
+            for:useActivity activity:heating ;
+            param:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ]
+        ] ;
+        for:subPlan [
+            for:useActivity activity:forming ;
+            param:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ]
+        ]
+    ] .
+
+### Heating
+
+plan:1_heating a for:HeatingPlan ;
+    for:useSystem machine:oven ;
+    param:holdingTime [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Time ;
+        qudt:hasUnit unit:SEC ;
+        qudt:value 5.0
+    ] ;
+    for:subPlan [
+        a for:HeatingPlan ;
+        for:useSystem machine:ir_top ;
+        param:temperatureGoal [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:AreaTemperature ;
+            qudt:hasUnit unit:DEG_C ;
+            qudt:value 280.0
+        ] ;
+        param:zoneControl [
+            a qudt:Quantity ;
+            qudt:hasUnit unit:PERCENT ;
+            qudt:value 80.0
+        ] ;
+        param:zoneControl [
+            a qudt:Quantity ;
+            qudt:hasUnit unit:PERCENT ;
+            qudt:value 20.0
+        ] ;
+        param:zoneControl [
+            a qudt:Quantity ;
+            qudt:hasUnit unit:PERCENT ;
+            qudt:value 20.0
+        ]
+    ] ;
+    for:subPlan [
+        a for:HeatingPlan ;
+        for:useSystem machine:ir_bottom
+        param:temperatureGoal [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:AreaTemperature ;
+            qudt:hasUnit unit:DEG_C ;
+            qudt:value 280.0
+        ] ;
+        param:zoneControl [
+            a qudt:Quantity ;
+            qudt:hasUnit unit:PERCENT ;
+            qudt:value 100.0
+        ] ;
+        param:zoneControl [
+            a qudt:Quantity ;
+            qudt:hasUnit unit:PERCENT ;
+            qudt:value 20.0
+        ] ;
+        param:zoneControl [
+            a qudt:Quantity ;
+            qudt:hasUnit unit:PERCENT ;
+            qudt:value 20.0
+        ]
+    ] .
+
+### Pressing
+
+plan:1_forming a for:FormingPlan ;
+    for:useSystem machine:press
+    param:pressForce [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Force ;
+        qudt:hasUnit unit:KiloN ;
+        qudt:value 1000.0
+    ] ;
+    param:coolingTime [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Time ;
+        qudt:hasUnit unit:SEC ;
+        qudt:value 60.0
+    ] ;
+    param:remainingPressPath [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Distance ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value 0.0
+    ] ;
+    param:closingSpeedSteps (
+        [
+            param:closingSpeed [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:LinearVelocity;
+                qudt:hasUnit unit:MilliM-PER-SEC ;
+                qudt:value 80.0
+            ] ;
+            param:remaining [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:Distance ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value 60.0
+            ]
+        ]
+        [
+            param:closingSpeed [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:LinearVelocity;
+                qudt:hasUnit unit:MilliM-PER-SEC ;
+                qudt:value 60.0
+            ] ;
+            param:remaining [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:Distance ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value 25.0
+            ]
+        ]
+        [
+            param:closingSpeed [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:LinearVelocity;
+                qudt:hasUnit unit:MilliM-PER-SEC ;
+                qudt:value 35.0
+            ] ;
+            param:remaining [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:Distance ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value 10.0
+            ]
+        ]
+        [
+            param:closingSpeed [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:LinearVelocity;
+                qudt:hasUnit unit:MilliM-PER-SEC ;
+                qudt:value 10.0
+            ] ;
+            param:remaining [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:Distance ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value 0.0
+            ]
+        ]
+    ) ;
+    for:subPlan [
+        a for:PressPlan ;
+        for:useSystem machine:press_mold_upper ;
+        param:moldTemperature [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:Temperature ;
+            qudt:hasUnit unit:DEG_C ;
+            qudt:value 110.0
+        ] ;
+    ] ;
+    for:subPlan [
+        a for:PressPlan ;
+        for:useSystem machine:press_mold_lower ;
+        param:moldTemperature [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:Temperature ;
+            qudt:hasUnit unit:DEG_C ;
+            qudt:value 110.0
+        ] ;
+    ] .

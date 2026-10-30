@@ -28,12 +28,12 @@ docker compose up --build
 | VPD UI | http://localhost:8080 |
 | Jena Fuseki admin | http://localhost:3030 (admin / admin) |
 
-The `seed` service automatically creates two Fuseki datasets and loads sample data on first start:
+The `seed` service runs `data/seed.sh`, creates two Fuseki datasets, and loads the Turtle files from `data/` on first start:
 
 - **`vpd`** — application data seeded from `data/catalog.ttl`
 - **`qudt`** — static QUDT units and quantity kinds (read-only)
 
-Seeding is skipped on subsequent starts if data already exists. To reset to a clean state:
+Seeding is skipped on subsequent starts if a dataset already contains triples. This preserves data edited through the UI, but it also means edits to files in `data/` are not picked up in an existing volume. To load the current files into a clean store:
 
 ```bash
 docker compose down -v   # removes the jena-data volume

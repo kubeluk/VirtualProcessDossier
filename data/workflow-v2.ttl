@@ -1,0 +1,464 @@
+@base <http://purl.org/for/workflow/> .
+
+@prefix : <#> .
+
+@prefix qudt: <http://qudt.org/schema/qudt/> .
+@prefix part: <http://purl.org/for/part#> .
+@prefix laminat: <http://purl.org/for/laminat#> .
+@prefix layup: <http://purl.org/for/layup#> .
+@prefix tape: <http://purl.org/for/tape#> .
+@prefix run: <http://purl.org/for/run#> .
+@prefix feature: <http://purl.org/for/feature#> .
+@prefix activity: <http://purl.org/for/activity#> .
+@prefix machine: <http://purl.org/for/machine#> .
+@prefix gripper: <http://purl.org/for/gripper#> .
+@prefix plan: <http://purl.org/for/plan#> .
+@prefix param: <http://purl.org/for/param#> .
+@prefix tool: <http://purl.org/for/tool#> .
+@prefix pos: <http://purl.org/for/position#> .
+@prefix vpd: <http://purl.org/vpd/data#> .
+@prefix quantitykind: <http://qudt.org/vocab/quantitykind/> .
+@prefix unit: <http://qudt.org/vocab/unit/> .
+@prefix sosa: <http://www.w3.org/ns/sosa/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix wild: <http://purl.org/wild/vocab#> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix geo: <http://www.opengis.net/ont/geosparql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix ssn: <http://www.w3.org/ns/ssn/> .
+
+
+# T Box
+
+for:hasSubPlan rdfs:subPropertyOf wild:hasChildActivity .
+
+# Workflow Model
+
+## Stamp Forming Flow
+
+<1#it> a wild:WorkflowModel ;
+    wild:hasBehaviour <activity/1#it> .
+
+<1#root> a wild:SequentialActivity ;
+    sosa:implementedBy machine:FoFaDemonstrator ;
+    # for:useActivity workflow:stampFormingFlow ;
+    for:useInput <data/lamiante/1#it> ;
+    wild:hasChildActivities ( <1#grippingBase> <1#heating> <1#forming> <1#inspecting> ) ;
+    for:hasSubPlan <1#grippingBase>, <1#heating>, <1#forming> <1#inspecting> .
+
+### Gripping
+
+plan:1_gripping a wild:ParallelActivity ;
+    sosa:implementedBy machine:gripperFrame ;
+    # for:useActivity activity:gripping ;
+    wild:hasChildActivities ( <1#gripping-1> <1#gripping-2> <1#gripping-3> <1#gripping-4> <1#gripping-5> <1#gripping-6> <1#gripping-7> <1#gripping-8> )
+    for:hasSubPlan [
+        a for:GrippingPlan ;
+        for:useSystem gripper:1 ;
+        for:useActivity activity:gripping ;
+        
+        for:hasSubPlan [
+            for:useActivity activity:forming ;
+            param:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ]
+        ]
+    ] ;
+    for:hasSubPlan [
+        a for:GrippingPlan ;
+        for:useSystem gripper:2 ;
+        for:useActivity activity:gripping ;
+        
+        for:hasSubPlan [
+            for:useActivity activity:forming ;
+            param:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ]
+        ]
+    ] ;
+    for:hasSubPlan [
+        a for:GrippingPlan ;
+        for:useSystem gripper:3 ;
+        for:useActivity activity:gripping ;
+        
+        for:hasSubPlan [
+            for:useActivity activity:forming ;
+            param:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ]
+        ]
+    ] ;
+    for:hasSubPlan [
+        a for:GrippingPlan ;
+        for:useSystem gripper:4 ;
+        for:useActivity activity:gripping ;
+        
+        for:hasSubPlan [
+            for:useActivity activity:forming ;
+            param:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ]
+        ]
+    ] ;
+    for:hasSubPlan [
+        a for:GrippingPlan ;
+        for:useSystem gripper:5 ;
+        for:useActivity activity:gripping ;
+        
+        for:hasSubPlan [
+            for:useActivity activity:forming ;
+            param:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ]
+        ]
+    ] ;
+    for:hasSubPlan [
+        a for:GrippingPlan ;
+        for:useSystem gripper:6 ;
+        for:useActivity activity:gripping ;
+        
+        for:hasSubPlan [
+            for:useActivity activity:forming ;
+            param:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ]
+        ]
+    ] ;
+    for:hasSubPlan [
+        a for:GrippingPlan ;
+        for:useSystem gripper:7 ;
+        for:useActivity activity:gripping ;
+        
+        for:hasSubPlan [
+            for:useActivity activity:forming ;
+            param:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ]
+        ]
+    ] ;
+    for:hasSubPlan [
+        a for:GrippingPlan ;
+        for:useSystem gripper:8 ;
+        for:useActivity activity:gripping ;
+
+        for:hasSubPlan [
+            for:useActivity activity:forming ;
+            param:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60
+            ]
+        ]
+    ] .
+
+<1#gripping-1> a wild:AtomicActivity ;
+    sosa:implementedBy gripper:1 ;
+    param:gripperPosition [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:PositionVector ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( 210.0 100.0 ) ;
+        prov:wasDerivedFrom pos:gripperFrameReferencePoint 
+    ] ;
+
+<1#gripping-2> a wild:AtomicActivity ;
+    sosa:implementedBy gripper:2 ;
+    param:gripperPosition [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:PositionVector ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( 210.0 -100.0 ) ;
+        prov:wasDerivedFrom pos:gripperFrameReferencePoint
+    ] ;
+
+<1#gripping-3> a wild:AtomicActivity ;
+    sosa:implementedBy gripper:3 ;
+    param:gripperPosition [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:PositionVector ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( -210.0 100.0 ) ;
+        prov:wasDerivedFrom pos:gripperFrameReferencePoint 
+    ] ;
+
+<1#gripping-4> a wild:AtomicActivity ;
+    sosa:implementedBy gripper:4 ;
+    param:gripperPosition [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:PositionVector ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( -210.0 -100.0 ) ;
+        prov:wasDerivedFrom pos:gripperFrameReferencePoint
+    ] ;
+
+<1#gripping-5> a wild:AtomicActivity ;
+    sosa:implementedBy gripper:5 ;
+    param:gripperPosition [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:PositionVector ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( 100.0 210.0 ) ;
+        prov:wasDerivedFrom pos:gripperFrameReferencePoint
+    ] ;
+
+<1#gripping-6> a wild:AtomicActivity ;
+    sosa:implementedBy gripper:6 ;
+    param:gripperPosition [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:PositionVector ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( -100.0 210.0 ) ;
+        prov:wasDerivedFrom pos:gripperFrameReferencePoint ;
+    ] ;
+
+<1#gripping-7> a wild:AtomicActivity ;
+    sosa:implementedBy gripper:7 ;
+    param:gripperPosition [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:PositionVector ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( 100.0 -210.0 ) ;
+        prov:wasDerivedFrom pos:gripperFrameReferencePoint ;
+    ] ;
+
+<1#gripping-8> a wild:AtomicActivity ;
+    sosa:implementedBy gripper:8 ;
+    param:gripperPosition [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:PositionVector ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value ( -100.0 -210.0 ) ;
+        prov:wasDerivedFrom pos:gripperFrameReferencePoint
+    ] ;
+
+### Heating
+
+<1#heating> a wild:ParallelActivity ;
+    sosa:implementedBy machine:oven ;
+    param:holdingTime [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Time ;
+        qudt:hasUnit unit:SEC ;
+        qudt:value 5.0
+    ] ;
+    wild:hasChildActivites ( <1#heatingUpper> <1#heatingLower> <1#heatingGripper-1> <1#heatingGripper-2> <1#heatingGripper-3> <1#heatingGripper-4> <1#heatingGripper-5> <1#heatingGripper-6> <1#heatingGripper-7> <1#heatingGripper-8>) ;
+    for:hasSubPlan <1#heatingUpper> ;
+    for:hasSubPlan <1#heatingLower> ;
+    for:hasSubPlan <1#heatingGripper-1> ;
+    for:hasSubPlan <1#heatingGripper-2> ;
+    for:hasSubPlan <1#heatingGripper-3> ;
+    for:hasSubPlan <1#heatingGripper-4> ;
+    for:hasSubPlan <1#heatingGripper-5> ;
+    for:hasSubPlan <1#heatingGripper-6> ;
+    for:hasSubPlan <1#heatingGripper-7> ;
+    for:hasSubPlan <1#heatingGripper-8> .
+
+<1#heatingUpper> a wild:AtomicActivity ;
+    sosa:implementedBy machine:ovenUpper ;
+    param:temperatureGoal [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:AreaTemperature ;
+        qudt:hasUnit unit:DEG_C ;
+        qudt:value 280.0
+    ] ;
+    param:zoneControl [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:PERCENT ;
+        qudt:value 100.0
+    ] .
+
+<1#heatingLower> a wild:AtomicActivity ;
+    sosa:implementedBy machine:ovenLower ;
+    param:temperatureGoal [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:AreaTemperature ;
+        qudt:hasUnit unit:DEG_C ;
+        qudt:value 280.0
+    ] ;
+    param:zoneControl [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:PERCENT ;
+        qudt:value 100.0
+    ] .
+
+<1#heatingGripper-1> a wild:AtomicActivity ;
+    sosa:implementedBy gripper:1 ;
+    param:setpoint [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:UNITLESS ;
+        qudt:value 60
+    ] .
+
+<1#heatingGripper-2> a wild:AtomicActivity ;
+    sosa:implementedBy gripper:2 ;
+    param:setpoint [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:UNITLESS ;
+        qudt:value 60
+    ] .
+
+<1#heatingGripper-3> a wild:AtomicActivity ;
+    sosa:implementedBy gripper:3 ;
+    param:setpoint [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:UNITLESS ;
+        qudt:value 60
+    ] .
+
+<1#heatingGripper-4> a wild:AtomicActivity ;
+    sosa:implementedBy gripper:4 ;
+    param:setpoint [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:UNITLESS ;
+        qudt:value 60
+    ] .
+
+<1#heatingGripper-5> a wild:AtomicActivity ;
+    sosa:implementedBy gripper:5 ;
+    param:setpoint [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:UNITLESS ;
+        qudt:value 60
+    ] .
+
+<1#heatingGripper-6> a wild:AtomicActivity ;
+    sosa:implementedBy gripper:6 ;
+    param:setpoint [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:UNITLESS ;
+        qudt:value 60
+    ] .
+
+<1#heatingGripper-7> a wild:AtomicActivity ;
+    sosa:implementedBy gripper:7 ;
+    param:setpoint [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:UNITLESS ;
+        qudt:value 60
+    ] .
+
+<1#heatingGripper-8> a wild:AtomicActivity ;
+    sosa:implementedBy gripper:8 ;
+    param:setpoint [
+        a qudt:Quantity ;
+        qudt:hasUnit unit:UNITLESS ;
+        qudt:value 60
+    ] .
+
+### Pressing
+
+<1#forming> a wild:ParallelActivity ;
+    sosa:implementedBy machine:press
+    param:pressForce [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Force ;
+        qudt:hasUnit unit:KiloN ;
+        qudt:value 1000.0
+    ] ;
+    param:coolingTime [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Time ;
+        qudt:hasUnit unit:SEC ;
+        qudt:value 60.0
+    ] ;
+    param:remainingPressPath [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Distance ;
+        qudt:hasUnit unit:MilliM ;
+        qudt:value 0.0
+    ] ;
+    param:closingSpeedSteps (
+        [
+            param:closingSpeed [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:LinearVelocity;
+                qudt:hasUnit unit:MilliM-PER-SEC ;
+                qudt:value 80.0
+            ] ;
+            param:remaining [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:Distance ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value 60.0
+            ]
+        ]
+        [
+            param:closingSpeed [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:LinearVelocity;
+                qudt:hasUnit unit:MilliM-PER-SEC ;
+                qudt:value 60.0
+            ] ;
+            param:remaining [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:Distance ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value 25.0
+            ]
+        ]
+        [
+            param:closingSpeed [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:LinearVelocity;
+                qudt:hasUnit unit:MilliM-PER-SEC ;
+                qudt:value 35.0
+            ] ;
+            param:remaining [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:Distance ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value 10.0
+            ]
+        ]
+        [
+            param:closingSpeed [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:LinearVelocity;
+                qudt:hasUnit unit:MilliM-PER-SEC ;
+                qudt:value 10.0
+            ] ;
+            param:remaining [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:Distance ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value 0.0
+            ]
+        ]
+    ) ;
+    wild:hasChildActivities ( <1#formingUpper> <1#formingLower> )
+    for:hasSubPlan <1#formingUpper> ;
+    for:hasSubPlan <1#formingLower> .
+
+<1#formingUpper> a wild:AtomicActivity ;
+    sosa:implementedBy machine:pressMoldUpper ;
+    param:moldTemperature [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Temperature ;
+        qudt:hasUnit unit:DEG_C ;
+        qudt:value 110.0
+    ] .
+
+<1#formingLower> a wild:AtomicActivity ;
+    sosa:implementedBy machine:pressMoldLower ;
+    param:moldTemperature [
+        a qudt:Quantity ;
+        qudt:hasQuantityKind quantitykind:Temperature ;
+        qudt:hasUnit unit:DEG_C ;
+        qudt:value 110.0
+    ] .
