@@ -2,25 +2,14 @@ BASE <http://purl.org/for/>
 
 PREFIX prov: <http://www.w3.org/ns/prov#>
 PREFIX dcat: <http://www.w3.org/ns/dcat#>
+PREFIX vpd: <http://purl.org/for/vpd#>
 
-INSERT DATA
+# Record a dataset, link its producing sensor execution, and add its download URL.
+INSERT
 {
-    # each dataset generated from a sensor activity instance MUST have a unique identifier
-    # TODO: create new URI
-    BIND(<vpd/dataset/000#it> AS ?dataset)
-
-    # each sensor activity instance MUST have a unique identifier
-    # TODO: use respective URI
-    BIND(</activity/instance/000#it> AS ?sensor_activity_instance)
-    
-    # the link that point to the actual data file containing the sensor observations
-    # TODO: insert correct path to file
-    BIND(<https://os-webdav.lsdf.kit.edu/kit/iar/projects/FOR_5339/path/to/file> AS ?dataset_download_url)
-    
-    # the query records a new dataset, links it to the sensor activity instance that generated it, and attaches the download URL for the dataset pointing to the actual data file at the online storage location (i.e., the demonstrator's data lake = LSDF?)
-    <vpd#it>
+    vpd:it
         dcat:dataset ?dataset .
-        
+
     ?dataset
         a dcat:Dataset ;
         prov:wasGeneratedBy ?sensor_activity_instance ;
@@ -28,4 +17,15 @@ INSERT DATA
             a dcat:Distribution ;
             dcat:downloadURL ?dataset_download_url
         ] .
+}
+WHERE
+{
+    # TODO: create a unique IRI for every dataset.
+    BIND(<vpd/dataset/000#it> AS ?dataset)
+
+    # TODO: use the exact activity instance IRI recorded by the sensor query.
+    BIND(<activity/instance/000-observe-laminate-surface-temperature-1#it> AS ?sensor_activity_instance)
+
+    # TODO: use the actual download URL for the data file.
+    BIND(<https://os-webdav.lsdf.kit.edu/kit/iar/projects/FOR_5339/path/to/file> AS ?dataset_download_url)
 }
