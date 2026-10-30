@@ -1,84 +1,162 @@
-@base <http://purl.org/for/fofa/workflow/>
+@base <http://purl.org/for/> .
+
+@prefix : <#> .
+@prefix wild: <http://purl.org/wild/vocab#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix workflow: <http://purl.org/for/workflow#> .
+@prefix activity: <http://purl.org/for/activity#> .
 
 # Workflow Model
 
 ## Stamp Forming Flow
 
-<model/1#it> a wild:WorkflowModel ;
-    rdfs:label "Stamp Forming Flow (v1)" ;
+workflow:stampForming a wild:WorkflowModel ;
+    rdfs:label "Stamp Forming Workflow Model" ;
     rdfs:comment "Workflow for the stamp forming process of a composite laminate." ;
-    wild:hasBehaviour <model/1/behaviour#it> .
+    wild:hasBehaviour activity:stampFormingFlow .
 
-<model/1/behaviour#it> a wild:SequentialActivity ;
+activity:stampFormingFlow a wild:ParallelActivity ;
     rdfs:label "Stamp Forming Behaviour" ;
-    wild:hasChildActivities ( <model/1/behaviour/1#loading> <model/1/behaviour/1#manufacturing> <model/1/behaviour/1#inspecting> ) .
+    wild:hasChildActivities ( activity:gripAndObserve activity:manufactureAndObserve ) ;
+    wild:hasChildActivity activity:gripAndObserve ;
+    wild:hasChildActivity activity:manufactureAndObserve .
 
-workflow:heatingTransferingForming a wild:SequentialActivity ;
-    rdfs:label "Heating and Forming" ;
-    wild:hasChildActivities ( activity:heating activity:transfering activity:forming ) .
+activity:gripAndObserve a wild:ParallelActivity ;
+    wild:hasChildActivities ( activity:gripping activity:observeGripperAngle1 activity:observeGripperAngle2 activity:observeGripperAngle3 activity:observeGripperAngle4 activity:observeGripperAngle5 activity:observeGripperAngle6 activity:observeGripperAngle7 activity:observeGripperAngle8 activity:observeGripperForce1 activity:observeGripperForce2 activity:observeGripperForce3 activity:observeGripperForce4 activity:observeGripperForce5 activity:observeGripperForce6 activity:observeGripperForce7 activity:observeGripperForce8 activity:observeGripperExtension1 activity:observeGripperExtension2 activity:observeGripperExtension3 activity:observeGripperExtension4 activity:observeGripperExtension5 activity:observeGripperExtension6 activity:observeGripperExtension7 activity:observeGripperExtension8 ) ;
+    wild:hasChildActivity activity:gripping ;
+    wild:hasChildActivity activity:observeGripperAngle1 ;
+    wild:hasChildActivity activity:observeGripperAngle2 ;
+    wild:hasChildActivity activity:observeGripperAngle3 ;
+    wild:hasChildActivity activity:observeGripperAngle4 ;
+    wild:hasChildActivity activity:observeGripperAngle5 ;
+    wild:hasChildActivity activity:observeGripperAngle6 ;
+    wild:hasChildActivity activity:observeGripperAngle7 ;
+    wild:hasChildActivity activity:observeGripperAngle8 ;
+    wild:hasChildActivity activity:observeGripperForce1 ;
+    wild:hasChildActivity activity:observeGripperForce2 ;
+    wild:hasChildActivity activity:observeGripperForce3 ;
+    wild:hasChildActivity activity:observeGripperForce4 ;
+    wild:hasChildActivity activity:observeGripperForce5 ;
+    wild:hasChildActivity activity:observeGripperForce6 ;
+    wild:hasChildActivity activity:observeGripperForce7 ;
+    wild:hasChildActivity activity:observeGripperForce8 ;
+    wild:hasChildActivity activity:observeGripperExtension1 ;
+    wild:hasChildActivity activity:observeGripperExtension2 ;
+    wild:hasChildActivity activity:observeGripperExtension3 ;
+    wild:hasChildActivity activity:observeGripperExtension4 ;
+    wild:hasChildActivity activity:observeGripperExtension5 ;
+    wild:hasChildActivity activity:observeGripperExtension6 ;
+    wild:hasChildActivity activity:observeGripperExtension7 ;
+    wild:hasChildActivity activity:observeGripperExtension8 .
+
+activity:manufactureAndObserve a wild:SequentialActivity ;
+    wild:hasChildActivities ( activity:load activity:moveToOven activity:heatAndObserve activity:moveToPress activity:pressing activity:moveToInspection activity:inspection activity:moveToUnload activity:unload ) ;
+    wild:hasChildActivity activity:load ;
+    wild:hasChildActivity activity:moveToOven ;
+    wild:hasChildActivity activity:heatAndObserve ;
+    wild:hasChildActivity activity:moveToPress ;
+    wild:hasChildActivity activity:pressing ;
+    wild:hasChildActivity activity:moveToInspection ;
+    wild:hasChildActivity activity:moveToUnload ;
+    wild:hasChildActivity activity:inspection;
+    wild:hasChildActivity activity:unload .
+
+activity:heatAndObserve a wild:ParallelActivity ;
+    wild:hasChildActivities ( activity:heating activity:observeLaminateSurfaceTemperature1 ) ;
+    wild:hasChildActivity activity:heating ;
+    wild:hasChildActivity activity:observeLaminateSurfaceTemperature1 .
 
 ## Atomic Activities
 
 ### Actuation
 
+activity:load a wild:AtomicActivity ;
+    rdfs:label "Load sheet" ;
+    rdfs:comment "The loading activity involves placing a laminate into the gripper frame." .
+
 activity:gripping a wild:AtomicActivity ;
     rdfs:label "Gripping" ;
-    rdfs:comment "The gripping activity involves the use of the gripper frame to hold the laminate in place during the heating and forming activities." .
+    rdfs:comment "The gripping activity involves the use of the gripper frame to hold the laminate in place throughout the whole process." .
+
+activity:moveToOven a wild:AtomicActivity ;
+    rdfs:label "Move to oven" ;
+    rdfs:comment "The moving activity involves transfering the laminate from the loading station to the oven." .
 
 activity:heating a wild:AtomicActivity ;
     rdfs:label "Heating" ;
     rdfs:comment "The heating activity involves the use of the IR oven to heat the laminate to the desired temperature." .
 
-activity:transfering a wild:AtomicActivity ;
-    rdfs:label "Transfering" ;
-    rdfs:comment "The transfering activity involves moving the laminate from the heating station to the press." .
+activity:moveToPress a wild:AtomicActivity ;
+    rdfs:label "Move to press" ;
+    rdfs:comment "The moving activity involves transfering the laminate from the oven to the press." .
 
-activity:forming a wild:AtomicActivity ;
-    rdfs:label "Forming" ;
-    rdfs:comment "The forming activity involves the use of the press to shape the laminate." .
+activity:pressing a wild:AtomicActivity ;
+    rdfs:label "Pressing" ;
+    rdfs:comment "The pressing activity involves the use of the press to shape the laminate." .
+
+activity:moveToInspection a wild:AtomicActivity ;
+    rdfs:label "Move to inspection" ;
+    rdfs:comment "The moving activity involves transfering the laminate from the press to the quality check." .
+
+activity:moveToUnload a wild:AtomicActivity ;
+    rdfs:label "Move to unload" ;
+    rdfs:comment "The moving activity involves transfering the laminate from the quality check to the unload station." .
+
+activity:unload a wild:AtomicActivity ;
+    rdfs:label "Unload" ;
+    rdfs:comment "The unloading activity involves the removal of the formed laminate from the gripper frame" .
 
 ### Observation
 
+activity:inspection a wild:SequentialActivity ;
+    rdfs:label "Inspection" ;
+    rdfs:comment "The inspection activity involves assessing the formed laminates geometric surface." ;
+    wild:hasChildActivities ( activity:observeLaminateShape1 activity:observeLaminateShape2 activity:observeLaminateShape3 activity:observeLaminateShape4 ) ;
+    wild:hasChildActivity activity:observeLaminateShape1 ;
+    wild:hasChildActivity activity:observeLaminateShape2 ;
+    wild:hasChildActivity activity:observeLaminateShape3 ;
+    wild:hasChildActivity activity:observeLaminateShape4 .
+
 #### Gripper Angle
 
-<activity/observe/gripper/angle/1#it> a wild:AtomicActivity .
-<activity/observe/gripper/angle/2#it> a wild:AtomicActivity .
-<activity/observe/gripper/angle/3#it> a wild:AtomicActivity .
-<activity/observe/gripper/angle/4#it> a wild:AtomicActivity .
-<activity/observe/gripper/angle/5#it> a wild:AtomicActivity .
-<activity/observe/gripper/angle/6#it> a wild:AtomicActivity .
-<activity/observe/gripper/angle/7#it> a wild:AtomicActivity .
-<activity/observe/gripper/angle/8#it> a wild:AtomicActivity .
+activity:observeGripperAngle1 a wild:AtomicActivity .
+activity:observeGripperAngle2 a wild:AtomicActivity .
+activity:observeGripperAngle3 a wild:AtomicActivity .
+activity:observeGripperAngle4 a wild:AtomicActivity .
+activity:observeGripperAngle5 a wild:AtomicActivity .
+activity:observeGripperAngle6 a wild:AtomicActivity .
+activity:observeGripperAngle7 a wild:AtomicActivity .
+activity:observeGripperAngle8 a wild:AtomicActivity .
 
 #### Gripper Force
 
-<activity/observe/gripper/angle/1#it> a wild:AtomicActivity .
-<activity/observe/gripper/angle/2#it> a wild:AtomicActivity .
-<activity/observe/gripper/angle/3#it> a wild:AtomicActivity .
-<activity/observe/gripper/angle/4#it> a wild:AtomicActivity .
-<activity/observe/gripper/angle/5#it> a wild:AtomicActivity .
-<activity/observe/gripper/angle/6#it> a wild:AtomicActivity .
-<activity/observe/gripper/angle/7#it> a wild:AtomicActivity .
-<activity/observe/gripper/angle/8#it> a wild:AtomicActivity .
+activity:observeGripperForce1 a wild:AtomicActivity .
+activity:observeGripperForce2 a wild:AtomicActivity .
+activity:observeGripperForce3 a wild:AtomicActivity .
+activity:observeGripperForce4 a wild:AtomicActivity .
+activity:observeGripperForce5 a wild:AtomicActivity .
+activity:observeGripperForce6 a wild:AtomicActivity .
+activity:observeGripperForce7 a wild:AtomicActivity .
+activity:observeGripperForce8 a wild:AtomicActivity .
 
 #### Gripper Extension
 
-<activity/observe/gripper/extension/1#it> a wild:AtomicActivity .
-<activity/observe/gripper/extension/2#it> a wild:AtomicActivity .
-<activity/observe/gripper/extension/3#it> a wild:AtomicActivity .
-<activity/observe/gripper/extension/4#it> a wild:AtomicActivity .
-<activity/observe/gripper/extension/5#it> a wild:AtomicActivity .
-<activity/observe/gripper/extension/6#it> a wild:AtomicActivity .
-<activity/observe/gripper/extension/7#it> a wild:AtomicActivity .
-<activity/observe/gripper/extension/8#it> a wild:AtomicActivity .
+activity:observeGripperExtension1 a wild:AtomicActivity .
+activity:observeGripperExtension2 a wild:AtomicActivity .
+activity:observeGripperExtension3 a wild:AtomicActivity .
+activity:observeGripperExtension4 a wild:AtomicActivity .
+activity:observeGripperExtension5 a wild:AtomicActivity .
+activity:observeGripperExtension6 a wild:AtomicActivity .
+activity:observeGripperExtension7 a wild:AtomicActivity .
+activity:observeGripperExtension8 a wild:AtomicActivity .
 
 #### Temperature
 
-<activity/observe/sheet/temperature/1#it> a wild:AtomicActivity .
+activity:observeLaminateSurfaceTemperature1 a wild:AtomicActivity .
 
 #### Camera
 
-<activity/observe/part/shape/1#it> a wild:AtomicActivity .
-<activity/observe/part/shape/2#it> a wild:AtomicActivity .
-<activity/observe/part/shape/3#it> a wild:AtomicActivity .
-<activity/observe/part/shape/4#it> a wild:AtomicActivity .
+activity:observeLaminateShape1 a wild:AtomicActivity .
+activity:observeLaminateShape2 a wild:AtomicActivity .
+activity:observeLaminateShape3 a wild:AtomicActivity .
+activity:observeLaminateShape4 a wild:AtomicActivity .
