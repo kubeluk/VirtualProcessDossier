@@ -1,0 +1,50 @@
+BASE <http://purl.org/for/>
+
+PREFIX : <#>
+PREFIX wild: <http://purl.org/wild/vocab#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX workflow: <http://purl.org/for/workflow#>
+PREFIX activity: <http://purl.org/for/activity#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+
+INSERT DATA
+{
+    # TODO: Create new URI
+    BIND(<part/000#it> AS ?part)
+    
+    # TODO: Adjust URIs in BIND accordingly
+    BIND(<laminate/000#it> AS ?laminate)
+    BIND(<workflow/instance/000#it> AS ?workflow_run)
+    BIND(<activity/instance/000#it> AS ?workflow_behaviour)
+
+    # TODO: Use correct start and end times
+    BIND("2026-11-30T12:00:00+01:00:00"^^xsd:dateTime AS ?run_start)
+    BIND("2026-11-30T12:00:00+01:00:00"^^xsd:dateTime AS ?run_end)
+    BIND("2026-11-30T12:00:00+01:00:00"^^xsd:dateTime AS ?behaviour_start)
+    BIND("2026-11-30T12:00:00+01:00:00"^^xsd:dateTime AS ?behaviour_end)
+
+    ?part
+        a prov:Entity ;
+        prov:wasDerivedFrom ?laminate ;
+        prov:qualifiedDerivation [
+            a prov:Derivation ;
+            prov:entity ?laminate ;
+            prov:hadActivity ?workflow_run
+        ] .
+
+    ?workflow_run
+        a wild:WorkflowInstance ;
+        wild:workflowInstanceOf workflow:stampForming ;
+        wild:hasState wild:done ;
+        prov:startedAtTime ?run_start ;
+        prov:endedAtTime ?run_end .
+
+    ?workflow_behaviour
+        a wild:ActivityInstance ;
+        wild:inWorkflowInstance ?workflow_run ;
+        wild:activityInstanceOf activity:stampFormingFlow ;
+        wild:hasState wild:done ;
+        prov:startedAtTime ?behaviour_start ;
+        prov:endedAtTime ?behaviour_end .
+}

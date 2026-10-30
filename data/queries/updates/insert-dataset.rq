@@ -6,17 +6,21 @@ PREFIX dcat: <http://www.w3.org/ns/dcat#>
 INSERT DATA
 {
     # each dataset generated from a sensor activity instance MUST have a unique identifier
-    BIND(<vpd/dataset/1#it> AS ?dataset)
+    # TODO: create new URI
+    BIND(<vpd/dataset/000#it> AS ?dataset)
 
     # each sensor activity instance MUST have a unique identifier
-    BIND(</activity/instance/1#it> AS ?sensor_activity_instance)
+    # TODO: use respective URI
+    BIND(</activity/instance/000#it> AS ?sensor_activity_instance)
     
     # the link that point to the actual data file containing the sensor observations
-    BIND(<https://os-webdav.lsdf.kit.edu/kit/iar/projects/FOR_5339/link/to/file> AS ?dataset_download_url)
+    # TODO: insert correct path to file
+    BIND(<https://os-webdav.lsdf.kit.edu/kit/iar/projects/FOR_5339/path/to/file> AS ?dataset_download_url)
     
     # the query records a new dataset, links it to the sensor activity instance that generated it, and attaches the download URL for the dataset pointing to the actual data file at the online storage location (i.e., the demonstrator's data lake = LSDF?)
     <vpd#it>
         dcat:dataset ?dataset .
+        
     ?dataset
         a dcat:Dataset ;
         prov:wasGeneratedBy ?sensor_activity_instance ;

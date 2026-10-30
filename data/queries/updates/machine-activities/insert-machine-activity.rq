@@ -1,7 +1,9 @@
+BASE <http://purl.org/fofa/>
+
 PREFIX prov: <http://www.w3.org/ns/prov#>
 PREFIX wild: <http://purl.org/wild/vocab#>
 PREFIX vpd: <http://purl.org/vpd/vocab#>
-BASE <http://purl.org/fofa/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
 INSERT DATA
 {    
@@ -19,7 +21,7 @@ INSERT DATA
     BIND(<activity/heating#it> AS ?activity)
 
     # each production run has its unique identifier
-    # TODO: generate new UUID whenever SPARQL query is used
+    # TODO: link the correct workflow instance which this activity instance belongs to
     BIND(<workflow/instance/8be4df61-93ca-11d2-aa0d-00e098032b8d#it> AS ?workflow_instance)
 
     # each relevant (sub-)system in the demonstrator has its unique identifier
