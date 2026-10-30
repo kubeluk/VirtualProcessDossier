@@ -1,8 +1,33 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, nextTick, watch } from 'vue'
 import { useLaminateStore, type LaminateSummary } from '@/stores/laminate'
+import { useRoute } from 'vue-router'
+import LaminateDetails from '@/components/LaminateDetails.vue'
+import type { PartDetail } from '@/stores/material'
 import LaminateEditor from '@/components/LaminateEditor.vue'
 
+const route = useRoute()
+type Detail = Pick<
+  PartDetail,
+  'laminatLabel' | 'laminatId' | 'layupLabel' | 'properties' | 'plies' | 'needlePoints'
+>
+const details = ref<Record<string, Detail>>({})
+const detailErrors = ref<Record<string, string>>({})
+async function focusLaminate() {
+  await nextTick()
+  const uri = route.query.laminate
+  if (typeof uri === 'string')
+    document
+      .getElementById(`laminate-${uri}`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+watch(
+  () => route.query.laminate,
+  () => {
+    search.value = ''
+    focusLaminate()
+  },
+)
 const store = useLaminateStore()
 const laminates = ref<LaminateSummary[]>([])
 const loading = ref(true)
@@ -20,10 +45,64 @@ async function load() {
   error.value = ''
   try {
     laminates.value = await store.fetchLaminates()
-  } catch {
-    error.value = 'Failed to load laminates. Make sure the triple store is running.'
+    details.value = {}
+    detailErrors.value = {}
+    loading.value = false
+    await focusLaminate()
+    const forms = await store.fetchLaminateBatch(laminates.value.map((laminate) => laminate.uri))
+    for (const laminate of laminates.value) {
+      try {
+        const form = forms[laminate.uri]
+        if (!form) throw new Error('Missing laminate')
+        details.value[laminate.uri] = {
+          laminatLabel: form.label,
+          laminatId: form.identifier,
+          layupLabel: form.layupLabel,
+          properties: (['length', 'width', 'thickness'] as const).flatMap((kind) =>
+            form[kind] === null
+              ? []
+              : [
+                  {
+                    kind,
+                    kindLabel: kind[0]!.toUpperCase() + kind.slice(1),
+                    value: form[kind]!,
+                    unitSymbol: 'mm',
+                  },
+                ],
+          ),
+          plies: form.plies.map((ply, i) => ({
+            tapeUri: String(i),
+            tapeId: String(i + 1),
+            polymer: ply.polymer,
+            fiberType: ply.fiberType,
+            orientation: ply.orientation,
+            fiberMassFraction: ply.massFraction,
+          })),
+          needlePoints: form.points.map((point, i) => ({
+            uri: String(i),
+            pointId: String(i + 1),
+            x: point.x,
+            y: point.y,
+            referenceUri: point.referenceUri ?? '',
+            referenceLabel: point.referenceLabel,
+          })),
+        }
+      } catch {
+        detailErrors.value[laminate.uri] = 'Could not load laminate details.'
+      }
+    }
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : 'Unknown error'
+    if (laminates.value.length) {
+      for (const laminate of laminates.value) {
+        detailErrors.value[laminate.uri] = `Could not load laminate details: ${message}`
+      }
+    } else {
+      error.value = `Failed to load laminates: ${message}`
+    }
   } finally {
     loading.value = false
+    await focusLaminate()
   }
 }
 function open(laminate: LaminateSummary | null) {
@@ -64,14 +143,40 @@ onMounted(load)
     </p>
     <p v-else-if="!filtered.length" class="state">No laminates match your search.</p>
     <ul v-else>
-      <li v-for="laminate in filtered" :key="laminate.uri">
-        <div>
+      <li
+        v-for="laminate in filtered"
+        :key="laminate.uri"
+        :id="`laminate-${laminate.uri}`"
+        :class="{ targeted: route.query.laminate === laminate.uri }"
+      >
+        <div class="card-heading">
           <h2>{{ laminate.label }}</h2>
           <p>Identifier: {{ laminate.identifier || '—' }}</p>
+          <template v-if="details[laminate.uri]">
+            <p>
+              {{ details[laminate.uri]!.layupLabel }} ·
+              {{ details[laminate.uri]!.plies.length }} layers ·
+              {{ details[laminate.uri]!.needlePoints.length }} needle points
+            </p>
+            <p>
+              <span
+                v-for="prop in details[laminate.uri]!.properties"
+                :key="prop.kind"
+                class="dimension"
+                >{{ prop.kindLabel }}: {{ prop.value }} {{ prop.unitSymbol }}</span
+              >
+            </p>
+          </template>
         </div>
-        <button @click="open(laminate)">
-          View / Edit <span class="sr-only">{{ laminate.label }}</span> →
-        </button>
+        <LaminateDetails v-if="details[laminate.uri]" :detail="details[laminate.uri]!" />
+        <p v-if="detailErrors[laminate.uri]" class="error" role="alert">
+          {{ detailErrors[laminate.uri] }}
+        </p>
+        <div class="card-actions">
+          <button @click="open(laminate)">
+            Edit laminate <span class="sr-only">{{ laminate.label }}</span> →
+          </button>
+        </div>
       </li>
     </ul>
     <LaminateEditor
@@ -89,8 +194,7 @@ onMounted(load)
   margin: 0 auto;
   padding: 2rem 1.5rem;
 }
-header,
-li {
+header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -168,6 +272,27 @@ li p {
 }
 .error {
   color: #dc2626;
+}
+.dimension {
+  display: inline-block;
+  margin-right: 1rem;
+}
+.card-heading,
+.card-actions {
+  padding: 0.25rem;
+}
+.card-actions {
+  margin-top: 1rem;
+  text-align: right;
+}
+li {
+  scroll-margin-top: 1rem;
+}
+li.targeted {
+  border-color: var(--color-primary);
+}
+ul {
+  padding: 0;
 }
 .sr-only {
   position: absolute;

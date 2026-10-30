@@ -33,12 +33,13 @@ export const useLaminateStore = defineStore('laminate', () => {
     }))
   }
 
-  async function fetchLaminate(uri: string): Promise<LaminateForm> {
-    const root = iri(uri)
+  async function fetchLaminateBatch(uris: string[]): Promise<Record<string, LaminateForm>> {
+    if (!uris.length) return {}
+    const root = '?root'
+    const values = `VALUES ?root { ${uris.map(iri).join(' ')} }`
     const [meta, dimensions, plies, points] = await Promise.all([
-      query(`SELECT ?root ?label ?identifier ?layupLabel WHERE {
+      query(`SELECT ?root ?label ?identifier ?layupLabel WHERE { ${values}
         ${root} a for:Laminate .
-        BIND(${root} AS ?root)
         OPTIONAL { ${root} rdfs:label ?label }
         OPTIONAL { ${root} dcterms:identifier ?identifier }
         ${root} prov:wasDerivedFrom ?layup .
@@ -46,24 +47,45 @@ export const useLaminateStore = defineStore('laminate', () => {
         OPTIONAL { ?layup rdfs:label ?layupLabel }
       }`),
       query(
-        `SELECT ?kind ?value WHERE { ${root} geo:hasSize [ qudt:hasQuantityKind ?kind ; qudt:value ?value ] }`,
+        `SELECT ?root ?kind ?value WHERE { ${values} ${root} geo:hasSize [ qudt:hasQuantityKind ?kind ; qudt:value ?value ] }`,
       ),
-      query(`SELECT DISTINCT ?cell ?next ?polymer ?fiberType ?massFraction ?orientation WHERE {
+      query(`SELECT DISTINCT ?root ?cell ?next ?polymer ?fiberType ?massFraction ?orientation WHERE { ${values}
         ${root} prov:wasDerivedFrom ?layup .
         ?layup a for:Layup ; param:tapeStack/rdf:rest* ?cell ; prov:qualifiedDerivation ?derivation .
         ?cell rdf:first ?tape ; rdf:rest ?next .
         ?derivation prov:entity ?tape ; param:fiberOrientation/qudt:value ?orientation .
         ?tape a for:Tape ; param:polymer ?polymer ; param:fiberType ?fiberType ; param:hasFiberMassFraction/qudt:value ?massFraction .
       }`),
-      query(`SELECT DISTINCT ?point ?x ?y ?reference ?referenceLabel WHERE {
+      query(`SELECT DISTINCT ?root ?point ?x ?y ?reference ?referenceLabel WHERE { ${values}
         ${root} param:hasNeedlePoint ?point .
         ?point a for:NeedlePoint ; param:referencePoint ?reference ; qudt:quantityValue/qudt:value ?list .
         ?list rdf:first ?x ; rdf:rest/rdf:first ?y .
         OPTIONAL { ?reference rdfs:label ?referenceLabel }
       } ORDER BY ?point`),
     ])
+    const forms: Record<string, LaminateForm> = {}
+    for (const uri of uris) {
+      const rowsFor = (result: typeof meta) => ({
+        ...result,
+        results: {
+          ...result.results,
+          bindings: result.results.bindings.filter((row) => row.root.value === uri),
+        },
+      })
+      const form = parse(rowsFor(meta), rowsFor(dimensions), rowsFor(plies), rowsFor(points))
+      if (form) forms[uri] = form
+    }
+    return forms
+  }
+
+  function parse(
+    meta: Awaited<ReturnType<typeof query>>,
+    dimensions: Awaited<ReturnType<typeof query>>,
+    plies: Awaited<ReturnType<typeof query>>,
+    points: Awaited<ReturnType<typeof query>>,
+  ): LaminateForm | null {
     const m = meta.results.bindings[0]
-    if (!m) throw new Error('Laminate was not found.')
+    if (!m) return null
     const size = (kind: string) => {
       const value = dimensions.results.bindings.find((b) => b.kind.value.endsWith('/' + kind))
         ?.value.value
@@ -75,7 +97,6 @@ export const useLaminateStore = defineStore('laminate', () => {
       massFraction: Number(row.massFraction.value),
       orientation: Number(row.orientation.value),
     }))
-    if (!ordered.length) throw new Error('The laminate has an empty tape stack.')
     return {
       label: m.label?.value ?? '',
       identifier: m.identifier?.value ?? '',
@@ -91,6 +112,12 @@ export const useLaminateStore = defineStore('laminate', () => {
         referenceLabel: b.referenceLabel?.value ?? '',
       })),
     }
+  }
+
+  async function fetchLaminate(uri: string): Promise<LaminateForm> {
+    const forms = await fetchLaminateBatch([uri])
+    if (!forms[uri]) throw new Error('Laminate was not found.')
+    return forms[uri]
   }
 
   async function isInUse(uri: string): Promise<boolean> {
@@ -125,5 +152,12 @@ export const useLaminateStore = defineStore('laminate', () => {
     await updateSparql(graph.updateEndpoint, prefixes + laminateDelete(uri))
   }
 
-  return { fetchLaminates, fetchLaminate, isInUse, saveLaminate, deleteLaminate }
+  return {
+    fetchLaminates,
+    fetchLaminateBatch,
+    fetchLaminate,
+    isInUse,
+    saveLaminate,
+    deleteLaminate,
+  }
 })

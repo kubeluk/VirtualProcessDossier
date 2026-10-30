@@ -1,10 +1,15 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { DataFactory, Parser, Store } from 'n3'
 import ts from 'typescript'
 import { createPinia, setActivePinia } from 'pinia'
 import { select } from 'shacl-engine/lib/sparql.js'
+
+const fixture = new URL('../data/material-example.ttl', import.meta.url)
+const exampleFixture = existsSync(fixture)
+  ? fixture
+  : new URL('../data/material-v2-example.ttl', import.meta.url)
 
 const moduleUrl = (code) => `data:text/javascript;base64,${Buffer.from(code).toString('base64')}`
 const modules = new Map([
@@ -51,7 +56,7 @@ const { orderedStack, materialResourceId } = await import(loadModule('@/services
 const n = DataFactory.namedNode
 const laminateUri = 'http://purl.org/for/data/laminate/1#it'
 const partUri = 'http://purl.org/for/part#test'
-const example = readFileSync(new URL('../data/material-example.ttl', import.meta.url), 'utf8')
+const example = readFileSync(exampleFixture, 'utf8')
 let data
 function reset() {
   setActivePinia(createPinia())
@@ -78,13 +83,17 @@ function reset() {
 }
 globalThis.materialUIQuery = async (_endpoint, query) => {
   if (process.env.VPD_FUSEKI_ENDPOINT) {
-    const response = await fetch(process.env.VPD_FUSEKI_ENDPOINT, {
-      method: 'POST',
+    const useGet = process.env.VPD_FUSEKI_GET === '1'
+    const endpoint = useGet
+      ? `${process.env.VPD_FUSEKI_ENDPOINT}?${new URLSearchParams({ query })}`
+      : process.env.VPD_FUSEKI_ENDPOINT
+    const response = await fetch(endpoint, {
+      method: useGet ? 'GET' : 'POST',
       headers: {
         'Content-Type': 'application/sparql-query',
         Accept: 'application/sparql-results+json',
       },
-      body: query,
+      body: useGet ? undefined : query,
     })
     if (!response.ok)
       throw new Error(`Fuseki query failed: HTTP ${response.status} ${await response.text()}`)
@@ -227,7 +236,14 @@ test(
       cards.reduce((sum, c) => sum + c.plies.length, 0),
       1086,
     )
-    assert.equal((await useLaminateStore().fetchLaminates()).length, 141)
+    const laminates = await useLaminateStore().fetchLaminates()
+    assert.equal(laminates.length, 141)
+    const forms = await useLaminateStore().fetchLaminateBatch(laminates.map((l) => l.uri))
+    assert.equal(Object.keys(forms).length, 141)
+    assert.equal(
+      Object.values(forms).reduce((sum, form) => sum + form.plies.length, 0),
+      1086,
+    )
     const incomplete = await useLaminateStore().fetchLaminate(
       'http://purl.org/for/data/laminate/6#it',
     )
@@ -244,4 +260,34 @@ test('multiple run annotations produce one card per part', async () => {
   data.addQuad(run, comment, DataFactory.literal('Second annotation'))
   assert.equal((await useMaterialStore().fetchParts()).length, 1)
   assert.equal((await useMaterialStore().fetchAllParts()).length, 1)
+})
+
+test('laminate batch uses four queries and keeps laminates separate', async () => {
+  reset()
+  const rename = (term) =>
+    term.termType === 'NamedNode' && term.value.startsWith('http://purl.org/for/data/')
+      ? n(term.value.replace('/data/', '/data/second/'))
+      : term
+  data.addQuads(
+    [...data].map((q) => DataFactory.quad(rename(q.subject), q.predicate, rename(q.object))),
+  )
+  const store = useLaminateStore()
+  const laminates = await store.fetchLaminates()
+  const originalQuery = globalThis.materialUIQuery
+  const queries = []
+  globalThis.materialUIQuery = async (...args) => {
+    queries.push(args[1])
+    return originalQuery(...args)
+  }
+  try {
+    const forms = await store.fetchLaminateBatch(laminates.map((l) => l.uri))
+    assert.equal(queries.length, 4)
+    assert.equal(Object.keys(forms).length, laminates.length)
+    assert.equal(
+      Object.values(forms).reduce((sum, form) => sum + form.plies.length, 0),
+      process.env.VPD_FUSEKI_ENDPOINT ? 1086 : 12,
+    )
+  } finally {
+    globalThis.materialUIQuery = originalQuery
+  }
 })

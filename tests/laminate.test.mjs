@@ -1,11 +1,16 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import test from 'node:test'
 import ts from 'typescript'
 import { DataFactory, Parser, Store } from 'n3'
 import { Validator } from 'shacl-engine'
 import { validations } from 'shacl-engine/sparql.js'
 import sparqljs from 'sparqljs'
+
+const fixture = new URL('../data/material-example.ttl', import.meta.url)
+const exampleFixture = existsSync(fixture)
+  ? fixture
+  : new URL('../data/material-v2-example.ttl', import.meta.url)
 
 const source = readFileSync(new URL('../src/services/laminate.ts', import.meta.url), 'utf8')
 const compiled = ts.transpileModule(source, {
@@ -30,11 +35,7 @@ const form = () => ({
   })),
   points: [{ x: 190, y: -100, referenceLabel: 'Centre' }],
 })
-const shapes = new Store(
-  new Parser().parse(
-    readFileSync(new URL('../data/material-example.ttl', import.meta.url), 'utf8'),
-  ),
-)
+const shapes = new Store(new Parser().parse(readFileSync(exampleFixture, 'utf8')))
 const validator = new Validator(shapes, { factory: DataFactory, validations })
 const turtlePrefixes = LAMINATE_PREFIXES.replace(/PREFIX ([^\n]+)/g, '@prefix $1 .')
 const parse = (input) => new Store(new Parser().parse(turtlePrefixes + input))
