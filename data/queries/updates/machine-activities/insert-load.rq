@@ -15,8 +15,7 @@ INSERT
         prov:endedAtTime ?end_time ;
         wild:activityInstanceOf ?activity ;
         wild:inWorkflowInstance ?workflow_instance ;
-        wild:hasState wild:done ;
-        prov:wasAssociatedWith ?executing_system .
+        wild:hasState wild:done .
 }
 WHERE
 {
@@ -33,14 +32,5 @@ WHERE
 
     # TODO: use the same workflow instance IRI as in finalize-run.rq.
     BIND(<workflow/instance/000#it> AS ?workflow_instance)
-
-    # TODO: use the actual executing system (or operator) IRI.
-    # The demonstrator is a placeholder because no dedicated system for this step
-    # is declared in systems-fofa.ttl.
-    BIND(<http://purl.org/for/fofa/system/demonstrator#it> AS ?executing_system)
-
-    # If a dedicated parameterization was applied, also record a
-    # prov:qualifiedAssociation with prov:agent and prov:hadPlan as in
-    # insert-machine-activity.rq.
 }
 
