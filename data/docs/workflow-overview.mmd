@@ -1,0 +1,45 @@
+flowchart TB
+    %% Source: data/workflow.ttl
+    %% Process overview: movement activities are shown on arrows.
+    %% Repeated gripper observations are grouped by measured quantity.
+    %% Containers marked parallel express composition, not exact timing.
+    %% Invisible links arrange lanes and parallel activities only.
+
+    subgraph workflow["Stamp forming · two parallel branches"]
+        subgraph manufacturing["Manufacture and inspect · follow the arrows"]
+            direction LR
+            load["Load sheet"]:::process
+            subgraph heat["Heat and observe · in parallel"]
+                direction TB
+                heating["Heat laminate"]:::process
+                temperature["Measure surface temperature"]:::observation
+                heating ~~~ temperature
+            end
+            press["Press into shape"]:::process
+            inspect["Inspect shape<br/>4 observations, in order"]:::observation
+            unload["Unload part"]:::process
+
+            load -->|"Move to oven"| heat
+            heat -->|"Move to press"| press
+            press -->|"Move to inspection"| inspect
+            inspect -->|"Move to unload"| unload
+        end
+
+        subgraph grip["Grip and monitor · activities run in parallel"]
+            direction LR
+            hold["Hold laminate<br/>with the gripper frame"]:::process
+            angles["Measure gripper angles<br/>8 observations"]:::observation
+            forces["Measure gripper forces<br/>8 observations"]:::observation
+            extensions["Measure gripper extensions<br/>8 observations"]:::observation
+            hold ~~~ angles ~~~ forces ~~~ extensions
+        end
+
+        manufacturing ~~~ grip
+    end
+
+    classDef process fill:#dbeafe,stroke:#2563eb,color:#172554
+    classDef observation fill:#fef3c7,stroke:#b45309,color:#78350f
+    style workflow fill:#ffffff,stroke:#94a3b8
+    style manufacturing fill:#f8fafc,stroke:#64748b
+    style heat fill:#f0fdf4,stroke:#16a34a
+    style grip fill:#f8fafc,stroke:#64748b

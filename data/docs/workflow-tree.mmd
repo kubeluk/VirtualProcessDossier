@@ -1,0 +1,102 @@
+flowchart LR
+    %% Source: data/workflow.ttl
+    %% Solid child edges follow wild:hasChildActivities RDF lists.
+    %% Numbers indicate order only for SequentialActivity children.
+
+    model["workflow:stampForming<br/>WorkflowModel"]:::modelStyle
+    stampFormingFlow["activity:stampFormingFlow<br/>ParallelActivity"]:::parallel
+    model -->|"hasBehaviour"| stampFormingFlow
+
+    gripAndObserve["activity:gripAndObserve<br/>ParallelActivity"]:::parallel
+    stampFormingFlow --> gripAndObserve
+    manufactureAndObserve["activity:manufactureAndObserve<br/>SequentialActivity"]:::sequential
+    stampFormingFlow --> manufactureAndObserve
+
+    gripping["activity:gripping<br/>AtomicActivity"]:::atomic
+    gripAndObserve --> gripping
+    observeGripperAngle1["activity:observeGripperAngle1<br/>AtomicActivity"]:::atomic
+    gripAndObserve --> observeGripperAngle1
+    observeGripperAngle2["activity:observeGripperAngle2<br/>AtomicActivity"]:::atomic
+    gripAndObserve --> observeGripperAngle2
+    observeGripperAngle3["activity:observeGripperAngle3<br/>AtomicActivity"]:::atomic
+    gripAndObserve --> observeGripperAngle3
+    observeGripperAngle4["activity:observeGripperAngle4<br/>AtomicActivity"]:::atomic
+    gripAndObserve --> observeGripperAngle4
+    observeGripperAngle5["activity:observeGripperAngle5<br/>AtomicActivity"]:::atomic
+    gripAndObserve --> observeGripperAngle5
+    observeGripperAngle6["activity:observeGripperAngle6<br/>AtomicActivity"]:::atomic
+    gripAndObserve --> observeGripperAngle6
+    observeGripperAngle7["activity:observeGripperAngle7<br/>AtomicActivity"]:::atomic
+    gripAndObserve --> observeGripperAngle7
+    observeGripperAngle8["activity:observeGripperAngle8<br/>AtomicActivity"]:::atomic
+    gripAndObserve --> observeGripperAngle8
+    observeGripperForce1["activity:observeGripperForce1<br/>AtomicActivity"]:::atomic
+    gripAndObserve --> observeGripperForce1
+    observeGripperForce2["activity:observeGripperForce2<br/>AtomicActivity"]:::atomic
+    gripAndObserve --> observeGripperForce2
+    observeGripperForce3["activity:observeGripperForce3<br/>AtomicActivity"]:::atomic
+    gripAndObserve --> observeGripperForce3
+    observeGripperForce4["activity:observeGripperForce4<br/>AtomicActivity"]:::atomic
+    gripAndObserve --> observeGripperForce4
+    observeGripperForce5["activity:observeGripperForce5<br/>AtomicActivity"]:::atomic
+    gripAndObserve --> observeGripperForce5
+    observeGripperForce6["activity:observeGripperForce6<br/>AtomicActivity"]:::atomic
+    gripAndObserve --> observeGripperForce6
+    observeGripperForce7["activity:observeGripperForce7<br/>AtomicActivity"]:::atomic
+    gripAndObserve --> observeGripperForce7
+    observeGripperForce8["activity:observeGripperForce8<br/>AtomicActivity"]:::atomic
+    gripAndObserve --> observeGripperForce8
+    observeGripperExtension1["activity:observeGripperExtension1<br/>AtomicActivity"]:::atomic
+    gripAndObserve --> observeGripperExtension1
+    observeGripperExtension2["activity:observeGripperExtension2<br/>AtomicActivity"]:::atomic
+    gripAndObserve --> observeGripperExtension2
+    observeGripperExtension3["activity:observeGripperExtension3<br/>AtomicActivity"]:::atomic
+    gripAndObserve --> observeGripperExtension3
+    observeGripperExtension4["activity:observeGripperExtension4<br/>AtomicActivity"]:::atomic
+    gripAndObserve --> observeGripperExtension4
+    observeGripperExtension5["activity:observeGripperExtension5<br/>AtomicActivity"]:::atomic
+    gripAndObserve --> observeGripperExtension5
+    observeGripperExtension6["activity:observeGripperExtension6<br/>AtomicActivity"]:::atomic
+    gripAndObserve --> observeGripperExtension6
+    observeGripperExtension7["activity:observeGripperExtension7<br/>AtomicActivity"]:::atomic
+    gripAndObserve --> observeGripperExtension7
+    observeGripperExtension8["activity:observeGripperExtension8<br/>AtomicActivity"]:::atomic
+    gripAndObserve --> observeGripperExtension8
+
+    load["activity:load<br/>AtomicActivity"]:::atomic
+    manufactureAndObserve -->|"1"| load
+    moveToOven["activity:moveToOven<br/>AtomicActivity"]:::atomic
+    manufactureAndObserve -->|"2"| moveToOven
+    heatAndObserve["activity:heatAndObserve<br/>ParallelActivity"]:::parallel
+    manufactureAndObserve -->|"3"| heatAndObserve
+    moveToPress["activity:moveToPress<br/>AtomicActivity"]:::atomic
+    manufactureAndObserve -->|"4"| moveToPress
+    pressing["activity:pressing<br/>AtomicActivity"]:::atomic
+    manufactureAndObserve -->|"5"| pressing
+    moveToInspection["activity:moveToInspection<br/>AtomicActivity"]:::atomic
+    manufactureAndObserve -->|"6"| moveToInspection
+    inspection["activity:inspection<br/>SequentialActivity"]:::sequential
+    manufactureAndObserve -->|"7"| inspection
+    moveToUnload["activity:moveToUnload<br/>AtomicActivity"]:::atomic
+    manufactureAndObserve -->|"8"| moveToUnload
+    unload["activity:unload<br/>AtomicActivity"]:::atomic
+    manufactureAndObserve -->|"9"| unload
+
+    heating["activity:heating<br/>AtomicActivity"]:::atomic
+    heatAndObserve --> heating
+    observeLaminateSurfaceTemperature1["activity:observeLaminateSurfaceTemperature1<br/>AtomicActivity"]:::atomic
+    heatAndObserve --> observeLaminateSurfaceTemperature1
+
+    observeLaminateShape1["activity:observeLaminateShape1<br/>AtomicActivity"]:::atomic
+    inspection -->|"1"| observeLaminateShape1
+    observeLaminateShape2["activity:observeLaminateShape2<br/>AtomicActivity"]:::atomic
+    inspection -->|"2"| observeLaminateShape2
+    observeLaminateShape3["activity:observeLaminateShape3<br/>AtomicActivity"]:::atomic
+    inspection -->|"3"| observeLaminateShape3
+    observeLaminateShape4["activity:observeLaminateShape4<br/>AtomicActivity"]:::atomic
+    inspection -->|"4"| observeLaminateShape4
+
+    classDef modelStyle fill:#e2e8f0,stroke:#334155,color:#0f172a,stroke-width:2px
+    classDef parallel fill:#dbeafe,stroke:#2563eb,color:#172554
+    classDef sequential fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef atomic fill:#f8fafc,stroke:#64748b,color:#0f172a

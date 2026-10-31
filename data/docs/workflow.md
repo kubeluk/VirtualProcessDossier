@@ -1,81 +1,83 @@
-# Stamp forming workflow model
+# Stamp forming workflow
 
 Source: [`../workflow.ttl`](../workflow.ttl).
 
-The model describes stamp forming a composite laminate. Its root behaviour contains two parallel branches: gripping the laminate and a sequence of heating, transferring, and forming. Reworking is declared separately but is not connected to the workflow.
-
-## Model structure
-
-The arrows below show containment and the behaviour reference, not execution transitions. Numbers indicate positions in the RDF child lists; the parallel branch positions do not imply execution order.
+Read the manufacturing branch from left to right. The arrows name the movements between stations. Gripping and its 24 observations form a second parallel branch. Blue boxes show physical actions; amber boxes show observations.
 
 ```mermaid
-flowchart TD
-    model["Stamp Forming Flow<br/>workflow:stampForming<br/>wild:WorkflowModel"]
-    root["Stamp Forming Behaviour<br/>workflow:stampForming_root<br/>wild:ParallelActivity"]
-    gripping["Gripping<br/>activity:gripping<br/>wild:AtomicActivity"]
-    sequence["Heating and Forming<br/>workflow:heatingTransferingForming<br/>wild:SequentialActivity"]
-    heating["Heating<br/>activity:heating<br/>wild:AtomicActivity"]
-    transferring["Transfering<br/>activity:transfering<br/>wild:AtomicActivity"]
-    forming["Forming<br/>activity:forming<br/>wild:AtomicActivity"]
-    reworking["Reworking — unconnected<br/>activity:reworking<br/>wild:AtomicActivity"]
+flowchart TB
 
-    model -->|wild:hasBehaviour| root
-    root -->|"wild:hasChildActivities · 1"| gripping
-    root -->|"wild:hasChildActivities · 2"| sequence
-    sequence -->|"wild:hasChildActivities · 1"| heating
-    sequence -->|"wild:hasChildActivities · 2"| transferring
-    sequence -->|"wild:hasChildActivities · 3"| forming
+    subgraph workflow["Stamp forming · two parallel branches"]
+        subgraph manufacturing["Manufacture and inspect · follow the arrows"]
+            direction LR
+            load["Load sheet"]:::process
+            subgraph heat["Heat and observe · in parallel"]
+                direction TB
+                heating["Heat laminate"]:::process
+                temperature["Measure surface temperature"]:::observation
+                heating ~~~ temperature
+            end
+            press["Press into shape"]:::process
+            inspect["Inspect shape<br/>4 observations, in order"]:::observation
+            unload["Unload part"]:::process
 
-    style reworking fill:#f3f4f6,stroke:#6b7280,stroke-dasharray:5 5
+            load -->|"Move to oven"| heat
+            heat -->|"Move to press"| press
+            press -->|"Move to inspection"| inspect
+            inspect -->|"Move to unload"| unload
+        end
+
+        subgraph grip["Grip and monitor · activities run in parallel"]
+            direction LR
+            hold["Hold laminate<br/>with the gripper frame"]:::process
+            angles["Measure gripper angles<br/>8 observations"]:::observation
+            forces["Measure gripper forces<br/>8 observations"]:::observation
+            extensions["Measure gripper extensions<br/>8 observations"]:::observation
+            hold ~~~ angles ~~~ forces ~~~ extensions
+        end
+
+        manufacturing ~~~ grip
+    end
+
+    classDef process fill:#dbeafe,stroke:#2563eb,color:#172554
+    classDef observation fill:#fef3c7,stroke:#b45309,color:#78350f
+    style workflow fill:#ffffff,stroke:#94a3b8
+    style manufacturing fill:#f8fafc,stroke:#64748b
+    style heat fill:#f0fdf4,stroke:#16a34a
+    style grip fill:#f8fafc,stroke:#64748b
 ```
 
-## Process interpretation
+The green container groups heating and surface temperature measurement as parallel activities. Inspection contains four shape observations in sequence:
 
 ```mermaid
 flowchart LR
-    subgraph parallel["Parallel root behaviour"]
-        direction TB
-        gripping["Gripping: hold the laminate with the gripper frame"]
-        subgraph sequence["Sequential branch: Heating and Forming"]
-            direction LR
-            heating["Heating: IR oven"] --> transferring["Transferring: heating station to press"] --> forming["Forming: shape in the press"]
-        end
-    end
+    shape1["Shape observation 1"] --> shape2["Shape observation 2"]
+    shape2 --> shape3["Shape observation 3"]
+    shape3 --> shape4["Shape observation 4"]
 ```
 
-Gripping runs as a parallel branch alongside the heating–transferring–forming sequence. Its comment describes holding the laminate during heating and forming. Within the sequential branch, heating precedes transferring, which precedes forming. The file does not specify exact start times, durations, synchronization conditions, or execution records; this diagram expresses the intended composition rather than a timed schedule.
+Parallel composition does not specify exact start times or durations. The diagram preserves the declared sequence and parallel groups without adding scheduling rules.
 
-## How the model is constructed
+## Correspondence with the RDF model
 
-The file uses Turtle to encode an RDF graph. Prefix declarations abbreviate resource IRIs: `workflow:` identifies workflow resources, `activity:` identifies individual activities, and `wild:` supplies the workflow vocabulary. Only `workflow:`, `activity:`, `wild:`, and `rdfs:` are used in the statements; the other declared prefixes are unused in this file. Turtle's `a` is shorthand for `rdf:type`.
+All activity identifiers below use the `activity:` prefix (`http://purl.org/for/activity#`).
 
-| Element | Construction and role |
+| Diagram element | Activity identifiers |
 | --- | --- |
-| Workflow entry point | `workflow:stampForming` is a `wild:WorkflowModel`, with a label, comment, and a `wild:hasBehaviour` reference to the root activity. |
-| Parallel composition | `workflow:stampForming_root` is a `wild:ParallelActivity`. Its child list contains `activity:gripping` and `workflow:heatingTransferingForming`. |
-| Sequential composition | `workflow:heatingTransferingForming` is a `wild:SequentialActivity`. Its child list orders `activity:heating`, `activity:transfering`, and `activity:forming`. |
-| Leaf activities | Gripping, heating, transferring, and forming are `wild:AtomicActivity` resources. Each has an `rdfs:label` and an `rdfs:comment`, with no child activities defined here. |
-| Separate activity | `activity:reworking` is also a `wild:AtomicActivity`, but no child list or behaviour reference includes it. It is not a reachable step of the stamp forming workflow. |
+| Two parallel branches | `stampFormingFlow` contains `manufactureAndObserve` and `gripAndObserve`. |
+| Load sheet | `load` |
+| Movements on the arrows | `moveToOven`, `moveToPress`, `moveToInspection`, `moveToUnload`, in that order |
+| Heat and observe | `heatAndObserve` contains `heating` and `observeLaminateSurfaceTemperature1` in parallel. |
+| Press into shape | `pressing` |
+| Inspect shape | `inspection` contains `observeLaminateShape1` through `observeLaminateShape4` in sequence. |
+| Unload part | `unload` |
+| Hold laminate | `gripping` |
+| Measure gripper angles | `observeGripperAngle1` through `observeGripperAngle8`, in parallel |
+| Measure gripper forces | `observeGripperForce1` through `observeGripperForce8`, in parallel |
+| Measure gripper extensions | `observeGripperExtension1` through `observeGripperExtension8`, in parallel |
 
-The two composition resources use Turtle collections:
+The three measurement boxes summarize 24 atomic activities; they do not introduce new composite activities. The overview accounts for all 38 atomic activities in the source.
 
-```turtle
-workflow:stampForming_root a wild:ParallelActivity ;
-    wild:hasChildActivities (
-        activity:gripping
-        workflow:heatingTransferingForming
-    ) .
+The workflow entry point is `workflow:stampForming`; its `wild:hasBehaviour` reference points to `activity:stampFormingFlow`. Ordered RDF lists in `wild:hasChildActivities` supply the sequence within `wild:SequentialActivity` resources. The direct `wild:hasChildActivity` links have no ordering of their own.
 
-workflow:heatingTransferingForming a wild:SequentialActivity ;
-    wild:hasChildActivities (
-        activity:heating
-        activity:transfering
-        activity:forming
-    ) .
-```
-
-Each parenthesized collection expands into an RDF list using `rdf:first`, `rdf:rest`, and `rdf:nil`. Thus, `wild:hasChildActivities` points to a list, rather than directly to each child. The structure diagram abbreviates these list nodes for readability. Both lists preserve their written order, but the parent's activity type determines whether the children represent parallel branches or a sequence. The file contains no explicit transition edges between the atomic activities.
-
-Labels provide display text, while comments describe the workflow and atomic activities. References to the gripper frame, IR oven, and press occur only in comments: this file does not link activities to machine resources, parameters, inputs, or outputs. It uses WILD classes and properties without defining their ontology or validation constraints locally.
-
-The source spells the transferring activity `activity:transfering` with the label `"Transfering"`, and the sequence resource `workflow:heatingTransferingForming`. These identifiers and the diagram label are preserved exactly; the prose uses the standard spelling “transferring.” Reworking has no conditional branch or placement defined, so including it in the process would require an additional modelling decision.
+Use the [overview Mermaid source](workflow-overview.mmd) for presentations and the [complete workflow tree](workflow-tree.mmd) to inspect every activity and its parent.
