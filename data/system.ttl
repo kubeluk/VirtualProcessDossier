@@ -2,7 +2,6 @@
 
 @prefix for: <http://purl.org/for/terms#> .
 @prefix frame: <http://purl.org/for/system/frame#> .
-@prefix prop: <http://purl.org/for/property#> .
 @prefix pos: <http://purl.org/for/position#> .
 @prefix sosa: <http://www.w3.org/ns/sosa/> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -42,47 +41,37 @@
 
 <system/gripper/1#it> a ssn:System ;
     rdfs:label "Gripper 1" ;
-    ssn:hasProperty prop:angle, prop:force, prop:extension ;
     ssn:hasSubSystem <sensor/angle/1#it>, <sensor/force/1#it>, <sensor/extension/1#it> .
 
 <system/gripper/2#it> a ssn:System ;
     rdfs:label "Gripper 2" ;
-    ssn:hasProperty prop:angle, prop:force, prop:extension ;
     ssn:hasSubSystem <sensor/angle/2#it>, <sensor/force/2#it>, <sensor/extension/2#it> .
 
 <system/gripper/3#it> a ssn:System ;
     rdfs:label "Gripper 3" ;
-    ssn:hasProperty prop:angle, prop:force, prop:extension ;
     ssn:hasSubSystem <sensor/angle/3#it>, <sensor/force/3#it>, <sensor/extension/3#it> .
 
 <system/gripper/4#it> a ssn:System ;
     rdfs:label "Gripper 4" ;
-    ssn:hasProperty prop:angle, prop:force, prop:extension ;
     ssn:hasSubSystem <sensor/angle/4#it>, <sensor/force/4#it>, <sensor/extension/4#it> .
 
 <system/gripper/5#it> a ssn:System ;
     rdfs:label "Gripper 5" ;
-    ssn:hasProperty prop:angle, prop:force, prop:extension ;
     ssn:hasSubSystem <sensor/angle/5#it>, <sensor/force/5#it>, <sensor/extension/5#it> .
 
 <system/gripper/6#it> a ssn:System ;
     rdfs:label "Gripper 6" ;
-    ssn:hasProperty prop:angle, prop:force, prop:extension ;
     ssn:hasSubSystem <sensor/angle/6#it>, <sensor/force/6#it>, <sensor/extension/6#it> .
 
 <system/gripper/7#it> a ssn:System ;
     rdfs:label "Gripper 7" ;
-    ssn:hasProperty prop:angle, prop:force, prop:extension ;
     ssn:hasSubSystem <sensor/angle/7#it>, <sensor/force/7#it>, <sensor/extension/7#it> .
 
 <system/gripper/8#it> a ssn:System ;
     rdfs:label "Gripper 8" ;
-    ssn:hasProperty prop:angle, prop:force, prop:extension ;
     ssn:hasSubSystem <sensor/angle/8#it>, <sensor/force/8#it>, <sensor/extension/8#it> .
 
 ### Angle
-
-<system/heater/2#it> a ssn:System .
 
 <sensor/angle/1#it> a sosa:Sensor .
 

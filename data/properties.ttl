@@ -1,26 +1,22 @@
-@base <http://purl.org/for/fofa/> .
+@base <http://purl.org/for/> .
 
-@prefix pos: <http://purl.org/for/position#> .
+@prefix prop: <http://purl.org/for/property#>
 @prefix sosa: <http://www.w3.org/ns/sosa/> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix ssn: <http://www.w3.org/ns/ssn/> .
-@prefix geo: <http://www.opengis.net/ont/geosparql#> .
-@prefix quantitykind: <http://qudt.org/vocab/quantitykind/> .
-@prefix unit: <http://qudt.org/vocab/unit/> .
-@prefix qudt: <http://qudt.org/schema/qudt/> .
 
-<property/temperature/surface#it> a sosa:ObservableProperty ;
+prop:surfaceTemperature a sosa:ObservableProperty ;
     rdfs:label "Surface Temperature"@en .
 
-<property/geometry/surface#it> a sosa:ObservableProperty ;
+prop:surfaceGeometry a sosa:ObservableProperty ;
     rdfs:label "Surface Geometry"@en ;
     rdfs:comment "The surface geometry of an object in 3D"@en .
 
-<property/angle#it> a sosa:ObservableProperty ;
+prop:angle a sosa:ObservableProperty ;
     rdfs:label "Angle"@en .
 
-<property/force#it> a sosa:ObservableProperty ;
+prop:force a sosa:ObservableProperty ;
     rdfs:label "Force"@en .
 
-<property/extension#it> a sosa:ObservableProperty ;
+prop:extension a sosa:ObservableProperty ;
     rdfs:label "Extension"@en .

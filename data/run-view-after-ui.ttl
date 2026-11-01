@@ -3,7 +3,6 @@
 @prefix press: <http://purl.org/system/press/1#> .
 @prefix oven: <http://purl.org/system/oven/1#> .
 @prefix frame: <http://purl.org/system/gripper-frame/1#> .
-
 @prefix qudt: <http://qudt.org/schema/qudt/> .
 @prefix workflow: <http://purl.org/for/workflow#> .
 @prefix activity: <http://purl.org/for/activity#> .
@@ -22,7 +21,13 @@
     rdfs:label "Trial No. 1" ;
     rdfs:comment "Inbetriebnahme Heizfeld und Greiferrahmen" ;
     wild:workflowInstanceOf workflow:stampForming ;
-    wild:hasState wild:initialized .
+    wild:hasState wild:initialized ;
+    for:workflowInitialization [
+        a prov:Collection ;
+        prov:hadMember <plan/1#gripping> ;
+        prov:hadMember <plan/1#heating> ;
+        prov:hadMember <plan/1#pressing> .
+    ] .
 
 ## Behaviour
 
@@ -42,8 +47,11 @@
     wild:inWorkflowInstance <workflow/instance/1#it> ;
     wild:activityInstanceOf activity:gripping ;
     wild:hasState wild:initialized ;
-    for:initialization [
+    for:initialization <plan/1#gripping> .
+
+    <plan/1#gripping>
         a prov:Plan
+        for:initialized <workflow/instance/1#gripping> ;
         frame:gripperPosition [
             frame:position [
                 a qudt:Quantity ;
@@ -339,8 +347,7 @@
             ] ;
             frame:ofGripper <system/gripper/8#it> ;
             frame:atActivity activity:pressing
-        ] ;
-    ] .
+        ] .
 
 <workflow/instance/1#observeGripperAngle1> a wild:ActivityInstance ;
     wild:inWorkflowInstance <workflow/instance/1#it> ;
@@ -488,8 +495,11 @@
     wild:inWorkflowInstance <workflow/instance/1#it> ;
     wild:activityInstanceOf activity:pressing ;
     wild:hasState wild:initialized ;
-    for:initialization [
+    for:initialization <plan/1#pressing> .
+
+    <plan/1#pressing>
         a prov:Plan ;
+        for:initialized <workflow/instance/1#pressing> ;
         press:force [
             a qudt:Quantity ;
             qudt:hasQuantityKind quantitykind:Force ;
@@ -583,8 +593,7 @@
                     qudt:value 0.0
                 ]
             ]
-        )
-    ] .
+        ) .
 
 <workflow/instance/1#moveToInspection> a wild:ActivityInstance ;
     wild:inWorkflowInstance <workflow/instance/1#it> ;
@@ -612,8 +621,11 @@
     wild:inWorkflowInstance <workflow/instance/1#it> ;
     wild:activityInstanceOf activity:heating ;
     wild:hasState wild:initialized ;
-    for:initialization [
+    for:initialization <plan/1#heating> .
+
+    <plan/1#heating>
         a prov:Plan ;
+        for:initialized <workflow/instance/1#heating> ;
         oven:thresholdTemperature [
             a qudt:Quantity ;
             qudt:hasQuantityKind quantitykind:AreaTemperature ;
@@ -715,8 +727,7 @@
                 qudt:value 300.0
             ] ;
             oven:atDevice <system/heating-device/2#it>
-        ]
-    ] .
+        ] .
 
 <workflow/instance/1#observeLaminateSurfaceTemperature1> a wild:ActivityInstance ;
     wild:inWorkflowInstance <workflow/instance/1#it> ;
