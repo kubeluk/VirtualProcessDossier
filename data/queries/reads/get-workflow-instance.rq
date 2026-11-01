@@ -1,0 +1,26 @@
+BASE <http://purl.org/for/>
+
+PREFIX for: <http://purl.org/for/terms#>
+PREFIX wild: <http://purl.org/wild/vocab#>
+
+# Input: replace this query's VALUES IRI with the scheduled workflow instance.
+# Read and check the state before execution; completion requires wild:initialized.
+SELECT ?workflow_instance ?workflow ?workflow_state ?laminate
+       ?workflow_behaviour ?behaviour_instance ?behaviour_state
+WHERE
+{
+    VALUES ?workflow_instance { <workflow/instance/1#it> }
+
+    ?workflow_instance
+        a wild:WorkflowInstance ;
+        wild:workflowInstanceOf ?workflow ;
+        wild:hasState ?workflow_state ;
+        for:workflowInitialization/for:laminate ?laminate .
+
+    ?workflow wild:hasBehaviour ?workflow_behaviour .
+    ?behaviour_instance
+        a wild:ActivityInstance ;
+        wild:inWorkflowInstance ?workflow_instance ;
+        wild:activityInstanceOf ?workflow_behaviour ;
+        wild:hasState ?behaviour_state .
+}

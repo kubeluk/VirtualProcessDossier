@@ -1,0 +1,25 @@
+BASE <http://purl.org/for/>
+
+PREFIX wild: <http://purl.org/wild/vocab#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+# Input: scheduled workflow instance IRI.
+# Traverse the ordered child lists, including all nested composites.
+# For sequential parents, next_activity is the immediate successor.
+# For parallel parents the list describes membership, not execution order.
+SELECT ?workflow_instance ?parent_activity ?parent_type
+       ?activity ?next_activity
+WHERE
+{
+    VALUES ?workflow_instance { <workflow/instance/1#it> }
+
+    ?workflow_instance a wild:WorkflowInstance ; wild:workflowInstanceOf ?workflow .
+    ?workflow wild:hasBehaviour ?root .
+    ?root (wild:hasChildActivities/rdf:rest*/rdf:first)* ?parent_activity .
+    ?parent_activity a ?parent_type ; wild:hasChildActivities ?children .
+    VALUES ?parent_type { wild:SequentialActivity wild:ParallelActivity }
+    ?children rdf:rest* ?cell .
+    ?cell rdf:first ?activity .
+    OPTIONAL { ?cell rdf:rest/rdf:first ?next_activity . }
+}
+ORDER BY ?parent_activity ?activity

@@ -1,0 +1,66 @@
+BASE <http://purl.org/for/>
+
+PREFIX for: <http://purl.org/for/terms#>
+PREFIX wild: <http://purl.org/wild/vocab#>
+PREFIX sosa: <http://www.w3.org/ns/sosa/>
+PREFIX activity: <http://purl.org/for/activity#>
+PREFIX prop: <http://purl.org/for/property#>
+
+# Input: scheduled workflow instance IRI.
+# The model currently has no activity-to-sensor/property/feature links.
+# VALUES is explicit demonstrator configuration, not metadata discovered in RDF.
+# Equipment/property IRIs use the current system.ttl and properties.ttl namespaces.
+# UNDEF means observe this run's laminate; all four shapes use one camera.
+SELECT ?workflow_instance ?sensor_activity_instance ?activity ?state
+       ?sensor ?observed_entity ?observed_property_of_entity
+WHERE
+{
+    VALUES ?workflow_instance { <workflow/instance/1#it> }
+    VALUES (?activity ?sensor ?observed_property_of_entity ?gripper)
+    {
+        (activity:observeGripperAngle1 <sensor/angle/1#it> prop:angle <system/gripper/1#it>)
+        (activity:observeGripperAngle2 <sensor/angle/2#it> prop:angle <system/gripper/2#it>)
+        (activity:observeGripperAngle3 <sensor/angle/3#it> prop:angle <system/gripper/3#it>)
+        (activity:observeGripperAngle4 <sensor/angle/4#it> prop:angle <system/gripper/4#it>)
+        (activity:observeGripperAngle5 <sensor/angle/5#it> prop:angle <system/gripper/5#it>)
+        (activity:observeGripperAngle6 <sensor/angle/6#it> prop:angle <system/gripper/6#it>)
+        (activity:observeGripperAngle7 <sensor/angle/7#it> prop:angle <system/gripper/7#it>)
+        (activity:observeGripperAngle8 <sensor/angle/8#it> prop:angle <system/gripper/8#it>)
+        (activity:observeGripperForce1 <sensor/force/1#it> prop:force <system/gripper/1#it>)
+        (activity:observeGripperForce2 <sensor/force/2#it> prop:force <system/gripper/2#it>)
+        (activity:observeGripperForce3 <sensor/force/3#it> prop:force <system/gripper/3#it>)
+        (activity:observeGripperForce4 <sensor/force/4#it> prop:force <system/gripper/4#it>)
+        (activity:observeGripperForce5 <sensor/force/5#it> prop:force <system/gripper/5#it>)
+        (activity:observeGripperForce6 <sensor/force/6#it> prop:force <system/gripper/6#it>)
+        (activity:observeGripperForce7 <sensor/force/7#it> prop:force <system/gripper/7#it>)
+        (activity:observeGripperForce8 <sensor/force/8#it> prop:force <system/gripper/8#it>)
+        (activity:observeGripperExtension1 <sensor/extension/1#it> prop:extension <system/gripper/1#it>)
+        (activity:observeGripperExtension2 <sensor/extension/2#it> prop:extension <system/gripper/2#it>)
+        (activity:observeGripperExtension3 <sensor/extension/3#it> prop:extension <system/gripper/3#it>)
+        (activity:observeGripperExtension4 <sensor/extension/4#it> prop:extension <system/gripper/4#it>)
+        (activity:observeGripperExtension5 <sensor/extension/5#it> prop:extension <system/gripper/5#it>)
+        (activity:observeGripperExtension6 <sensor/extension/6#it> prop:extension <system/gripper/6#it>)
+        (activity:observeGripperExtension7 <sensor/extension/7#it> prop:extension <system/gripper/7#it>)
+        (activity:observeGripperExtension8 <sensor/extension/8#it> prop:extension <system/gripper/8#it>)
+        (activity:observeLaminateSurfaceTemperature1 <sensor/pyrometer/1#it> prop:surfaceTemperature UNDEF)
+        (activity:observeLaminateShape1 <sensor/camera/1#it> prop:surfaceGeometry UNDEF)
+        (activity:observeLaminateShape2 <sensor/camera/1#it> prop:surfaceGeometry UNDEF)
+        (activity:observeLaminateShape3 <sensor/camera/1#it> prop:surfaceGeometry UNDEF)
+        (activity:observeLaminateShape4 <sensor/camera/1#it> prop:surfaceGeometry UNDEF)
+    }
+
+    ?workflow_instance
+        a wild:WorkflowInstance ;
+        for:workflowInitialization/for:laminate ?laminate .
+    ?sensor_activity_instance
+        a wild:ActivityInstance ;
+        wild:inWorkflowInstance ?workflow_instance ;
+        wild:activityInstanceOf ?activity ;
+        wild:hasState ?state .
+
+    # Verify that configured sensor and property resources are registered.
+    ?sensor a sosa:Sensor .
+    ?observed_property_of_entity a sosa:ObservableProperty .
+    BIND(COALESCE(?gripper, ?laminate) AS ?observed_entity)
+}
+ORDER BY ?activity ?sensor_activity_instance
