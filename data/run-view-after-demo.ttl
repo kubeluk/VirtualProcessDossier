@@ -1,0 +1,460 @@
+@base <http://purl.org/for/> .
+
+@prefix for: <http://purl.org/for/terms#> .
+@prefix press: <http://purl.org/system/press/1#> .
+@prefix oven: <http://purl.org/system/oven/1#> .
+@prefix frame: <http://purl.org/system/gripper-frame/1#> .
+@prefix qudt: <http://qudt.org/schema/qudt/> .
+@prefix workflow: <http://purl.org/for/workflow#> .
+@prefix activity: <http://purl.org/for/activity#> .
+@prefix pos: <http://purl.org/for/position#> .
+@prefix quantitykind: <http://qudt.org/vocab/quantitykind/> .
+@prefix unit: <http://qudt.org/vocab/unit/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix wild: <http://purl.org/wild/vocab#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+@prefix sosa: <http://www.w3.org/ns/sosa/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# Workflow Run
+# Completed-run example using the timestamps supplied in the demonstrator queries.
+# Dataset links are added separately by the dataset update queries.
+
+## Workflow instance
+
+<workflow/instance/1#it> a wild:WorkflowInstance ;
+    rdfs:label "Trial No. 1" ;
+    rdfs:comment "Inbetriebnahme Heizfeld und Greiferrahmen" ;
+    wild:workflowInstanceOf workflow:stampForming ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    for:workflowInitialization [
+        for:laminate <laminate/1#it> ;
+        for:parameterization [
+            a prov:Collection ;
+            prov:hadMember <plan/1#gripping> ;
+            prov:hadMember <plan/1#heating> ;
+            prov:hadMember <plan/1#pressing>
+        ]
+    ] .
+
+## Behaviour
+
+<workflow/instance/1#stampFormingFlow> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:stampFormingFlow ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime .
+
+## Gripping
+
+<workflow/instance/1#gripAndObserve> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:gripAndObserve ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime .
+
+<workflow/instance/1#gripping> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:gripping ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    prov:wasAssociatedWith <http://purl.org/for/system/frame/1#it> ;
+    prov:qualifiedAssociation [
+        a prov:Association ;
+        prov:agent <http://purl.org/for/system/frame/1#it> ;
+        prov:hadPlan <http://purl.org/for/plan/1#gripping>
+    ] ;
+    for:initialization <plan/1#gripping> .
+
+<workflow/instance/1#observeGripperAngle1> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperAngle1 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/angle/1#it> ;
+    sosa:hasFeatureOfInterest <http://purl.org/for/fofa/system/gripper/1#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/angle#it> .
+
+<workflow/instance/1#observeGripperAngle2> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperAngle2 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/angle/2#it> ;
+    sosa:hasFeatureOfInterest <http://purl.org/for/fofa/system/gripper/2#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/angle#it> .
+
+<workflow/instance/1#observeGripperAngle3> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperAngle3 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/angle/3#it> ;
+    sosa:hasFeatureOfInterest <http://purl.org/for/fofa/system/gripper/3#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/angle#it> .
+
+<workflow/instance/1#observeGripperAngle4> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperAngle4 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/angle/4#it> ;
+    sosa:hasFeatureOfInterest <http://purl.org/for/fofa/system/gripper/4#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/angle#it> .
+
+<workflow/instance/1#observeGripperAngle5> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperAngle5 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/angle/5#it> ;
+    sosa:hasFeatureOfInterest <http://purl.org/for/fofa/system/gripper/5#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/angle#it> .
+
+<workflow/instance/1#observeGripperAngle6> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperAngle6 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/angle/6#it> ;
+    sosa:hasFeatureOfInterest <http://purl.org/for/fofa/system/gripper/6#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/angle#it> .
+
+<workflow/instance/1#observeGripperAngle7> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperAngle7 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/angle/7#it> ;
+    sosa:hasFeatureOfInterest <http://purl.org/for/fofa/system/gripper/7#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/angle#it> .
+
+<workflow/instance/1#observeGripperAngle8> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperAngle8 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/angle/8#it> ;
+    sosa:hasFeatureOfInterest <http://purl.org/for/fofa/system/gripper/8#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/angle#it> .
+
+<workflow/instance/1#observeGripperForce1> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperForce1 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/force/1#it> ;
+    sosa:hasFeatureOfInterest <http://purl.org/for/fofa/system/gripper/1#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/force#it> .
+
+<workflow/instance/1#observeGripperForce2> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperForce2 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/force/2#it> ;
+    sosa:hasFeatureOfInterest <http://purl.org/for/fofa/system/gripper/2#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/force#it> .
+
+<workflow/instance/1#observeGripperForce3> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperForce3 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/force/3#it> ;
+    sosa:hasFeatureOfInterest <http://purl.org/for/fofa/system/gripper/3#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/force#it> .
+
+<workflow/instance/1#observeGripperForce4> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperForce4 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/force/4#it> ;
+    sosa:hasFeatureOfInterest <http://purl.org/for/fofa/system/gripper/4#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/force#it> .
+
+<workflow/instance/1#observeGripperForce5> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperForce5 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/force/5#it> ;
+    sosa:hasFeatureOfInterest <http://purl.org/for/fofa/system/gripper/5#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/force#it> .
+
+<workflow/instance/1#observeGripperForce6> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperForce6 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/force/6#it> ;
+    sosa:hasFeatureOfInterest <http://purl.org/for/fofa/system/gripper/6#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/force#it> .
+
+<workflow/instance/1#observeGripperForce7> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperForce7 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/force/7#it> ;
+    sosa:hasFeatureOfInterest <http://purl.org/for/fofa/system/gripper/7#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/force#it> .
+
+<workflow/instance/1#observeGripperForce8> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperForce8 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/force/8#it> ;
+    sosa:hasFeatureOfInterest <http://purl.org/for/fofa/system/gripper/8#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/force#it> .
+
+<workflow/instance/1#observeGripperExtension1> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperExtension1 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/extension/1#it> ;
+    sosa:hasFeatureOfInterest <http://purl.org/for/fofa/system/gripper/1#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/extension#it> .
+
+<workflow/instance/1#observeGripperExtension2> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperExtension2 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/extension/2#it> ;
+    sosa:hasFeatureOfInterest <http://purl.org/for/fofa/system/gripper/2#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/extension#it> .
+
+<workflow/instance/1#observeGripperExtension3> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperExtension3 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/extension/3#it> ;
+    sosa:hasFeatureOfInterest <http://purl.org/for/fofa/system/gripper/3#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/extension#it> .
+
+<workflow/instance/1#observeGripperExtension4> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperExtension4 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/extension/4#it> ;
+    sosa:hasFeatureOfInterest <http://purl.org/for/fofa/system/gripper/4#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/extension#it> .
+
+<workflow/instance/1#observeGripperExtension5> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperExtension5 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/extension/5#it> ;
+    sosa:hasFeatureOfInterest <http://purl.org/for/fofa/system/gripper/5#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/extension#it> .
+
+<workflow/instance/1#observeGripperExtension6> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperExtension6 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/extension/6#it> ;
+    sosa:hasFeatureOfInterest <http://purl.org/for/fofa/system/gripper/6#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/extension#it> .
+
+<workflow/instance/1#observeGripperExtension7> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperExtension7 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/extension/7#it> ;
+    sosa:hasFeatureOfInterest <http://purl.org/for/fofa/system/gripper/7#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/extension#it> .
+
+<workflow/instance/1#observeGripperExtension8> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperExtension8 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/extension/8#it> ;
+    sosa:hasFeatureOfInterest <http://purl.org/for/fofa/system/gripper/8#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/extension#it> .
+
+## manufacturing
+
+<workflow/instance/1#manufactureAndObserve> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:manufactureAndObserve ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime .
+
+<workflow/instance/1#load> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:load ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime .
+
+<workflow/instance/1#moveToOven> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:moveToOven ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime .
+
+<workflow/instance/1#moveToPress> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:moveToPress ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime .
+
+<workflow/instance/1#pressing> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:pressing ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    prov:wasAssociatedWith <http://purl.org/for/system/press/1#it> ;
+    prov:qualifiedAssociation [
+        a prov:Association ;
+        prov:agent <http://purl.org/for/system/press/1#it> ;
+        prov:hadPlan <http://purl.org/for/plan/1#pressing>
+    ] ;
+    for:initialization <plan/1#pressing> .
+
+<workflow/instance/1#moveToInspection> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:moveToInspection ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime .
+
+<workflow/instance/1#moveToUnload> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:moveToUnload ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime .
+
+<workflow/instance/1#unload> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:unload ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime .
+
+### Heating
+
+<workflow/instance/1#heatAndObserve> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:heatAndObserve ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime .
+
+<workflow/instance/1#heating> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:heating ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    prov:wasAssociatedWith <http://purl.org/for/system/oven/1#it> ;
+    prov:qualifiedAssociation [
+        a prov:Association ;
+        prov:agent <http://purl.org/for/system/oven/1#it> ;
+        prov:hadPlan <http://purl.org/for/plan/1#heating>
+    ] ;
+    for:initialization <plan/1#heating> .
+
+<workflow/instance/1#observeLaminateSurfaceTemperature1> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeLaminateSurfaceTemperature1 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/pyrometer/1#it> ;
+    sosa:hasFeatureOfInterest <laminate/1#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/temperature/surface#it> .
+
+### Inspection
+
+<workflow/instance/1#inspection> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:inspection ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime .
+
+<workflow/instance/1#observeLaminateShape1> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeLaminateShape1 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/camera/1#it> ;
+    sosa:hasFeatureOfInterest <laminate/1#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/geometry/surface#it> .
+
+<workflow/instance/1#observeLaminateShape2> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeLaminateShape2 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/camera/1#it> ;
+    sosa:hasFeatureOfInterest <laminate/1#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/geometry/surface#it> .
+
+<workflow/instance/1#observeLaminateShape3> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeLaminateShape3 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/camera/1#it> ;
+    sosa:hasFeatureOfInterest <laminate/1#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/geometry/surface#it> .
+
+<workflow/instance/1#observeLaminateShape4> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeLaminateShape4 ;
+    wild:hasState wild:done ;
+    prov:startedAtTime "2026-09-24T10:00:00Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-09-24T10:02:34Z"^^xsd:dateTime ;
+    sosa:madeBySensor <http://purl.org/for/fofa/sensor/camera/1#it> ;
+    sosa:hasFeatureOfInterest <laminate/1#it> ;
+    sosa:observedProperty <http://purl.org/for/fofa/property/geometry/surface#it> .
