@@ -23,8 +23,14 @@ INSERT
             prov:hadPlan ?system_parameterization
         ] .
 
-    ?system_parameterization
-        a prov:Plan .
+        ?system_parameterization
+            a prov:Plan ;
+            param:temperatureGoal [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value 280.0
+            ]
 }
 WHERE
 {

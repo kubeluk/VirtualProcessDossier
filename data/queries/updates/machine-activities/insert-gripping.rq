@@ -22,9 +22,6 @@ INSERT
             prov:agent ?executing_system ;
             prov:hadPlan ?system_parameterization
         ] .
-
-    ?sytem_parameterization
-        a prov:Plan .
 }
 WHERE
 {
