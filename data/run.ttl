@@ -1,0 +1,751 @@
+@base <http://purl.org/for/> .
+
+@prefix press: <http://purl.org/system/press/1#> .
+@prefix oven: <http://purl.org/system/oven/1#> .
+@prefix frame: <http://purl.org/system/gripper-frame/1#> .
+
+@prefix qudt: <http://qudt.org/schema/qudt/> .
+@prefix workflow: <http://purl.org/for/workflow#> .
+@prefix activity: <http://purl.org/for/activity#> .
+@prefix pos: <http://purl.org/for/position#> .
+@prefix quantitykind: <http://qudt.org/vocab/quantitykind/> .
+@prefix unit: <http://qudt.org/vocab/unit/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix wild: <http://purl.org/wild/vocab#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+# Workflow Run
+
+## Workflow instance
+
+<workflow/instance/1#it> a wild:WorkflowInstance ;
+    rdfs:label "Trial No. 1" ;
+    rdfs:comment "Inbetriebnahme Heizfeld und Greiferrahmen" ;
+    wild:workflowInstanceOf workflow:stampForming ;
+    wild:hasState wild:initialized .
+
+## Behaviour
+
+<workflow/instance/1#stampFormingFlow> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:stampFormingFlow ;
+    wild:hasState wild:initialized .
+
+## Gripping
+
+<workflow/instance/1#gripAndObserve> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:gripAndObserve ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#gripping> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:gripping ;
+    wild:hasState wild:initialized ;
+    for:initialization [
+        a prov:Plan
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( 210.0 100.0 ) ;
+                prov:wasDerivedFrom pos:gripperFrameReferencePoint
+            ] ;
+            frame:ofGripper <system/gripper/1#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60 ;
+            ] ;
+            frame:ofGripper <system/gripper/1#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60 ;
+            ] ;
+            frame:ofGripper <system/gripper/1#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60 ;
+            ] ;
+            frame:ofGripper <system/gripper/1#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( 210.0 -100.0 ) ;
+                prov:wasDerivedFrom pos:gripperFrameReferencePoint
+            ] ;
+            frame:ofGripper <system/gripper/2#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60 ;
+            ] ;
+            frame:ofGripper <system/gripper/2#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60 ;
+            ] ;
+            frame:ofGripper <system/gripper/2#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60 ;
+            ] ;
+            frame:ofGripper <system/gripper/2#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( -210.0 100.0 ) ;
+                prov:wasDerivedFrom pos:gripperFrameReferencePoint
+            ] ;
+            frame:ofGripper <system/gripper/3#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60 ;
+            ] ;
+            frame:ofGripper <system/gripper/3#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60 ;
+            ] ;
+            frame:ofGripper <system/gripper/3#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60 ;
+            ] ;
+            frame:ofGripper <system/gripper/3#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( -210.0 -100.0 ) ;
+                prov:wasDerivedFrom pos:gripperFrameReferencePoint
+            ] ;
+            frame:ofGripper <system/gripper/4#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60 ;
+            ] ;
+            frame:ofGripper <system/gripper/4#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60 ;
+            ] ;
+            frame:ofGripper <system/gripper/4#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60 ;
+            ] ;
+            frame:ofGripper <system/gripper/4#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( 100.0 210.0 ) ;
+                prov:wasDerivedFrom pos:gripperFrameReferencePoint
+            ] ;
+            frame:ofGripper <system/gripper/5#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60 ;
+            ] ;
+            frame:ofGripper <system/gripper/5#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60 ;
+            ] ;
+            frame:ofGripper <system/gripper/5#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60 ;
+            ] ;
+            frame:ofGripper <system/gripper/5#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( -100.0 210.0 ) ;
+                prov:wasDerivedFrom pos:gripperFrameReferencePoint
+            ] ;
+            frame:ofGripper <system/gripper/6#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60 ;
+            ] ;
+            frame:ofGripper <system/gripper/6#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60 ;
+            ] ;
+            frame:ofGripper <system/gripper/6#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60 ;
+            ] ;
+            frame:ofGripper <system/gripper/6#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( 100.0 -210.0 ) ;
+                prov:wasDerivedFrom pos:gripperFrameReferencePoint
+            ] ;
+            frame:ofGripper <system/gripper/7#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60 ;
+            ] ;
+            frame:ofGripper <system/gripper/7#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60 ;
+            ] ;
+            frame:ofGripper <system/gripper/7#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60 ;
+            ] ;
+            frame:ofGripper <system/gripper/7#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( 100.0 210.0 ) ;
+                prov:wasDerivedFrom pos:gripperFrameReferencePoint
+            ] ;
+            frame:ofGripper <system/gripper/8#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60 ;
+            ] ;
+            frame:ofGripper <system/gripper/8#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60 ;
+            ] ;
+            frame:ofGripper <system/gripper/8#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value 60 ;
+            ] ;
+            frame:ofGripper <system/gripper/8#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+    ] .
+
+<workflow/instance/1#observeGripperAngle1> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperAngle1 ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeGripperAngle2> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperAngle2 ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeGripperAngle3> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperAngle3 ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeGripperAngle4> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperAngle4 ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeGripperAngle5> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperAngle5 ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeGripperAngle6> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperAngle6 ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeGripperAngle7> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperAngle7 ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeGripperAngle8> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperAngle8 ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeGripperForce1> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperForce1 ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeGripperForce2> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperForce2 ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeGripperForce3> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperForce3 ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeGripperForce4> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperForce4 ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeGripperForce5> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperForce5 ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeGripperForce6> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperForce6 ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeGripperForce7> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperForce7 ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeGripperForce8> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperForce8 ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeGripperExtension1> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperExtension1 ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeGripperExtension2> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperExtension2 ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeGripperExtension3> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperExtension3 ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeGripperExtension4> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperExtension4 ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeGripperExtension5> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperExtension5 ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeGripperExtension6> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperExtension6 ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeGripperExtension7> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperExtension7 ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeGripperExtension8> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeGripperExtension8 ;
+    wild:hasState wild:initialized .
+
+## manufacturing
+
+<workflow/instance/1#manufactureAndObserve> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:manufactureAndObserve ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#load> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:load ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#moveToOven> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:moveToOven ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#moveToPress> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:moveToPress ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#pressing> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:pressing ;
+    wild:hasState wild:initialized ;
+    for:initialization [
+        a prov:Plan ;
+        press:force [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:Force ;
+            qudt:hasUnit unit:KiloN ;
+            qudt:value 1000.0
+        ] ;
+        press:moldCoolingTime [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:Time ;
+            qudt:hasUnit unit:SEC ;
+            qudt:value 60.0
+        ] ;
+        press:remainingPath [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:Distance ;
+            qudt:hasUnit unit:MilliM ;
+            qudt:value 0.0
+        ] ;
+        press:moldTemperature [
+            press:temperature [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:Temperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value 110.0
+            ] ;
+            press:mold <system/press/1#upperMold>
+        ] ;
+        press:moldTemperature [
+            press:temperature [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:Temperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value 110.0
+            ] ;
+            press:mold <system/press/1#lowerMold>
+        ] ;
+        press:closingSteps (
+            [
+                press:closingSpeed [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:LinearVelocity ;
+                    qudt:hasUnit unit:MilliM-PER-SEC ;
+                    qudt:value 80.0
+                ] ;
+                press:remainingDistance [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:Distance ;
+                    qudt:hasUnit unit:MilliM ;
+                    qudt:value 60.0
+                ]
+            ]
+            [
+                press:closingSpeed [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:LinearVelocity ;
+                    qudt:hasUnit unit:MilliM-PER-SEC ;
+                    qudt:value 60.0
+                ] ;
+                press:remainingDistance [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:Distance ;
+                    qudt:hasUnit unit:MilliM ;
+                    qudt:value 25.0
+                ]
+            ]
+            [
+                press:closingSpeed [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:LinearVelocity ;
+                    qudt:hasUnit unit:MilliM-PER-SEC ;
+                    qudt:value 35.0
+                ] ;
+                press:remainingDistance [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:Distance ;
+                    qudt:hasUnit unit:MilliM ;
+                    qudt:value 10.0
+                ]
+            ]
+            [
+                press:closingSpeed [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:LinearVelocity ;
+                    qudt:hasUnit unit:MilliM-PER-SEC ;
+                    qudt:value 10.0
+                ] ;
+                press:remainingDistance [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:Distance ;
+                    qudt:hasUnit unit:MilliM ;
+                    qudt:value 0.0
+                ]
+            ]
+        )
+    ] .
+
+<workflow/instance/1#moveToInspection> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:moveToInspection ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#moveToUnload> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:moveToUnload ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#unload> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:unload ;
+    wild:hasState wild:initialized .
+
+### Heating
+
+<workflow/instance/1#heatAndObserve> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:heatAndObserve ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#heating> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:heating ;
+    wild:hasState wild:initialized ;
+    for:initialization [
+        a prov:Plan ;
+        oven:thresholdTemperature [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:AreaTemperature ;
+            qudt:hasUnit unit:DEG_C ;
+            qudt:value 260.0
+        ] ;
+        oven:stableHoldingTime [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:Time ;
+            qudt:hasUnit unit:SEC ;
+            qudt:value 5.0
+        ] ;
+        oven:fieldTargetTemperature [
+            oven:fieldTarget [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value 280.0
+            ] ;
+            oven:atField <system/ir-field/1#it>
+        ] ;
+        oven:fieldTargetTemperature [
+            oven:fieldTarget [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value 280.0
+            ] ;
+            oven:atField <system/ir-field/2#it>
+        ] ;
+        oven:fieldTargetTemperature [
+            oven:fieldTarget [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value 280.0
+            ] ;
+            oven:atField <system/ir-field/3#it>
+        ] ;
+        oven:fieldTargetTemperature [
+            oven:fieldTarget [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value 280.0
+            ] ;
+            oven:atField <system/ir-field/4#it>
+        ] ;
+        oven:fieldTargetTemperature [
+            oven:fieldTarget [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value 280.0
+            ] ;
+            oven:atField <system/ir-field/5#it>
+        ] ;
+        oven:fieldTargetTemperature [
+            oven:fieldTarget [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value 280.0
+            ] ;
+            oven:atField <system/ir-field/6#it>
+        ] ;
+        oven:fieldTargetTemperature [
+            oven:fieldTemperature [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value 280.0
+            ] ;
+            oven:atField <system/ir-field/7#it>
+        ] ;
+        oven:fieldTargetTemperature [
+            oven:fieldTemperature [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value 280.0
+            ] ;
+            oven:atField <system/ir-field/8#it>
+        ] ;
+        oven:heatingDeviceTargetTemperature [
+            oven:deviceTemperature [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value 300.0
+            ] ;
+            oven:atDevice <system/heating-device/1#it>
+        ] ;
+        oven:heatingDeviceTargetTemperature [
+            oven:deviceTemperature [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value 300.0
+            ] ;
+            oven:atDevice <system/heating-device/2#it>
+        ]
+    ] .
+
+<workflow/instance/1#observeLaminateSurfaceTemperature1> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeLaminateSurfaceTemperature1 ;
+    wild:hasState wild:initialized .
+
+### Inspection
+
+<workflow/instance/1#inspection> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:inspection ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeLaminateShape1> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeLaminateShape1 ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeLaminateShape2> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeLaminateShape2 ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeLaminateShape3> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeLaminateShape3 ;
+    wild:hasState wild:initialized .
+
+<workflow/instance/1#observeLaminateShape4> a wild:ActivityInstance ;
+    wild:inWorkflowInstance <workflow/instance/1#it> ;
+    wild:activityInstanceOf activity:observeLaminateShape4 ;
+    wild:hasState wild:initialized .

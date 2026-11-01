@@ -17,11 +17,14 @@ workflow:stampForming a wild:WorkflowModel ;
 
 activity:stampFormingFlow a wild:ParallelActivity ;
     rdfs:label "Stamp Forming Behaviour" ;
+    rdfs:comment "The stamp forming activity combines gripping and gripper observations with the manufacturing and inspection sequence in parallel." ;
     wild:hasChildActivities ( activity:gripAndObserve activity:manufactureAndObserve ) ;
     wild:hasChildActivity activity:gripAndObserve ;
     wild:hasChildActivity activity:manufactureAndObserve .
 
 activity:gripAndObserve a wild:ParallelActivity ;
+    rdfs:label "Grip and observe" ;
+    rdfs:comment "The gripping and observation activity holds the laminate in place while observing the angle, force, and extension of each gripper in parallel." ;
     wild:hasChildActivities ( activity:gripping activity:observeGripperAngle1 activity:observeGripperAngle2 activity:observeGripperAngle3 activity:observeGripperAngle4 activity:observeGripperAngle5 activity:observeGripperAngle6 activity:observeGripperAngle7 activity:observeGripperAngle8 activity:observeGripperForce1 activity:observeGripperForce2 activity:observeGripperForce3 activity:observeGripperForce4 activity:observeGripperForce5 activity:observeGripperForce6 activity:observeGripperForce7 activity:observeGripperForce8 activity:observeGripperExtension1 activity:observeGripperExtension2 activity:observeGripperExtension3 activity:observeGripperExtension4 activity:observeGripperExtension5 activity:observeGripperExtension6 activity:observeGripperExtension7 activity:observeGripperExtension8 ) ;
     wild:hasChildActivity activity:gripping ;
     wild:hasChildActivity activity:observeGripperAngle1 ;
@@ -50,6 +53,8 @@ activity:gripAndObserve a wild:ParallelActivity ;
     wild:hasChildActivity activity:observeGripperExtension8 .
 
 activity:manufactureAndObserve a wild:SequentialActivity ;
+    rdfs:label "Manufacture and observe" ;
+    rdfs:comment "The manufacturing and observation activity sequences loading, transfer to the oven, heating with temperature observation, transfer to the press, pressing, transfer to inspection, inspection, transfer to unloading, and unloading." ;
     wild:hasChildActivities ( activity:load activity:moveToOven activity:heatAndObserve activity:moveToPress activity:pressing activity:moveToInspection activity:inspection activity:moveToUnload activity:unload ) ;
     wild:hasChildActivity activity:load ;
     wild:hasChildActivity activity:moveToOven ;
@@ -62,9 +67,20 @@ activity:manufactureAndObserve a wild:SequentialActivity ;
     wild:hasChildActivity activity:unload .
 
 activity:heatAndObserve a wild:ParallelActivity ;
+    rdfs:label "Heat and observe" ;
+    rdfs:comment "The heating and observation activity heats the laminate while observing its surface temperature in parallel." ;
     wild:hasChildActivities ( activity:heating activity:observeLaminateSurfaceTemperature1 ) ;
     wild:hasChildActivity activity:heating ;
     wild:hasChildActivity activity:observeLaminateSurfaceTemperature1 .
+
+activity:inspection a wild:SequentialActivity ;
+    rdfs:label "Inspection" ;
+    rdfs:comment "The inspection activity involves assessing the formed laminates geometric surface." ;
+    wild:hasChildActivities ( activity:observeLaminateShape1 activity:observeLaminateShape2 activity:observeLaminateShape3 activity:observeLaminateShape4 ) ;
+    wild:hasChildActivity activity:observeLaminateShape1 ;
+    wild:hasChildActivity activity:observeLaminateShape2 ;
+    wild:hasChildActivity activity:observeLaminateShape3 ;
+    wild:hasChildActivity activity:observeLaminateShape4 .
 
 ## Atomic Activities
 
@@ -108,55 +124,131 @@ activity:unload a wild:AtomicActivity ;
 
 ### Observation
 
-activity:inspection a wild:SequentialActivity ;
-    rdfs:label "Inspection" ;
-    rdfs:comment "The inspection activity involves assessing the formed laminates geometric surface." ;
-    wild:hasChildActivities ( activity:observeLaminateShape1 activity:observeLaminateShape2 activity:observeLaminateShape3 activity:observeLaminateShape4 ) ;
-    wild:hasChildActivity activity:observeLaminateShape1 ;
-    wild:hasChildActivity activity:observeLaminateShape2 ;
-    wild:hasChildActivity activity:observeLaminateShape3 ;
-    wild:hasChildActivity activity:observeLaminateShape4 .
-
 #### Gripper Angle
 
-activity:observeGripperAngle1 a wild:AtomicActivity .
-activity:observeGripperAngle2 a wild:AtomicActivity .
-activity:observeGripperAngle3 a wild:AtomicActivity .
-activity:observeGripperAngle4 a wild:AtomicActivity .
-activity:observeGripperAngle5 a wild:AtomicActivity .
-activity:observeGripperAngle6 a wild:AtomicActivity .
-activity:observeGripperAngle7 a wild:AtomicActivity .
-activity:observeGripperAngle8 a wild:AtomicActivity .
+activity:observeGripperAngle1 a wild:AtomicActivity ;
+    rdfs:label "Observe gripper 1 angle" ;
+    rdfs:comment "The observation activity measures the angle of gripper 1 during the stamp forming process." .
+
+activity:observeGripperAngle2 a wild:AtomicActivity ;
+    rdfs:label "Observe gripper 2 angle" ;
+    rdfs:comment "The observation activity measures the angle of gripper 2 during the stamp forming process." .
+
+activity:observeGripperAngle3 a wild:AtomicActivity ;
+    rdfs:label "Observe gripper 3 angle" ;
+    rdfs:comment "The observation activity measures the angle of gripper 3 during the stamp forming process." .
+
+activity:observeGripperAngle4 a wild:AtomicActivity ;
+    rdfs:label "Observe gripper 4 angle" ;
+    rdfs:comment "The observation activity measures the angle of gripper 4 during the stamp forming process." .
+
+activity:observeGripperAngle5 a wild:AtomicActivity ;
+    rdfs:label "Observe gripper 5 angle" ;
+    rdfs:comment "The observation activity measures the angle of gripper 5 during the stamp forming process." .
+
+activity:observeGripperAngle6 a wild:AtomicActivity ;
+    rdfs:label "Observe gripper 6 angle" ;
+    rdfs:comment "The observation activity measures the angle of gripper 6 during the stamp forming process." .
+
+activity:observeGripperAngle7 a wild:AtomicActivity ;
+    rdfs:label "Observe gripper 7 angle" ;
+    rdfs:comment "The observation activity measures the angle of gripper 7 during the stamp forming process." .
+
+activity:observeGripperAngle8 a wild:AtomicActivity ;
+    rdfs:label "Observe gripper 8 angle" ;
+    rdfs:comment "The observation activity measures the angle of gripper 8 during the stamp forming process." .
+
 
 #### Gripper Force
 
-activity:observeGripperForce1 a wild:AtomicActivity .
-activity:observeGripperForce2 a wild:AtomicActivity .
-activity:observeGripperForce3 a wild:AtomicActivity .
-activity:observeGripperForce4 a wild:AtomicActivity .
-activity:observeGripperForce5 a wild:AtomicActivity .
-activity:observeGripperForce6 a wild:AtomicActivity .
-activity:observeGripperForce7 a wild:AtomicActivity .
-activity:observeGripperForce8 a wild:AtomicActivity .
+activity:observeGripperForce1 a wild:AtomicActivity ;
+    rdfs:label "Observe gripper 1 force" ;
+    rdfs:comment "The observation activity measures the force of gripper 1 during the stamp forming process." .
+
+activity:observeGripperForce2 a wild:AtomicActivity ;
+    rdfs:label "Observe gripper 2 force" ;
+    rdfs:comment "The observation activity measures the force of gripper 2 during the stamp forming process." .
+
+activity:observeGripperForce3 a wild:AtomicActivity ;
+    rdfs:label "Observe gripper 3 force" ;
+    rdfs:comment "The observation activity measures the force of gripper 3 during the stamp forming process." .
+
+activity:observeGripperForce4 a wild:AtomicActivity ;
+    rdfs:label "Observe gripper 4 force" ;
+    rdfs:comment "The observation activity measures the force of gripper 4 during the stamp forming process." .
+
+activity:observeGripperForce5 a wild:AtomicActivity ;
+    rdfs:label "Observe gripper 5 force" ;
+    rdfs:comment "The observation activity measures the force of gripper 5 during the stamp forming process." .
+
+activity:observeGripperForce6 a wild:AtomicActivity ;
+    rdfs:label "Observe gripper 6 force" ;
+    rdfs:comment "The observation activity measures the force of gripper 6 during the stamp forming process." .
+
+activity:observeGripperForce7 a wild:AtomicActivity ;
+    rdfs:label "Observe gripper 7 force" ;
+    rdfs:comment "The observation activity measures the force of gripper 7 during the stamp forming process." .
+
+activity:observeGripperForce8 a wild:AtomicActivity ;
+    rdfs:label "Observe gripper 8 force" ;
+    rdfs:comment "The observation activity measures the force of gripper 8 during the stamp forming process." .
+
 
 #### Gripper Extension
 
-activity:observeGripperExtension1 a wild:AtomicActivity .
-activity:observeGripperExtension2 a wild:AtomicActivity .
-activity:observeGripperExtension3 a wild:AtomicActivity .
-activity:observeGripperExtension4 a wild:AtomicActivity .
-activity:observeGripperExtension5 a wild:AtomicActivity .
-activity:observeGripperExtension6 a wild:AtomicActivity .
-activity:observeGripperExtension7 a wild:AtomicActivity .
-activity:observeGripperExtension8 a wild:AtomicActivity .
+activity:observeGripperExtension1 a wild:AtomicActivity ;
+    rdfs:label "Observe gripper 1 extension" ;
+    rdfs:comment "The observation activity measures the extension of gripper 1 during the stamp forming process." .
+
+activity:observeGripperExtension2 a wild:AtomicActivity ;
+    rdfs:label "Observe gripper 2 extension" ;
+    rdfs:comment "The observation activity measures the extension of gripper 2 during the stamp forming process." .
+
+activity:observeGripperExtension3 a wild:AtomicActivity ;
+    rdfs:label "Observe gripper 3 extension" ;
+    rdfs:comment "The observation activity measures the extension of gripper 3 during the stamp forming process." .
+
+activity:observeGripperExtension4 a wild:AtomicActivity ;
+    rdfs:label "Observe gripper 4 extension" ;
+    rdfs:comment "The observation activity measures the extension of gripper 4 during the stamp forming process." .
+
+activity:observeGripperExtension5 a wild:AtomicActivity ;
+    rdfs:label "Observe gripper 5 extension" ;
+    rdfs:comment "The observation activity measures the extension of gripper 5 during the stamp forming process." .
+
+activity:observeGripperExtension6 a wild:AtomicActivity ;
+    rdfs:label "Observe gripper 6 extension" ;
+    rdfs:comment "The observation activity measures the extension of gripper 6 during the stamp forming process." .
+
+activity:observeGripperExtension7 a wild:AtomicActivity ;
+    rdfs:label "Observe gripper 7 extension" ;
+    rdfs:comment "The observation activity measures the extension of gripper 7 during the stamp forming process." .
+
+activity:observeGripperExtension8 a wild:AtomicActivity ;
+    rdfs:label "Observe gripper 8 extension" ;
+    rdfs:comment "The observation activity measures the extension of gripper 8 during the stamp forming process." .
+
 
 #### Temperature
 
-activity:observeLaminateSurfaceTemperature1 a wild:AtomicActivity .
+activity:observeLaminateSurfaceTemperature1 a wild:AtomicActivity ;
+    rdfs:label "Observe laminate surface temperature 1" ;
+    rdfs:comment "The observation activity measures the surface temperature of the laminate during heating." .
 
 #### Camera
 
-activity:observeLaminateShape1 a wild:AtomicActivity .
-activity:observeLaminateShape2 a wild:AtomicActivity .
-activity:observeLaminateShape3 a wild:AtomicActivity .
-activity:observeLaminateShape4 a wild:AtomicActivity .
+activity:observeLaminateShape1 a wild:AtomicActivity ;
+    rdfs:label "Observe laminate shape 1" ;
+    rdfs:comment "The observation activity captures the geometric surface of the formed laminate during inspection step 1." .
+
+activity:observeLaminateShape2 a wild:AtomicActivity ;
+    rdfs:label "Observe laminate shape 2" ;
+    rdfs:comment "The observation activity captures the geometric surface of the formed laminate during inspection step 2." .
+
+activity:observeLaminateShape3 a wild:AtomicActivity ;
+    rdfs:label "Observe laminate shape 3" ;
+    rdfs:comment "The observation activity captures the geometric surface of the formed laminate during inspection step 3." .
+
+activity:observeLaminateShape4 a wild:AtomicActivity ;
+    rdfs:label "Observe laminate shape 4" ;
+    rdfs:comment "The observation activity captures the geometric surface of the formed laminate during inspection step 4." .

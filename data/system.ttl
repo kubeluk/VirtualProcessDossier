@@ -79,7 +79,7 @@ pos:gripperFrameReferencePoint a pos:Origin ;
 <system/oven/1#it> a ssn:System ;
     rdfs:label "Infrared (IR) Oven"@en ;
     rdfs:comment "Infrared (IR) oven comprised of two parts (top and bottom)."@en ;
-    ssn:hasSubSystem <system/oven/1/top#it>, <system/oven/1/bottom#it> .
+    ssn:hasSubSystem <system/oven/1/top#it>, <system/oven/1/bottom#it>, <system/heating-device/1#it>, <system/heating-device/2#it> .
 
 <system/oven/1/top#it> a ssn:System ;
     rdfs:label "IR Field (top)"@en ;
@@ -90,6 +90,10 @@ pos:gripperFrameReferencePoint a pos:Origin ;
     rdfs:label "IR Field (bottom)"@en ;
     rdfs:comment "The bottom IR field consists of three individually controllable zones: middle, edge and corner zones for the bottom part of the laminat."@en ;
     ssn:hasSubSystem <sytem/ir-field/5#it>, <sytem/ir-field/6#it>, <sytem/ir-field/7#it>, <system/ir-field/8#it> .
+
+<system/heating-device/1#it> a ssn:System .
+
+<system/heating-device/2#it> a ssn:System .
 
 <system/ir-field/1#it> a ssn:System .
 
@@ -112,7 +116,12 @@ pos:gripperFrameReferencePoint a pos:Origin ;
 <system/press/1#it> a ssn:System ;
     rdfs:label "Press"@en ;
     rdfs:comment "The press is used for forming the laminat."@en ;
+    ssn:hasSubSystem <system/press/1#upperMold>, <system/press/1#lowerMold> ;
     ssn:hasProperty <system/press/1#force> .
+
+<system/press/1#upperMold> a ssn:System .
+
+<system/press/1#lowerMold> a ssn:System .
 
 # Sensors
 
