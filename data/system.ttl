@@ -13,12 +13,12 @@
 
 # Setup FoFa
 
+## Systems
+
 <system/demonstrator#it> a ssn:System ;
     rdfs:label "FoFa Demonstrator"@en ;
     rdfs:comment "The demonstrator as set up at the Forschungsfabrik"@en ;
     ssn:hasSubSystem <system/frame/1#it>, <system/oven/1#it>, <system/press/1#it>, <sensor/camera/1#it> .
-
-# Systems
 
 ## Gripper Frame
 
@@ -80,64 +80,9 @@
     ssn:hasProperty prop:angle, prop:force, prop:extension ;
     ssn:hasSubSystem <sensor/angle/8#it>, <sensor/force/8#it>, <sensor/extension/8#it> .
 
-frame:referencePoint a for:ReferencePoint ;
-    rdfs:label "Greiferrahmen Reference Point"@en ;
-    rdfs:comment "Die linke, untere Ecke des Greiferrahmens bildet den Bezugspunkt für die Positionen der Greiferpunkte."@de .
-
-## Oven
-
-<system/oven/1#it> a ssn:System ;
-    rdfs:label "Infrared (IR) Oven"@en ;
-    rdfs:comment "Infrared (IR) oven comprised of two parts (top and bottom)."@en ;
-    ssn:hasSubSystem <system/oven/1#top>, <system/oven/1#bottom> .
-
-<system/oven/1#top> a ssn:System ;
-    rdfs:label "IR Field (top)"@en ;
-    rdfs:comment "The top IR field consists of three individually controllable zones: middle, edge and corner zones for the top part of the laminat."@en ;
-    ssn:hasSubSystem <system/field/1#it>, <system/field/2#it>, <system/field/3#it>, <system/field/4#it> .
-
-<system/oven/1#bottom> a ssn:System ;
-    rdfs:label "IR Field (bottom)"@en ;
-    rdfs:comment "The bottom IR field consists of three individually controllable zones: middle, edge and corner zones for the bottom part of the laminat."@en ;
-    ssn:hasSubSystem <system/field/5#it>, <system/field/6#it>, <system/field/7#it>, <system/field/8#it> ;
-    ssn:hasSubSystem <sensor/pyrometer/1#it> .
-
-<system/field/1#it> a ssn:System .
-
-<system/field/2#it> a ssn:System .
-
-<system/field/3#it> a ssn:System .
-
-<system/field/4#it> a ssn:System .
-
-<system/field/5#it> a ssn:System .
-
-<system/field/6#it> a ssn:System .
-
-<system/field/7#it> a ssn:System .
-
-<system/field/8#it> a ssn:System .
-
-## Press
-
-<system/press/1#it> a ssn:System ;
-    rdfs:label "Press"@en ;
-    rdfs:comment "The press is used for forming the laminat."@en ;
-    ssn:hasSubSystem <system/press/1#upperMold>, <system/press/1#lowerMold>, <system/heater/1#it>, <system/heater/2#it> .
-
-<system/press/1#upperMold> a ssn:System .
-
-<system/press/1#lowerMold> a ssn:System .
-
-<system/heater/1#it> a ssn:System .
+### Angle
 
 <system/heater/2#it> a ssn:System .
-
-# Sensors
-
-## Gripper
-
-### Angle
 
 <sensor/angle/1#it> a sosa:Sensor .
 
@@ -191,10 +136,68 @@ frame:referencePoint a for:ReferencePoint ;
 
 <sensor/extension/8#it> a sosa:Sensor .
 
-## Pyrometer
+### Reference
+
+frame:referencePoint a for:ReferencePoint ;
+    rdfs:label "Greiferrahmen Reference Point"@en ;
+    rdfs:comment "Die linke, untere Ecke des Greiferrahmens bildet den Bezugspunkt für die Positionen der Greiferpunkte."@de .
+
+## Oven
+
+<system/oven/1#it> a ssn:System ;
+    rdfs:label "Infrared (IR) Oven"@en ;
+    rdfs:comment "Infrared (IR) oven comprised of two parts (top and bottom)."@en ;
+    ssn:hasSubSystem <system/oven/1#top>, <system/oven/1#bottom> .
+
+<system/oven/1#top> a ssn:System ;
+    rdfs:label "IR Field (top)"@en ;
+    rdfs:comment "The top IR field consists of three individually controllable zones: middle, edge and corner zones for the top part of the laminat."@en ;
+    ssn:hasSubSystem <system/field/1#it>, <system/field/2#it>, <system/field/3#it>, <system/field/4#it> .
+
+<system/oven/1#bottom> a ssn:System ;
+    rdfs:label "IR Field (bottom)"@en ;
+    rdfs:comment "The bottom IR field consists of three individually controllable zones: middle, edge and corner zones for the bottom part of the laminat."@en ;
+    ssn:hasSubSystem <system/field/5#it>, <system/field/6#it>, <system/field/7#it>, <system/field/8#it> ;
+    ssn:hasSubSystem <sensor/pyrometer/1#it> .
+
+<system/field/1#it> a ssn:System .
+
+<system/field/2#it> a ssn:System .
+
+<system/field/3#it> a ssn:System .
+
+<system/field/4#it> a ssn:System .
+
+<system/field/5#it> a ssn:System .
+
+<system/field/6#it> a ssn:System .
+
+<system/field/7#it> a ssn:System .
+
+<system/field/8#it> a ssn:System .
+
+### Pyrometer
 
 <sensor/pyrometer/1#it> a sosa:Sensor .
 
-## Camera
+## Press
+
+<system/press/1#it> a ssn:System ;
+    rdfs:label "Press"@en ;
+    rdfs:comment "The press is used for forming the laminat."@en ;
+    ssn:hasSubSystem <system/press/1#upperMold>, <system/press/1#lowerMold>, <system/heater/1#it>, <system/heater/2#it> .
+
+<system/press/1#upperMold> a ssn:System .
+
+<system/press/1#lowerMold> a ssn:System .
+
+<system/heater/1#it> a ssn:System .
+
+<system/heater/2#it> a ssn:System .
+
+## Inspection
+
+<system/inspector/1#it> a ssn:System ;
+    ssn:hasSubSystem <sensor/camera/1#it> .
 
 <sensor/camera/1#it> a sosa:Sensor .

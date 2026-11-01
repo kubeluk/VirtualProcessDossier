@@ -1,9 +1,9 @@
 @base <http://purl.org/for/> .
 
-@prefix : <#> .
 @prefix wild: <http://purl.org/wild/vocab#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix workflow: <http://purl.org/for/workflow#> .
+@prefix ssn: <http://www.w3.org/ns/ssn/> .
 @prefix activity: <http://purl.org/for/activity#> .
 
 # Workflow Model
@@ -16,6 +16,7 @@ workflow:stampForming a wild:WorkflowModel ;
     wild:hasBehaviour activity:stampFormingFlow .
 
 activity:stampFormingFlow a wild:ParallelActivity ;
+    ssn:implementedBy <system/demonstrator#it> ;
     rdfs:label "Stamp Forming Behaviour" ;
     rdfs:comment "The stamp forming activity combines gripping and gripper observations with the manufacturing and inspection sequence in parallel." ;
     wild:hasChildActivities ( activity:gripAndObserve activity:manufactureAndObserve ) ;
@@ -80,7 +81,8 @@ activity:inspection a wild:SequentialActivity ;
     wild:hasChildActivity activity:observeLaminateShape1 ;
     wild:hasChildActivity activity:observeLaminateShape2 ;
     wild:hasChildActivity activity:observeLaminateShape3 ;
-    wild:hasChildActivity activity:observeLaminateShape4 .
+    wild:hasChildActivity activity:observeLaminateShape4 ;
+    ssn:implementedBy <system/inspector/1#it> .
 
 ## Atomic Activities
 
@@ -92,7 +94,8 @@ activity:load a wild:AtomicActivity ;
 
 activity:gripping a wild:AtomicActivity ;
     rdfs:label "Gripping" ;
-    rdfs:comment "The gripping activity involves the use of the gripper frame to hold the laminate in place throughout the whole process." .
+    rdfs:comment "The gripping activity involves the use of the gripper frame to hold the laminate in place throughout the whole process." ;
+    ssn:implementedBy <system/frame/1#it> .
 
 activity:moveToOven a wild:AtomicActivity ;
     rdfs:label "Move to oven" ;
@@ -100,7 +103,8 @@ activity:moveToOven a wild:AtomicActivity ;
 
 activity:heating a wild:AtomicActivity ;
     rdfs:label "Heating" ;
-    rdfs:comment "The heating activity involves the use of the IR oven to heat the laminate to the desired temperature." .
+    rdfs:comment "The heating activity involves the use of the IR oven to heat the laminate to the desired temperature." ;
+    ssn:implementedBy <system/oven/1#it> .
 
 activity:moveToPress a wild:AtomicActivity ;
     rdfs:label "Move to press" ;
@@ -108,7 +112,8 @@ activity:moveToPress a wild:AtomicActivity ;
 
 activity:pressing a wild:AtomicActivity ;
     rdfs:label "Pressing" ;
-    rdfs:comment "The pressing activity involves the use of the press to shape the laminate." .
+    rdfs:comment "The pressing activity involves the use of the press to shape the laminate." ;
+    ssn:implementedBy <system/press/1#it> .
 
 activity:moveToInspection a wild:AtomicActivity ;
     rdfs:label "Move to inspection" ;
@@ -158,7 +163,6 @@ activity:observeGripperAngle8 a wild:AtomicActivity ;
     rdfs:label "Observe gripper 8 angle" ;
     rdfs:comment "The observation activity measures the angle of gripper 8 during the stamp forming process." .
 
-
 #### Gripper Force
 
 activity:observeGripperForce1 a wild:AtomicActivity ;
@@ -193,7 +197,6 @@ activity:observeGripperForce8 a wild:AtomicActivity ;
     rdfs:label "Observe gripper 8 force" ;
     rdfs:comment "The observation activity measures the force of gripper 8 during the stamp forming process." .
 
-
 #### Gripper Extension
 
 activity:observeGripperExtension1 a wild:AtomicActivity ;
@@ -227,7 +230,6 @@ activity:observeGripperExtension7 a wild:AtomicActivity ;
 activity:observeGripperExtension8 a wild:AtomicActivity ;
     rdfs:label "Observe gripper 8 extension" ;
     rdfs:comment "The observation activity measures the extension of gripper 8 during the stamp forming process." .
-
 
 #### Temperature
 
