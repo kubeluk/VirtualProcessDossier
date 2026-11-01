@@ -37,7 +37,8 @@
         qudt:value 800.0
     ] ;
     pos:hasPositionalReference frame:referencePoint ;
-    ssn:hasSubSystem <system/gripper/1#it>, <system/gripper/2#it>, <system/gripper/3#it>, <system/gripper/4#it>, <system/gripper/5#it>, <system/gripper/6#it>, <system/gripper/7#it>, <system/gripper/8#it> .
+    ssn:hasSubSystem <system/gripper/1#it>, <system/gripper/2#it>, <system/gripper/3#it>, <system/gripper/4#it>, <system/gripper/5#it>, <system/gripper/6#it>, <system/gripper/7#it>, <system/gripper/8#it> ;
+    for:takesParameters <system/frame/1#parameters> .
 
 <system/gripper/1#it> a ssn:System ;
     rdfs:label "Gripper 1" ;
@@ -136,7 +137,8 @@ frame:referencePoint a for:ReferencePoint ;
 <system/oven/1#it> a ssn:System ;
     rdfs:label "Infrared (IR) Oven"@en ;
     rdfs:comment "Infrared (IR) oven comprised of two parts (top and bottom)."@en ;
-    ssn:hasSubSystem <system/oven/1#top>, <system/oven/1#bottom> .
+    ssn:hasSubSystem <system/oven/1#top>, <system/oven/1#bottom> ;
+    for:takesParameters <system/oven/1#parameters> .
 
 <system/oven/1#top> a ssn:System ;
     rdfs:label "IR Field (top)"@en ;
@@ -174,7 +176,8 @@ frame:referencePoint a for:ReferencePoint ;
 <system/press/1#it> a ssn:System ;
     rdfs:label "Press"@en ;
     rdfs:comment "The press is used for forming the laminat."@en ;
-    ssn:hasSubSystem <system/press/1#upperMold>, <system/press/1#lowerMold>, <system/heater/1#it>, <system/heater/2#it> .
+    ssn:hasSubSystem <system/press/1#upperMold>, <system/press/1#lowerMold>, <system/heater/1#it>, <system/heater/2#it> ;
+    for:takesParameters <system/press/1#parameters> .
 
 <system/press/1#upperMold> a ssn:System .
 

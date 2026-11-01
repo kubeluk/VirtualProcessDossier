@@ -1,5 +1,6 @@
 @base <http://purl.org/for/> .
 
+@prefix for: <http://purl.org/for/terms#> .
 @prefix press: <http://purl.org/system/press/1#> .
 @prefix oven: <http://purl.org/system/oven/1#> .
 @prefix frame: <http://purl.org/system/gripper-frame/1#> .
@@ -26,7 +27,7 @@
         a prov:Collection ;
         prov:hadMember <plan/1#gripping> ;
         prov:hadMember <plan/1#heating> ;
-        prov:hadMember <plan/1#pressing> .
+        prov:hadMember <plan/1#pressing>
     ] .
 
 ## Behaviour
@@ -50,7 +51,7 @@
     for:initialization <plan/1#gripping> .
 
     <plan/1#gripping>
-        a prov:Plan
+        a prov:Plan ;
         for:initialized <workflow/instance/1#gripping> ;
         frame:gripperPosition [
             frame:position [
@@ -693,7 +694,7 @@
             oven:atField <system/ir-field/6#it>
         ] ;
         oven:fieldTargetTemperature [
-            oven:fieldTemperature [
+            oven:fieldTarget [
                 a qudt:Quantity ;
                 qudt:hasQuantityKind quantitykind:AreaTemperature ;
                 qudt:hasUnit unit:DEG_C ;
@@ -702,7 +703,7 @@
             oven:atField <system/ir-field/7#it>
         ] ;
         oven:fieldTargetTemperature [
-            oven:fieldTemperature [
+            oven:fieldTarget [
                 a qudt:Quantity ;
                 qudt:hasQuantityKind quantitykind:AreaTemperature ;
                 qudt:hasUnit unit:DEG_C ;

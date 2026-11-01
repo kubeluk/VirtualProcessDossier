@@ -1,0 +1,746 @@
+@base <http://purl.org/for/> .
+
+@prefix param: <http://purl.org/for/parameter#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix for: <http://purl.org/for/terms#> .
+@prefix frame: <http://purl.org/system/gripper-frame/1#> .
+@prefix oven: <http://purl.org/system/oven/1#> .
+@prefix press: <http://purl.org/system/press/1#> .
+@prefix pos: <http://purl.org/for/position#> .
+@prefix activity: <http://purl.org/for/activity#> .
+@prefix qudt: <http://qudt.org/schema/qudt/> .
+@prefix quantitykind: <http://qudt.org/vocab/quantitykind/> .
+@prefix unit: <http://qudt.org/vocab/unit/> .
+
+# Component lists describe the fixed setup; keep them in sync with system.ttl.
+# Defaults come from run-view-after-ui.ttl and suggest values for new plans.
+# Numeric defaults are scoped to individual parameters, not shared quantity shapes.
+
+<system/frame/1#parameters>
+    a sh:NodeShape ;
+    rdfs:label "Gripper frame parameters"@en ;
+    rdfs:comment "Initialization parameters for the eight grippers, including positions and activity-specific setpoints."@en ;
+    sh:node param:planShape ;
+    sh:property [
+        sh:path frame:gripperPosition ;
+        sh:name "Gripper positions"@en ;
+        sh:description "Position of each of the eight grippers relative to the gripper frame reference point, in millimetres."@en ;
+        sh:minCount 8 ;
+        sh:maxCount 8 ;
+        sh:node [
+            sh:property [
+                sh:path frame:position ;
+                sh:name "Position"@en ;
+                sh:description "X and Y coordinates of this gripper in millimetres."@en ;
+                sh:minCount 1 ;
+                sh:maxCount 1 ;
+                sh:node <system/frame/1#positionShape>
+            ] ;
+            sh:property [
+                sh:path frame:ofGripper ;
+                sh:name "Gripper"@en ;
+                sh:description "Gripper to which this parameter entry applies."@en ;
+                sh:nodeKind sh:IRI ;
+                sh:node <system/frame/1#gripperShape> ;
+                sh:minCount 1 ;
+                sh:maxCount 1
+            ]
+        ]
+    ] ;
+    # Eight position entries referencing eight distinct allowed grippers: one each.
+    sh:property [
+        sh:path ( frame:gripperPosition frame:ofGripper ) ;
+        sh:name "Grippers with positions"@en ;
+        sh:description "All eight grippers must have a position entry, with one entry per gripper."@en ;
+        sh:minCount 8 ;
+        sh:maxCount 8
+    ] ;
+    sh:property [
+        sh:path frame:gripperSetpoint ;
+        sh:name "Gripper setpoints"@en ;
+        sh:description "Unitless setpoints for the eight grippers during gripping, heating, and pressing."@en ;
+        sh:minCount 24 ;
+        sh:maxCount 24 ;
+        sh:node [
+            sh:property [
+                sh:path frame:setpoint ;
+                sh:name "Setpoint"@en ;
+                sh:description "Unitless setpoint for this gripper at the selected activity."@en ;
+                sh:minCount 1 ;
+                sh:maxCount 1 ;
+                sh:node [
+                    sh:node param:unitlessShape ;
+                    sh:property [
+                        sh:path qudt:value ;
+                        sh:name "Setpoint"@en ;
+                        sh:description "Unitless setpoint for the gripper at the selected activity."@en ;
+                        sh:datatype xsd:integer ;
+                        sh:defaultValue 60
+                    ]
+                ]
+            ] ;
+            sh:property [
+                sh:path frame:ofGripper ;
+                sh:name "Gripper"@en ;
+                sh:description "Gripper to which this parameter entry applies."@en ;
+                sh:nodeKind sh:IRI ;
+                sh:node <system/frame/1#gripperShape> ;
+                sh:minCount 1 ;
+                sh:maxCount 1
+            ] ;
+            sh:property [
+                sh:path frame:atActivity ;
+                sh:name "Activity"@en ;
+                sh:description "Activity during which this gripper setpoint applies."@en ;
+                sh:in ( activity:gripping activity:heating activity:pressing ) ;
+                sh:minCount 1 ;
+                sh:maxCount 1
+            ]
+        ]
+    ] ;
+    # Count setpoint entries for each activity separately.
+    sh:property [
+        sh:path frame:gripperSetpoint ;
+        sh:name "Gripping setpoints"@en ;
+        sh:description "Exactly eight gripper setpoints must apply to gripping."@en ;
+        sh:qualifiedValueShape [
+            sh:property [
+                sh:path frame:atActivity ;
+                sh:name "Activity"@en ;
+                sh:description "Activity during which this gripper setpoint applies."@en ;
+                sh:hasValue activity:gripping
+            ]
+        ] ;
+        sh:qualifiedMinCount 8 ;
+        sh:qualifiedMaxCount 8
+    ] ;
+    sh:property [
+        sh:path frame:gripperSetpoint ;
+        sh:name "Heating setpoints"@en ;
+        sh:description "Exactly eight gripper setpoints must apply to heating."@en ;
+        sh:qualifiedValueShape [
+            sh:property [
+                sh:path frame:atActivity ;
+                sh:name "Activity"@en ;
+                sh:description "Activity during which this gripper setpoint applies."@en ;
+                sh:hasValue activity:heating
+            ]
+        ] ;
+        sh:qualifiedMinCount 8 ;
+        sh:qualifiedMaxCount 8
+    ] ;
+    sh:property [
+        sh:path frame:gripperSetpoint ;
+        sh:name "Pressing setpoints"@en ;
+        sh:description "Exactly eight gripper setpoints must apply to pressing."@en ;
+        sh:qualifiedValueShape [
+            sh:property [
+                sh:path frame:atActivity ;
+                sh:name "Activity"@en ;
+                sh:description "Activity during which this gripper setpoint applies."@en ;
+                sh:hasValue activity:pressing
+            ]
+        ] ;
+        sh:qualifiedMinCount 8 ;
+        sh:qualifiedMaxCount 8
+    ] .
+
+<system/oven/1#parameters>
+    a sh:NodeShape ;
+    rdfs:label "Oven parameters"@en ;
+    rdfs:comment "Initialization parameters for the infrared oven, including temperatures and holding time."@en ;
+    sh:node param:planShape ;
+    sh:property [
+        sh:path oven:thresholdTemperature ;
+        sh:name "Threshold temperature"@en ;
+        sh:description "Temperature threshold for the heating activity, in degrees Celsius."@en ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:node [
+            sh:node param:areaTemperatureShape ;
+            sh:property [
+                sh:path qudt:value ;
+                sh:name "Threshold temperature"@en ;
+                sh:description "Temperature threshold for heating, in degrees Celsius."@en ;
+                sh:datatype xsd:decimal ;
+                sh:defaultValue 260.0
+            ]
+        ]
+    ] ;
+    sh:property [
+        sh:path oven:stableHoldingTime ;
+        sh:name "Stable holding time"@en ;
+        sh:description "Duration of the stable holding period during heating, in seconds."@en ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:node [
+            sh:node param:timeShape ;
+            sh:property [
+                sh:path qudt:value ;
+                sh:name "Stable holding time"@en ;
+                sh:description "Duration of the stable holding period during heating, in seconds."@en ;
+                sh:datatype xsd:decimal ;
+                sh:defaultValue 5.0
+            ]
+        ]
+    ] ;
+    sh:property [
+        sh:path oven:fieldTargetTemperature ;
+        sh:name "Field target temperatures"@en ;
+        sh:description "Target temperature for each of the eight infrared fields, in degrees Celsius."@en ;
+        sh:minCount 8 ;
+        sh:maxCount 8 ;
+        sh:node [
+            sh:property [
+                sh:path oven:fieldTarget ;
+                sh:name "Field target temperature"@en ;
+                sh:description "Target temperature of this infrared field, in degrees Celsius."@en ;
+                sh:minCount 1 ;
+                sh:maxCount 1 ;
+                sh:node [
+                    sh:node param:areaTemperatureShape ;
+                    sh:property [
+                        sh:path qudt:value ;
+                        sh:name "Field target temperature"@en ;
+                        sh:description "Target temperature of the infrared field, in degrees Celsius."@en ;
+                        sh:datatype xsd:decimal ;
+                        sh:defaultValue 280.0
+                    ]
+                ]
+            ] ;
+            sh:property [
+                sh:path oven:atField ;
+                sh:name "Infrared field"@en ;
+                sh:description "Infrared field to which this target temperature applies."@en ;
+                sh:nodeKind sh:IRI ;
+                sh:in (
+                    <system/field/1#it> <system/field/2#it>
+                    <system/field/3#it> <system/field/4#it>
+                    <system/field/5#it> <system/field/6#it>
+                    <system/field/7#it> <system/field/8#it>
+                ) ;
+                sh:minCount 1 ;
+                sh:maxCount 1
+            ]
+        ]
+    ] ;
+    # Cover all eight distinct fields from the oven's top and bottom in system.ttl.
+    sh:property [
+        sh:path ( oven:fieldTargetTemperature oven:atField ) ;
+        sh:name "Fields with target temperatures"@en ;
+        sh:description "All eight infrared fields must have a target temperature entry, with one entry per field."@en ;
+        sh:minCount 8 ;
+        sh:maxCount 8
+    ] ;
+    sh:property [
+        sh:path oven:heatingDeviceTargetTemperature ;
+        sh:name "Heating device target temperatures"@en ;
+        sh:description "Target temperature for each of the two heating devices, in degrees Celsius."@en ;
+        sh:minCount 2 ;
+        sh:maxCount 2 ;
+        sh:node [
+            sh:property [
+                sh:path oven:deviceTemperature ;
+                sh:name "Device target temperature"@en ;
+                sh:description "Target temperature of this heating device, in degrees Celsius."@en ;
+                sh:minCount 1 ;
+                sh:maxCount 1 ;
+                sh:node [
+                    sh:node param:areaTemperatureShape ;
+                    sh:property [
+                        sh:path qudt:value ;
+                        sh:name "Device target temperature"@en ;
+                        sh:description "Target temperature of the heating device, in degrees Celsius."@en ;
+                        sh:datatype xsd:decimal ;
+                        sh:defaultValue 300.0
+                    ]
+                ]
+            ] ;
+            sh:property [
+                sh:path oven:atDevice ;
+                sh:name "Heating device"@en ;
+                sh:description "Heating device to which this target temperature applies."@en ;
+                sh:nodeKind sh:IRI ;
+                # Device IRIs follow the example; their oven links are absent in system.ttl.
+                sh:in ( <system/heating-device/1#it> <system/heating-device/2#it> ) ;
+                sh:minCount 1 ;
+                sh:maxCount 1
+            ]
+        ]
+    ] ;
+    # Two entries must reference both distinct heating devices.
+    sh:property [
+        sh:path ( oven:heatingDeviceTargetTemperature oven:atDevice ) ;
+        sh:name "Devices with target temperatures"@en ;
+        sh:description "Both heating devices must have a target temperature entry, with one entry per device."@en ;
+        sh:minCount 2 ;
+        sh:maxCount 2
+    ] .
+
+<system/press/1#parameters>
+    a sh:NodeShape ;
+    rdfs:label "Press parameters"@en ;
+    rdfs:comment "Initialization parameters for the press, including force, cooling, mold temperatures, and the closing sequence."@en ;
+    sh:node param:planShape ;
+    sh:property [
+        sh:path press:force ;
+        sh:name "Press force"@en ;
+        sh:description "Force applied by the press, in kilonewtons."@en ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:node [
+            sh:node param:forceShape ;
+            sh:property [
+                sh:path qudt:value ;
+                sh:name "Press force"@en ;
+                sh:description "Force applied by the press, in kilonewtons."@en ;
+                sh:datatype xsd:decimal ;
+                sh:defaultValue 1000.0
+            ]
+        ]
+    ] ;
+    sh:property [
+        sh:path press:moldCoolingTime ;
+        sh:name "Mold cooling time"@en ;
+        sh:description "Duration of mold cooling, in seconds."@en ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:node [
+            sh:node param:timeShape ;
+            sh:property [
+                sh:path qudt:value ;
+                sh:name "Mold cooling time"@en ;
+                sh:description "Duration of mold cooling, in seconds."@en ;
+                sh:datatype xsd:decimal ;
+                sh:defaultValue 60.0
+            ]
+        ]
+    ] ;
+    sh:property [
+        sh:path press:remainingPath ;
+        sh:name "Remaining path"@en ;
+        sh:description "Remaining press travel, in millimetres."@en ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:node [
+            sh:node param:distanceShape ;
+            sh:property [
+                sh:path qudt:value ;
+                sh:name "Remaining path"@en ;
+                sh:description "Remaining press travel, in millimetres."@en ;
+                sh:datatype xsd:decimal ;
+                sh:defaultValue 0.0
+            ]
+        ]
+    ] ;
+    sh:property [
+        sh:path press:moldTemperature ;
+        sh:name "Mold temperatures"@en ;
+        sh:description "Temperature settings for the upper and lower molds, in degrees Celsius."@en ;
+        sh:minCount 2 ;
+        sh:maxCount 2 ;
+        sh:node [
+            sh:property [
+                sh:path press:temperature ;
+                sh:name "Mold temperature"@en ;
+                sh:description "Temperature setting of this mold, in degrees Celsius."@en ;
+                sh:minCount 1 ;
+                sh:maxCount 1 ;
+                sh:node [
+                    sh:node param:temperatureShape ;
+                    sh:property [
+                        sh:path qudt:value ;
+                        sh:name "Mold temperature"@en ;
+                        sh:description "Temperature setting of the mold, in degrees Celsius."@en ;
+                        sh:datatype xsd:decimal ;
+                        sh:defaultValue 110.0
+                    ]
+                ]
+            ] ;
+            sh:property [
+                sh:path press:mold ;
+                sh:name "Mold"@en ;
+                sh:description "Upper or lower mold to which this temperature setting applies."@en ;
+                sh:in ( <system/press/1#upperMold> <system/press/1#lowerMold> ) ;
+                sh:minCount 1 ;
+                sh:maxCount 1
+            ]
+        ]
+    ] ;
+    # Two entries must reference both distinct molds from system.ttl.
+    sh:property [
+        sh:path ( press:moldTemperature press:mold ) ;
+        sh:name "Molds with temperatures"@en ;
+        sh:description "Both molds must have a temperature entry, with one entry per mold."@en ;
+        sh:minCount 2 ;
+        sh:maxCount 2
+    ] ;
+    sh:property [
+        sh:path press:closingSteps ;
+        sh:name "Closing sequence"@en ;
+        sh:description "Ordered sequence of closing steps, each specifying a closing speed and remaining distance."@en ;
+        # Preserve the complete example sequence because values vary between steps.
+        sh:defaultValue (
+            [
+                press:closingSpeed [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:LinearVelocity ;
+                    qudt:hasUnit unit:MilliM-PER-SEC ;
+                    qudt:value 80.0
+                ] ;
+                press:remainingDistance [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:Distance ;
+                    qudt:hasUnit unit:MilliM ;
+                    qudt:value 60.0
+                ]
+            ]
+            [
+                press:closingSpeed [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:LinearVelocity ;
+                    qudt:hasUnit unit:MilliM-PER-SEC ;
+                    qudt:value 60.0
+                ] ;
+                press:remainingDistance [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:Distance ;
+                    qudt:hasUnit unit:MilliM ;
+                    qudt:value 25.0
+                ]
+            ]
+            [
+                press:closingSpeed [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:LinearVelocity ;
+                    qudt:hasUnit unit:MilliM-PER-SEC ;
+                    qudt:value 35.0
+                ] ;
+                press:remainingDistance [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:Distance ;
+                    qudt:hasUnit unit:MilliM ;
+                    qudt:value 10.0
+                ]
+            ]
+            [
+                press:closingSpeed [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:LinearVelocity ;
+                    qudt:hasUnit unit:MilliM-PER-SEC ;
+                    qudt:value 10.0
+                ] ;
+                press:remainingDistance [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:Distance ;
+                    qudt:hasUnit unit:MilliM ;
+                    qudt:value 0.0
+                ]
+            ]
+        ) ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] ;
+    # Follow the RDF list to validate each closing step; allow any non-empty sequence.
+    sh:property [
+        sh:path ( press:closingSteps [ sh:zeroOrMorePath rdf:rest ] rdf:first ) ;
+        sh:name "Closing steps"@en ;
+        sh:description "Each step in the closing sequence specifies a speed in millimetres per second and a remaining distance in millimetres."@en ;
+        sh:minCount 1 ;
+        sh:node <system/press/1#closingStepShape>
+    ] .
+
+# Shared plan and quantity shapes.
+
+param:planShape
+    a sh:NodeShape ;
+    rdfs:label "Initialization plan"@en ;
+    rdfs:comment "Plan that identifies the activity instance it initializes."@en ;
+    sh:class prov:Plan ;
+    sh:property [
+        sh:path for:initialized ;
+        sh:name "Initialized activity"@en ;
+        sh:description "Activity instance initialized by this plan."@en ;
+        sh:nodeKind sh:IRI ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] .
+
+param:decimalShape
+    a sh:NodeShape ;
+    rdfs:label "Decimal quantity"@en ;
+    rdfs:comment "Physical quantity with a decimal magnitude."@en ;
+    sh:class qudt:Quantity ;
+    sh:property [
+        sh:path qudt:value ;
+        sh:name "Value"@en ;
+        sh:description "Numeric magnitude of the quantity in its stated unit."@en ;
+        sh:datatype xsd:decimal ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] .
+
+# The eight gripper subsystems of <system/frame/1#it> in system.ttl.
+<system/frame/1#gripperShape>
+    a sh:NodeShape ;
+    rdfs:label "Frame gripper"@en ;
+    rdfs:comment "One of the eight grippers configured on the frame."@en ;
+    sh:in (
+        <system/gripper/1#it> <system/gripper/2#it>
+        <system/gripper/3#it> <system/gripper/4#it>
+        <system/gripper/5#it> <system/gripper/6#it>
+        <system/gripper/7#it> <system/gripper/8#it>
+    ) .
+
+<system/frame/1#positionShape>
+    a sh:NodeShape ;
+    rdfs:label "Gripper position"@en ;
+    rdfs:comment "Two-dimensional gripper position in millimetres relative to the gripper frame reference point."@en ;
+    sh:class qudt:Quantity ;
+    sh:property [
+        sh:path qudt:hasQuantityKind ;
+        sh:name "Quantity kind"@en ;
+        sh:description "Physical quantity represented by this value."@en ;
+        sh:hasValue quantitykind:PositionVector ;
+        sh:defaultValue quantitykind:PositionVector ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path qudt:hasUnit ;
+        sh:name "Unit"@en ;
+        sh:description "Unit in which the quantity is expressed."@en ;
+        sh:hasValue unit:MilliM ;
+        sh:defaultValue unit:MilliM ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path prov:wasDerivedFrom ;
+        sh:name "Reference point"@en ;
+        sh:description "Gripper frame reference point from which the position coordinates are measured."@en ;
+        sh:hasValue pos:gripperFrameReferencePoint ;
+        sh:defaultValue pos:gripperFrameReferencePoint ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path qudt:value ;
+        sh:name "Position vector"@en ;
+        sh:description "X and Y coordinates of the gripper relative to the frame reference point, in millimetres."@en ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        # Coordinates vary by gripper, so this shared shape has no position default.
+        # Exactly two decimal coordinates, represented as an RDF list.
+        sh:node [
+            sh:property [
+                sh:path rdf:first ;
+                sh:name "X coordinate"@en ;
+                sh:description "X coordinate of the gripper position, in millimetres."@en ;
+                sh:datatype xsd:decimal ;
+                sh:minCount 1 ;
+                sh:maxCount 1
+            ] ;
+            sh:property [
+                sh:path rdf:rest ;
+                sh:name "Second coordinate"@en ;
+                sh:description "List tail containing the Y coordinate of the gripper position."@en ;
+                sh:minCount 1 ;
+                sh:maxCount 1 ;
+                sh:node [
+                    sh:property [
+                        sh:path rdf:first ;
+                        sh:name "Y coordinate"@en ;
+                        sh:description "Y coordinate of the gripper position, in millimetres."@en ;
+                        sh:datatype xsd:decimal ;
+                        sh:minCount 1 ;
+                        sh:maxCount 1
+                    ] ;
+                    sh:property [
+                        sh:path rdf:rest ;
+                        sh:name "End of position vector"@en ;
+                        sh:description "End of the two-coordinate position vector."@en ;
+                        sh:hasValue rdf:nil ;
+                        sh:maxCount 1
+                    ]
+                ]
+            ]
+        ]
+    ] .
+
+param:unitlessShape
+    a sh:NodeShape ;
+    rdfs:label "Unitless quantity"@en ;
+    rdfs:comment "Quantity with an integer magnitude and no physical unit."@en ;
+    sh:class qudt:Quantity ;
+    sh:property [
+        sh:path qudt:hasUnit ;
+        sh:name "Unit"@en ;
+        sh:description "Unit in which the quantity is expressed."@en ;
+        sh:hasValue unit:UNITLESS ;
+        sh:defaultValue unit:UNITLESS ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path qudt:value ;
+        sh:name "Value"@en ;
+        sh:description "Numeric magnitude of the quantity in its stated unit."@en ;
+        sh:datatype xsd:integer ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] .
+
+param:areaTemperatureShape
+    a sh:NodeShape ;
+    rdfs:label "Area temperature"@en ;
+    rdfs:comment "Area temperature expressed in degrees Celsius."@en ;
+    sh:node param:decimalShape ;
+    sh:property [
+        sh:path qudt:hasQuantityKind ;
+        sh:name "Quantity kind"@en ;
+        sh:description "Physical quantity represented by this value."@en ;
+        sh:hasValue quantitykind:AreaTemperature ;
+        sh:defaultValue quantitykind:AreaTemperature ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path qudt:hasUnit ;
+        sh:name "Unit"@en ;
+        sh:description "Unit in which the quantity is expressed."@en ;
+        sh:hasValue unit:DEG_C ;
+        sh:defaultValue unit:DEG_C ;
+        sh:maxCount 1
+    ] .
+
+param:temperatureShape
+    a sh:NodeShape ;
+    rdfs:label "Temperature"@en ;
+    rdfs:comment "Temperature expressed in degrees Celsius."@en ;
+    sh:node param:decimalShape ;
+    sh:property [
+        sh:path qudt:hasQuantityKind ;
+        sh:name "Quantity kind"@en ;
+        sh:description "Physical quantity represented by this value."@en ;
+        sh:hasValue quantitykind:Temperature ;
+        sh:defaultValue quantitykind:Temperature ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path qudt:hasUnit ;
+        sh:name "Unit"@en ;
+        sh:description "Unit in which the quantity is expressed."@en ;
+        sh:hasValue unit:DEG_C ;
+        sh:defaultValue unit:DEG_C ;
+        sh:maxCount 1
+    ] .
+
+param:timeShape
+    a sh:NodeShape ;
+    rdfs:label "Time"@en ;
+    rdfs:comment "Duration expressed in seconds."@en ;
+    sh:node param:decimalShape ;
+    sh:property [
+        sh:path qudt:hasQuantityKind ;
+        sh:name "Quantity kind"@en ;
+        sh:description "Physical quantity represented by this value."@en ;
+        sh:hasValue quantitykind:Time ;
+        sh:defaultValue quantitykind:Time ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path qudt:hasUnit ;
+        sh:name "Unit"@en ;
+        sh:description "Unit in which the quantity is expressed."@en ;
+        sh:hasValue unit:SEC ;
+        sh:defaultValue unit:SEC ;
+        sh:maxCount 1
+    ] .
+
+param:distanceShape
+    a sh:NodeShape ;
+    rdfs:label "Distance"@en ;
+    rdfs:comment "Distance expressed in millimetres."@en ;
+    sh:node param:decimalShape ;
+    sh:property [
+        sh:path qudt:hasQuantityKind ;
+        sh:name "Quantity kind"@en ;
+        sh:description "Physical quantity represented by this value."@en ;
+        sh:hasValue quantitykind:Distance ;
+        sh:defaultValue quantitykind:Distance ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path qudt:hasUnit ;
+        sh:name "Unit"@en ;
+        sh:description "Unit in which the quantity is expressed."@en ;
+        sh:hasValue unit:MilliM ;
+        sh:defaultValue unit:MilliM ;
+        sh:maxCount 1
+    ] .
+
+param:forceShape
+    a sh:NodeShape ;
+    rdfs:label "Force"@en ;
+    rdfs:comment "Force expressed in kilonewtons."@en ;
+    sh:node param:decimalShape ;
+    sh:property [
+        sh:path qudt:hasQuantityKind ;
+        sh:name "Quantity kind"@en ;
+        sh:description "Physical quantity represented by this value."@en ;
+        sh:hasValue quantitykind:Force ;
+        sh:defaultValue quantitykind:Force ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path qudt:hasUnit ;
+        sh:name "Unit"@en ;
+        sh:description "Unit in which the quantity is expressed."@en ;
+        sh:hasValue unit:KiloN ;
+        sh:defaultValue unit:KiloN ;
+        sh:maxCount 1
+    ] .
+
+param:speedShape
+    a sh:NodeShape ;
+    rdfs:label "Linear speed"@en ;
+    rdfs:comment "Linear speed expressed in millimetres per second."@en ;
+    sh:node param:decimalShape ;
+    sh:property [
+        sh:path qudt:hasQuantityKind ;
+        sh:name "Quantity kind"@en ;
+        sh:description "Physical quantity represented by this value."@en ;
+        sh:hasValue quantitykind:LinearVelocity ;
+        sh:defaultValue quantitykind:LinearVelocity ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path qudt:hasUnit ;
+        sh:name "Unit"@en ;
+        sh:description "Unit in which the quantity is expressed."@en ;
+        sh:hasValue unit:MilliM-PER-SEC ;
+        sh:defaultValue unit:MilliM-PER-SEC ;
+        sh:maxCount 1
+    ] .
+
+<system/press/1#closingStepShape>
+    a sh:NodeShape ;
+    rdfs:label "Press closing step"@en ;
+    rdfs:comment "One closing step with a speed and remaining distance."@en ;
+    sh:property [
+        sh:path press:closingSpeed ;
+        sh:name "Closing speed"@en ;
+        sh:description "Press closing speed for this step, in millimetres per second."@en ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:node param:speedShape
+    ] ;
+    sh:property [
+        sh:path press:remainingDistance ;
+        sh:name "Remaining distance"@en ;
+        sh:description "Remaining distance for this closing step, in millimetres."@en ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:node param:distanceShape
+    ] .
