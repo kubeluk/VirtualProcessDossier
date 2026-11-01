@@ -1,0 +1,397 @@
+BASE <http://purl.org/for/>
+
+PREFIX wild: <http://purl.org/wild/vocab#>
+PREFIX activity: <http://purl.org/for/activity#>
+PREFIX for: <http://purl.org/for/terms#>
+PREFIX prov: <http://www.w3.org/ns/prov#>
+PREFIX frame: <http://purl.org/system/gripper-frame/1#>
+PREFIX qudt: <http://qudt.org/schema/qudt/>
+PREFIX quantitykind: <http://qudt.org/vocab/quantitykind/>
+PREFIX unit: <http://qudt.org/vocab/unit/>
+PREFIX pos: <http://purl.org/for/position#>
+
+# Initialize an instance of activity:gripping.
+# Replace the BIND placeholders below with the requested initialization values.
+# Placeholder defaults match data/run-view-after-ui.ttl.
+INSERT
+{
+    ?activity_instance
+        a wild:ActivityInstance ;
+        wild:activityInstanceOf ?activity ;
+        wild:inWorkflowInstance ?workflow_instance ;
+        wild:hasState wild:initialized ;
+        for:initialization ?system_parameterization .
+
+    ?system_parameterization
+        a prov:Plan ;
+        for:initialized ?activity_instance ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( ?gripper_1_position_x ?gripper_1_position_y ) ;
+                prov:wasDerivedFrom pos:gripperFrameReferencePoint
+            ] ;
+            frame:ofGripper <system/gripper/1#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_1_gripping_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/1#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_1_heating_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/1#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_1_pressing_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/1#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( ?gripper_2_position_x ?gripper_2_position_y ) ;
+                prov:wasDerivedFrom pos:gripperFrameReferencePoint
+            ] ;
+            frame:ofGripper <system/gripper/2#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_2_gripping_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/2#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_2_heating_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/2#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_2_pressing_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/2#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( ?gripper_3_position_x ?gripper_3_position_y ) ;
+                prov:wasDerivedFrom pos:gripperFrameReferencePoint
+            ] ;
+            frame:ofGripper <system/gripper/3#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_3_gripping_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/3#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_3_heating_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/3#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_3_pressing_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/3#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( ?gripper_4_position_x ?gripper_4_position_y ) ;
+                prov:wasDerivedFrom pos:gripperFrameReferencePoint
+            ] ;
+            frame:ofGripper <system/gripper/4#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_4_gripping_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/4#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_4_heating_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/4#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_4_pressing_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/4#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( ?gripper_5_position_x ?gripper_5_position_y ) ;
+                prov:wasDerivedFrom pos:gripperFrameReferencePoint
+            ] ;
+            frame:ofGripper <system/gripper/5#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_5_gripping_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/5#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_5_heating_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/5#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_5_pressing_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/5#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( ?gripper_6_position_x ?gripper_6_position_y ) ;
+                prov:wasDerivedFrom pos:gripperFrameReferencePoint
+            ] ;
+            frame:ofGripper <system/gripper/6#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_6_gripping_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/6#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_6_heating_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/6#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_6_pressing_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/6#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( ?gripper_7_position_x ?gripper_7_position_y ) ;
+                prov:wasDerivedFrom pos:gripperFrameReferencePoint
+            ] ;
+            frame:ofGripper <system/gripper/7#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_7_gripping_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/7#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_7_heating_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/7#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_7_pressing_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/7#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( ?gripper_8_position_x ?gripper_8_position_y ) ;
+                prov:wasDerivedFrom pos:gripperFrameReferencePoint
+            ] ;
+            frame:ofGripper <system/gripper/8#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_8_gripping_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/8#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_8_heating_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/8#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_8_pressing_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/8#it> ;
+            frame:atActivity activity:pressing
+        ] .
+}
+WHERE
+{
+    # TODO: replace 000 with a fresh UUID for every activity instance.
+    # Keep this IRI when referring to the initialized activity instance.
+    BIND(<activity/instance/000-gripping#it> AS ?activity_instance)
+
+    # Reference the activity exactly as declared in data/workflow.ttl.
+    BIND(activity:gripping AS ?activity)
+
+    # TODO: use the same workflow instance IRI for all initialization queries.
+    BIND(<workflow/instance/000#it> AS ?workflow_instance)
+
+    # TODO: use a unique initialization plan IRI for this activity instance.
+    BIND(<plan/000-gripping#it> AS ?system_parameterization)
+
+    # TODO: replace these example values with the initialization parameters.
+
+    # Gripper 1: position in millimeters and setpoints for each activity.
+    BIND(210.0 AS ?gripper_1_position_x)
+    BIND(100.0 AS ?gripper_1_position_y)
+    BIND(60 AS ?gripper_1_gripping_setpoint)
+    BIND(60 AS ?gripper_1_heating_setpoint)
+    BIND(60 AS ?gripper_1_pressing_setpoint)
+
+    # Gripper 2: position in millimeters and setpoints for each activity.
+    BIND(210.0 AS ?gripper_2_position_x)
+    BIND(-100.0 AS ?gripper_2_position_y)
+    BIND(60 AS ?gripper_2_gripping_setpoint)
+    BIND(60 AS ?gripper_2_heating_setpoint)
+    BIND(60 AS ?gripper_2_pressing_setpoint)
+
+    # Gripper 3: position in millimeters and setpoints for each activity.
+    BIND(-210.0 AS ?gripper_3_position_x)
+    BIND(100.0 AS ?gripper_3_position_y)
+    BIND(60 AS ?gripper_3_gripping_setpoint)
+    BIND(60 AS ?gripper_3_heating_setpoint)
+    BIND(60 AS ?gripper_3_pressing_setpoint)
+
+    # Gripper 4: position in millimeters and setpoints for each activity.
+    BIND(-210.0 AS ?gripper_4_position_x)
+    BIND(-100.0 AS ?gripper_4_position_y)
+    BIND(60 AS ?gripper_4_gripping_setpoint)
+    BIND(60 AS ?gripper_4_heating_setpoint)
+    BIND(60 AS ?gripper_4_pressing_setpoint)
+
+    # Gripper 5: position in millimeters and setpoints for each activity.
+    BIND(100.0 AS ?gripper_5_position_x)
+    BIND(210.0 AS ?gripper_5_position_y)
+    BIND(60 AS ?gripper_5_gripping_setpoint)
+    BIND(60 AS ?gripper_5_heating_setpoint)
+    BIND(60 AS ?gripper_5_pressing_setpoint)
+
+    # Gripper 6: position in millimeters and setpoints for each activity.
+    BIND(-100.0 AS ?gripper_6_position_x)
+    BIND(210.0 AS ?gripper_6_position_y)
+    BIND(60 AS ?gripper_6_gripping_setpoint)
+    BIND(60 AS ?gripper_6_heating_setpoint)
+    BIND(60 AS ?gripper_6_pressing_setpoint)
+
+    # Gripper 7: position in millimeters and setpoints for each activity.
+    BIND(100.0 AS ?gripper_7_position_x)
+    BIND(-210.0 AS ?gripper_7_position_y)
+    BIND(60 AS ?gripper_7_gripping_setpoint)
+    BIND(60 AS ?gripper_7_heating_setpoint)
+    BIND(60 AS ?gripper_7_pressing_setpoint)
+
+    # Gripper 8: position in millimeters and setpoints for each activity.
+    BIND(100.0 AS ?gripper_8_position_x)
+    BIND(210.0 AS ?gripper_8_position_y)
+    BIND(60 AS ?gripper_8_gripping_setpoint)
+    BIND(60 AS ?gripper_8_heating_setpoint)
+    BIND(60 AS ?gripper_8_pressing_setpoint)
+}
