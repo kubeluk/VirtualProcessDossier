@@ -1,5 +1,6 @@
-@base <http://purl.org/for/fofa/> .
+@base <http://purl.org/for/> .
 
+@prefix for: <http://purl.org/for/terms#> .
 @prefix frame: <http://purl.org/for/system/frame#> .
 @prefix prop: <http://purl.org/for/property#> .
 @prefix pos: <http://purl.org/for/position#> .
@@ -15,13 +16,13 @@
 <system/demonstrator#it> a ssn:System ;
     rdfs:label "FoFa Demonstrator"@en ;
     rdfs:comment "The demonstrator as set up at the Forschungsfabrik"@en ;
-    ssn:hasSubSystem <system/gripper-frame/1#it>, <system/oven/1#it>, <system/press/1#it> .
+    ssn:hasSubSystem <system/frame/1#it>, <system/oven/1#it>, <system/press/1#it>, <sensor/camera/1#it> .
 
 # Systems
 
 ## Gripper Frame
 
-<system/gripper-frame/1#it> a ssn:System ;
+<system/frame/1#it> a ssn:System ;
     rdfs:label "Gripper Frame"@en ;
     rdfs:comment "The gripper frame is a base structure that is comprised of a range of grippers which are used for fixing a sheet of laminate in place."@en ;
     frame:hasSize [
@@ -74,7 +75,7 @@
     ssn:hasProperty prop:angle, prop:force, prop:extension ;
     ssn:hasSubSystem <sensor/angle/7#it>, <sensor/force/7#it>, <sensor/extension/7#it> .
 
-<system/gripper/1#it> a ssn:System ;
+<system/gripper/8#it> a ssn:System ;
     rdfs:label "Gripper 8" ;
     ssn:hasProperty prop:angle, prop:force, prop:extension ;
     ssn:hasSubSystem <sensor/angle/8#it>, <sensor/force/8#it>, <sensor/extension/8#it> .
@@ -88,7 +89,7 @@ frame:referencePoint a for:ReferencePoint ;
 <system/oven/1#it> a ssn:System ;
     rdfs:label "Infrared (IR) Oven"@en ;
     rdfs:comment "Infrared (IR) oven comprised of two parts (top and bottom)."@en ;
-    ssn:hasSubSystem <system/oven/1/top#it>, <system/oven/1/bottom#it> .
+    ssn:hasSubSystem <system/oven/1#top>, <system/oven/1#bottom> .
 
 <system/oven/1#top> a ssn:System ;
     rdfs:label "IR Field (top)"@en ;
