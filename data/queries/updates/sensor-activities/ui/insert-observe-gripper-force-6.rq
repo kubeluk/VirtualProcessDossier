@@ -1,0 +1,26 @@
+BASE <http://purl.org/for/>
+
+PREFIX wild: <http://purl.org/wild/vocab#>
+PREFIX activity: <http://purl.org/for/activity#>
+
+# Initialize a sensor activity instance of activity:observeGripperForce6.
+INSERT
+{
+    ?sensor_activity_instance
+        a wild:ActivityInstance ;
+        wild:activityInstanceOf ?activity ;
+        wild:inWorkflowInstance ?workflow_instance ;
+        wild:hasState wild:initialized .
+}
+WHERE
+{
+    # TODO: replace 000 with a fresh UUID for every activity instance.
+    # Reuse this IRI for execution updates and dataset links.
+    BIND(<activity/instance/000-observe-gripper-force-6#it> AS ?sensor_activity_instance)
+
+    # Reference the activity exactly as declared in data/workflow.ttl.
+    BIND(activity:observeGripperForce6 AS ?activity)
+
+    # TODO: use the same workflow instance IRI for all initialization queries.
+    BIND(<workflow/instance/000#it> AS ?workflow_instance)
+}
