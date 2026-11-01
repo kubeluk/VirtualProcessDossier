@@ -1,5 +1,7 @@
 @base <http://purl.org/for/fofa/> .
 
+@prefix frame: <http://purl.org/for/system/frame#> .
+@prefix prop: <http://purl.org/for/property#> .
 @prefix pos: <http://purl.org/for/position#> .
 @prefix sosa: <http://www.w3.org/ns/sosa/> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -20,57 +22,65 @@
 
 ## Gripper Frame
 
-<system/gripper-frame/1#it> a ssn:System, geo:Feature ;
+<system/gripper-frame/1#it> a ssn:System ;
     rdfs:label "Gripper Frame"@en ;
     rdfs:comment "The gripper frame is a base structure that is comprised of a range of grippers which are used for fixing a sheet of laminate in place."@en ;
-    geo:hasSize [
+    frame:hasSize [
         a qudt:Quantity ;
         qudt:hasQuantityKind quantitykind:Length ;
         qudt:hasUnit unit:MilliM ;
         qudt:value 800.0
     ] ;
-    geo:hasSize [
+    frame:hasSize [
         a qudt:Quantity ;
         qudt:hasQuantityKind quantitykind:Width ;
         qudt:hasUnit unit:MilliM ;
         qudt:value 800.0
     ] ;
-    pos:hasPositionalReference pos:gripperFrameReferencePoint ;
+    pos:hasPositionalReference frame:referencePoint ;
     ssn:hasSubSystem <system/gripper/1#it>, <system/gripper/2#it>, <system/gripper/3#it>, <system/gripper/4#it>, <system/gripper/5#it>, <system/gripper/6#it>, <system/gripper/7#it>, <system/gripper/8#it> .
 
 <system/gripper/1#it> a ssn:System ;
     rdfs:label "Gripper 1" ;
-    ssn:hasProperty <property/angle#it>, <property/force#it>, <property/extension#it> .
+    ssn:hasProperty prop:angle, prop:force, prop:extension ;
+    ssn:hasSubSystem <sensor/angle/1#it>, <sensor/force/1#it>, <sensor/extension/1#it> .
 
 <system/gripper/2#it> a ssn:System ;
     rdfs:label "Gripper 2" ;
-    ssn:hasProperty <property/angle#it>, <property/force#it>, <property/extension#it> .
+    ssn:hasProperty prop:angle, prop:force, prop:extension ;
+    ssn:hasSubSystem <sensor/angle/2#it>, <sensor/force/2#it>, <sensor/extension/2#it> .
 
 <system/gripper/3#it> a ssn:System ;
     rdfs:label "Gripper 3" ;
-    ssn:hasProperty <property/angle#it>, <property/force#it>, <property/extension#it> .
+    ssn:hasProperty prop:angle, prop:force, prop:extension ;
+    ssn:hasSubSystem <sensor/angle/3#it>, <sensor/force/3#it>, <sensor/extension/3#it> .
 
 <system/gripper/4#it> a ssn:System ;
     rdfs:label "Gripper 4" ;
-    ssn:hasProperty <property/angle#it>, <property/force#it>, <property/extension#it> .
+    ssn:hasProperty prop:angle, prop:force, prop:extension ;
+    ssn:hasSubSystem <sensor/angle/4#it>, <sensor/force/4#it>, <sensor/extension/4#it> .
 
 <system/gripper/5#it> a ssn:System ;
     rdfs:label "Gripper 5" ;
-    ssn:hasProperty <property/angle#it>, <property/force#it>, <property/extension#it> .
+    ssn:hasProperty prop:angle, prop:force, prop:extension ;
+    ssn:hasSubSystem <sensor/angle/5#it>, <sensor/force/5#it>, <sensor/extension/5#it> .
 
 <system/gripper/6#it> a ssn:System ;
     rdfs:label "Gripper 6" ;
-    ssn:hasProperty <property/angle#it>, <property/force#it>, <property/extension#it> .
+    ssn:hasProperty prop:angle, prop:force, prop:extension ;
+    ssn:hasSubSystem <sensor/angle/6#it>, <sensor/force/6#it>, <sensor/extension/6#it> .
 
 <system/gripper/7#it> a ssn:System ;
     rdfs:label "Gripper 7" ;
-    ssn:hasProperty <property/angle#it>, <property/force#it>, <property/extension#it> .
+    ssn:hasProperty prop:angle, prop:force, prop:extension ;
+    ssn:hasSubSystem <sensor/angle/7#it>, <sensor/force/7#it>, <sensor/extension/7#it> .
 
 <system/gripper/1#it> a ssn:System ;
     rdfs:label "Gripper 8" ;
-    ssn:hasProperty <property/angle#it>, <property/force#it>, <property/extension#it> .
+    ssn:hasProperty prop:angle, prop:force, prop:extension ;
+    ssn:hasSubSystem <sensor/angle/8#it>, <sensor/force/8#it>, <sensor/extension/8#it> .
 
-pos:gripperFrameReferencePoint a pos:Origin ;
+frame:referencePoint a for:ReferencePoint ;
     rdfs:label "Greiferrahmen Reference Point"@en ;
     rdfs:comment "Die linke, untere Ecke des Greiferrahmens bildet den Bezugspunkt für die Positionen der Greiferpunkte."@de .
 
@@ -79,49 +89,49 @@ pos:gripperFrameReferencePoint a pos:Origin ;
 <system/oven/1#it> a ssn:System ;
     rdfs:label "Infrared (IR) Oven"@en ;
     rdfs:comment "Infrared (IR) oven comprised of two parts (top and bottom)."@en ;
-    ssn:hasSubSystem <system/oven/1/top#it>, <system/oven/1/bottom#it>, <system/heating-device/1#it>, <system/heating-device/2#it> .
+    ssn:hasSubSystem <system/oven/1/top#it>, <system/oven/1/bottom#it> .
 
-<system/oven/1/top#it> a ssn:System ;
+<system/oven/1#top> a ssn:System ;
     rdfs:label "IR Field (top)"@en ;
     rdfs:comment "The top IR field consists of three individually controllable zones: middle, edge and corner zones for the top part of the laminat."@en ;
-    ssn:hasSubSystem <sytem/ir-field/1#it>, <sytem/ir-field/2#it>, <sytem/oven/ir-field/3#it>, <system/oven/ir-field/4#it> .
+    ssn:hasSubSystem <system/field/1#it>, <system/field/2#it>, <system/field/3#it>, <system/field/4#it> .
 
-<system/oven/1/bottom#it> a ssn:System ;
+<system/oven/1#bottom> a ssn:System ;
     rdfs:label "IR Field (bottom)"@en ;
     rdfs:comment "The bottom IR field consists of three individually controllable zones: middle, edge and corner zones for the bottom part of the laminat."@en ;
-    ssn:hasSubSystem <sytem/ir-field/5#it>, <sytem/ir-field/6#it>, <sytem/ir-field/7#it>, <system/ir-field/8#it> .
+    ssn:hasSubSystem <system/field/5#it>, <system/field/6#it>, <system/field/7#it>, <system/field/8#it> ;
+    ssn:hasSubSystem <sensor/pyrometer/1#it> .
 
-<system/heating-device/1#it> a ssn:System .
+<system/field/1#it> a ssn:System .
 
-<system/heating-device/2#it> a ssn:System .
+<system/field/2#it> a ssn:System .
 
-<system/ir-field/1#it> a ssn:System .
+<system/field/3#it> a ssn:System .
 
-<system/ir-field/2#it> a ssn:System .
+<system/field/4#it> a ssn:System .
 
-<system/ir-field/3#it> a ssn:System .
+<system/field/5#it> a ssn:System .
 
-<system/ir-field/4#it> a ssn:System .
+<system/field/6#it> a ssn:System .
 
-<system/ir-field/5#it> a ssn:System .
+<system/field/7#it> a ssn:System .
 
-<system/ir-field/6#it> a ssn:System .
-
-<system/ir-field/7#it> a ssn:System .
-
-<system/ir-field/8#it> a ssn:System .
+<system/field/8#it> a ssn:System .
 
 ## Press
 
 <system/press/1#it> a ssn:System ;
     rdfs:label "Press"@en ;
     rdfs:comment "The press is used for forming the laminat."@en ;
-    ssn:hasSubSystem <system/press/1#upperMold>, <system/press/1#lowerMold> ;
-    ssn:hasProperty <system/press/1#force> .
+    ssn:hasSubSystem <system/press/1#upperMold>, <system/press/1#lowerMold>, <system/heater/1#it>, <system/heater/2#it> .
 
 <system/press/1#upperMold> a ssn:System .
 
 <system/press/1#lowerMold> a ssn:System .
+
+<system/heater/1#it> a ssn:System .
+
+<system/heater/2#it> a ssn:System .
 
 # Sensors
 
