@@ -1,0 +1,34 @@
+BASE <http://purl.org/for/>
+
+PREFIX prov: <http://www.w3.org/ns/prov#>
+PREFIX wild: <http://purl.org/wild/vocab#>
+PREFIX workflow: <http://purl.org/for/workflow#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+# Complete the workflow instance after the full manufacturing run has finished.
+# Complete its activity instances separately using their respective queries.
+DELETE
+{
+    ?workflow_instance wild:hasState wild:initialized .
+}
+INSERT
+{
+    ?workflow_instance
+        wild:hasState wild:done ;
+        prov:startedAtTime ?start_time ;
+        prov:endedAtTime ?end_time .
+}
+WHERE
+{
+    # TODO: use the existing workflow instance IRI created during initialization.
+    BIND(<workflow/instance/000#it> AS ?workflow_instance)
+
+    # TODO: use the actual start and end times of the complete manufacturing run.
+    BIND("2026-09-24T10:00:00Z"^^xsd:dateTime AS ?start_time)
+    BIND("2026-09-24T10:02:34Z"^^xsd:dateTime AS ?end_time)
+
+    ?workflow_instance
+        a wild:WorkflowInstance ;
+        wild:workflowInstanceOf workflow:stampForming ;
+        wild:hasState wild:initialized .
+}
