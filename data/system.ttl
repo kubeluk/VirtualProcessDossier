@@ -142,12 +142,12 @@ frame:referencePoint a for:ReferencePoint ;
 
 <system/oven/1#top> a ssn:System ;
     rdfs:label "IR Field (top)"@en ;
-    rdfs:comment "The top IR field consists of three individually controllable zones: middle, edge and corner zones for the top part of the laminat."@en ;
+    rdfs:comment "The top IR field consists of four individually controllable zones that each make up a corner."@en ;
     ssn:hasSubSystem <system/field/1#it>, <system/field/2#it>, <system/field/3#it>, <system/field/4#it> .
 
 <system/oven/1#bottom> a ssn:System ;
     rdfs:label "IR Field (bottom)"@en ;
-    rdfs:comment "The bottom IR field consists of three individually controllable zones: middle, edge and corner zones for the bottom part of the laminat."@en ;
+    rdfs:comment "The bottom IR field consists of four individually controllable zones that each make up a corner."@en ;
     ssn:hasSubSystem <system/field/5#it>, <system/field/6#it>, <system/field/7#it>, <system/field/8#it> ;
     ssn:hasSubSystem <sensor/pyrometer/1#it> .
 

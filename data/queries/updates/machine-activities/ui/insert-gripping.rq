@@ -31,7 +31,7 @@ INSERT
                 qudt:hasQuantityKind quantitykind:PositionVector ;
                 qudt:hasUnit unit:MilliM ;
                 qudt:value ( ?gripper_1_position_x ?gripper_1_position_y ) ;
-                prov:wasDerivedFrom pos:gripperFrameReferencePoint
+                prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
             ] ;
             frame:ofGripper <system/gripper/1#it>
         ] ;
@@ -68,7 +68,7 @@ INSERT
                 qudt:hasQuantityKind quantitykind:PositionVector ;
                 qudt:hasUnit unit:MilliM ;
                 qudt:value ( ?gripper_2_position_x ?gripper_2_position_y ) ;
-                prov:wasDerivedFrom pos:gripperFrameReferencePoint
+                prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
             ] ;
             frame:ofGripper <system/gripper/2#it>
         ] ;
@@ -105,7 +105,7 @@ INSERT
                 qudt:hasQuantityKind quantitykind:PositionVector ;
                 qudt:hasUnit unit:MilliM ;
                 qudt:value ( ?gripper_3_position_x ?gripper_3_position_y ) ;
-                prov:wasDerivedFrom pos:gripperFrameReferencePoint
+                prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
             ] ;
             frame:ofGripper <system/gripper/3#it>
         ] ;
@@ -142,7 +142,7 @@ INSERT
                 qudt:hasQuantityKind quantitykind:PositionVector ;
                 qudt:hasUnit unit:MilliM ;
                 qudt:value ( ?gripper_4_position_x ?gripper_4_position_y ) ;
-                prov:wasDerivedFrom pos:gripperFrameReferencePoint
+                prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
             ] ;
             frame:ofGripper <system/gripper/4#it>
         ] ;
@@ -179,7 +179,7 @@ INSERT
                 qudt:hasQuantityKind quantitykind:PositionVector ;
                 qudt:hasUnit unit:MilliM ;
                 qudt:value ( ?gripper_5_position_x ?gripper_5_position_y ) ;
-                prov:wasDerivedFrom pos:gripperFrameReferencePoint
+                prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
             ] ;
             frame:ofGripper <system/gripper/5#it>
         ] ;
@@ -216,7 +216,7 @@ INSERT
                 qudt:hasQuantityKind quantitykind:PositionVector ;
                 qudt:hasUnit unit:MilliM ;
                 qudt:value ( ?gripper_6_position_x ?gripper_6_position_y ) ;
-                prov:wasDerivedFrom pos:gripperFrameReferencePoint
+                prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
             ] ;
             frame:ofGripper <system/gripper/6#it>
         ] ;
@@ -253,7 +253,7 @@ INSERT
                 qudt:hasQuantityKind quantitykind:PositionVector ;
                 qudt:hasUnit unit:MilliM ;
                 qudt:value ( ?gripper_7_position_x ?gripper_7_position_y ) ;
-                prov:wasDerivedFrom pos:gripperFrameReferencePoint
+                prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
             ] ;
             frame:ofGripper <system/gripper/7#it>
         ] ;
@@ -290,7 +290,7 @@ INSERT
                 qudt:hasQuantityKind quantitykind:PositionVector ;
                 qudt:hasUnit unit:MilliM ;
                 qudt:value ( ?gripper_8_position_x ?gripper_8_position_y ) ;
-                prov:wasDerivedFrom pos:gripperFrameReferencePoint
+                prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
             ] ;
             frame:ofGripper <system/gripper/8#it>
         ] ;
@@ -389,8 +389,8 @@ WHERE
     BIND(60 AS ?gripper_7_pressing_setpoint)
 
     # Gripper 8: position in millimeters and setpoints for each activity.
-    BIND(100.0 AS ?gripper_8_position_x)
-    BIND(210.0 AS ?gripper_8_position_y)
+    BIND(-100.0 AS ?gripper_8_position_x)
+    BIND(-210.0 AS ?gripper_8_position_y)
     BIND(60 AS ?gripper_8_gripping_setpoint)
     BIND(60 AS ?gripper_8_heating_setpoint)
     BIND(60 AS ?gripper_8_pressing_setpoint)

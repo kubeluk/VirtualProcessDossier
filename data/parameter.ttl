@@ -266,7 +266,7 @@
                 sh:description "Heating device to which this target temperature applies."@en ;
                 sh:nodeKind sh:IRI ;
                 # Device IRIs follow the example; their oven links are absent in system.ttl.
-                sh:in ( <system/heating-device/1#it> <system/heating-device/2#it> ) ;
+                sh:in ( <system/heater/1#it> <system/heater/2#it> ) ;
                 sh:minCount 1 ;
                 sh:maxCount 1
             ]
@@ -522,8 +522,8 @@ param:decimalShape
         sh:path prov:wasDerivedFrom ;
         sh:name "Reference point"@en ;
         sh:description "Gripper frame reference point from which the position coordinates are measured."@en ;
-        sh:hasValue pos:gripperFrameReferencePoint ;
-        sh:defaultValue pos:gripperFrameReferencePoint ;
+        sh:hasValue <http://purl.org/for/system/frame#referencePoint> ;
+        sh:defaultValue <http://purl.org/for/system/frame#referencePoint> ;
         sh:maxCount 1
     ] ;
     sh:property [

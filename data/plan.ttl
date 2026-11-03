@@ -26,7 +26,7 @@
             qudt:hasQuantityKind quantitykind:PositionVector ;
             qudt:hasUnit unit:MilliM ;
             qudt:value ( 210.0 100.0 ) ;
-            prov:wasDerivedFrom pos:gripperFrameReferencePoint
+            prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
         ] ;
         frame:ofGripper <system/gripper/1#it>
     ] ;
@@ -63,7 +63,7 @@
             qudt:hasQuantityKind quantitykind:PositionVector ;
             qudt:hasUnit unit:MilliM ;
             qudt:value ( 210.0 -100.0 ) ;
-            prov:wasDerivedFrom pos:gripperFrameReferencePoint
+            prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
         ] ;
         frame:ofGripper <system/gripper/2#it>
     ] ;
@@ -100,7 +100,7 @@
             qudt:hasQuantityKind quantitykind:PositionVector ;
             qudt:hasUnit unit:MilliM ;
             qudt:value ( -210.0 100.0 ) ;
-            prov:wasDerivedFrom pos:gripperFrameReferencePoint
+            prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
         ] ;
         frame:ofGripper <system/gripper/3#it>
     ] ;
@@ -137,7 +137,7 @@
             qudt:hasQuantityKind quantitykind:PositionVector ;
             qudt:hasUnit unit:MilliM ;
             qudt:value ( -210.0 -100.0 ) ;
-            prov:wasDerivedFrom pos:gripperFrameReferencePoint
+            prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
         ] ;
         frame:ofGripper <system/gripper/4#it>
     ] ;
@@ -174,7 +174,7 @@
             qudt:hasQuantityKind quantitykind:PositionVector ;
             qudt:hasUnit unit:MilliM ;
             qudt:value ( 100.0 210.0 ) ;
-            prov:wasDerivedFrom pos:gripperFrameReferencePoint
+            prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
         ] ;
         frame:ofGripper <system/gripper/5#it>
     ] ;
@@ -211,7 +211,7 @@
             qudt:hasQuantityKind quantitykind:PositionVector ;
             qudt:hasUnit unit:MilliM ;
             qudt:value ( -100.0 210.0 ) ;
-            prov:wasDerivedFrom pos:gripperFrameReferencePoint
+            prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
         ] ;
         frame:ofGripper <system/gripper/6#it>
     ] ;
@@ -248,7 +248,7 @@
             qudt:hasQuantityKind quantitykind:PositionVector ;
             qudt:hasUnit unit:MilliM ;
             qudt:value ( 100.0 -210.0 ) ;
-            prov:wasDerivedFrom pos:gripperFrameReferencePoint
+            prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
         ] ;
         frame:ofGripper <system/gripper/7#it>
     ] ;
@@ -284,8 +284,8 @@
             a qudt:Quantity ;
             qudt:hasQuantityKind quantitykind:PositionVector ;
             qudt:hasUnit unit:MilliM ;
-            qudt:value ( 100.0 210.0 ) ;
-            prov:wasDerivedFrom pos:gripperFrameReferencePoint
+            qudt:value ( -100.0 -210.0 ) ;
+            prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
         ] ;
         frame:ofGripper <system/gripper/8#it>
     ] ;
@@ -341,7 +341,7 @@
             qudt:hasUnit unit:DEG_C ;
             qudt:value 280.0
         ] ;
-        oven:atField <system/ir-field/1#it>
+        oven:atField <system/field/1#it>
     ] ;
     oven:fieldTargetTemperature [
         oven:fieldTarget [
@@ -350,7 +350,7 @@
             qudt:hasUnit unit:DEG_C ;
             qudt:value 280.0
         ] ;
-        oven:atField <system/ir-field/2#it>
+        oven:atField <system/field/2#it>
     ] ;
     oven:fieldTargetTemperature [
         oven:fieldTarget [
@@ -359,7 +359,7 @@
             qudt:hasUnit unit:DEG_C ;
             qudt:value 280.0
         ] ;
-        oven:atField <system/ir-field/3#it>
+        oven:atField <system/field/3#it>
     ] ;
     oven:fieldTargetTemperature [
         oven:fieldTarget [
@@ -368,7 +368,7 @@
             qudt:hasUnit unit:DEG_C ;
             qudt:value 280.0
         ] ;
-        oven:atField <system/ir-field/4#it>
+        oven:atField <system/field/4#it>
     ] ;
     oven:fieldTargetTemperature [
         oven:fieldTarget [
@@ -377,7 +377,7 @@
             qudt:hasUnit unit:DEG_C ;
             qudt:value 280.0
         ] ;
-        oven:atField <system/ir-field/5#it>
+        oven:atField <system/field/5#it>
     ] ;
     oven:fieldTargetTemperature [
         oven:fieldTarget [
@@ -386,7 +386,7 @@
             qudt:hasUnit unit:DEG_C ;
             qudt:value 280.0
         ] ;
-        oven:atField <system/ir-field/6#it>
+        oven:atField <system/field/6#it>
     ] ;
     oven:fieldTargetTemperature [
         oven:fieldTarget [
@@ -395,7 +395,7 @@
             qudt:hasUnit unit:DEG_C ;
             qudt:value 280.0
         ] ;
-        oven:atField <system/ir-field/7#it>
+        oven:atField <system/field/7#it>
     ] ;
     oven:fieldTargetTemperature [
         oven:fieldTarget [
@@ -404,7 +404,7 @@
             qudt:hasUnit unit:DEG_C ;
             qudt:value 280.0
         ] ;
-        oven:atField <system/ir-field/8#it>
+        oven:atField <system/field/8#it>
     ] ;
     oven:heatingDeviceTargetTemperature [
         oven:deviceTemperature [
@@ -413,7 +413,7 @@
             qudt:hasUnit unit:DEG_C ;
             qudt:value 300.0
         ] ;
-        oven:atDevice <system/heating-device/1#it>
+        oven:atDevice <system/heater/1#it>
     ] ;
     oven:heatingDeviceTargetTemperature [
         oven:deviceTemperature [
@@ -422,7 +422,7 @@
             qudt:hasUnit unit:DEG_C ;
             qudt:value 300.0
         ] ;
-        oven:atDevice <system/heating-device/2#it>
+        oven:atDevice <system/heater/2#it>
     ] .
 
 # Pressing

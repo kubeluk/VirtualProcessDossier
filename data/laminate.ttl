@@ -388,6 +388,7 @@ param:tapeStack a rdf:Property ;
 ## Reference point
 
 <laminate/1#origin>
+    a for:ReferencePoint ;
     rdfs:label "Laminate Reference Point"@en ;
     rdfs:comment "Die Mitte des Laminats bildet den Bezugspunkt für die Positionen der Greiferpunkte."@de .
 
