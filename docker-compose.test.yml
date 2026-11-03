@@ -1,0 +1,10 @@
+services:
+  fuseki-test:
+    image: stain/jena-fuseki:5.1.0
+    ports:
+      - '127.0.0.1:${TEST_FUSEKI_PORT:-3330}:3030'
+    environment:
+      ADMIN_PASSWORD: admin
+      JVM_ARGS: -Xmx1g
+    tmpfs:
+      - /fuseki

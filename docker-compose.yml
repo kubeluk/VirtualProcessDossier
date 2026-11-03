@@ -1,33 +1,38 @@
 services:
   ui:
     build: .
+    environment:
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
     ports:
-      - "8080:80"
+      - '${UI_PORT:-8080}:80'
     depends_on:
-      - jena
+      seed:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   jena:
     image: stain/jena-fuseki:5.1.0
     ports:
-      - "3030:3030"
+      - '${FUSEKI_PORT:-3030}:3030'
     environment:
-      - ADMIN_PASSWORD=admin
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
       - JVM_ARGS=-Xmx2g
     volumes:
       - jena-data:/fuseki
     restart: unless-stopped
 
   seed:
-    image: curlimages/curl:latest
+    build:
+      context: .
+      target: seed
     depends_on:
       - jena
     environment:
-      - ADMIN_PASSWORD=admin
-    volumes:
-      - ./data:/data:ro
-    entrypoint: ["sh", "/data/seed.sh"]
-    restart: "no"
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      - FUSEKI_URL=http://jena:3030
+      - FUSEKI_DATASET=vpd
+      - PUBLIC_BASE_URL=${PUBLIC_BASE_URL:-http://localhost:8080}
+    restart: 'no'
 
 volumes:
   jena-data:

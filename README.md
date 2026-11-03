@@ -1,96 +1,88 @@
-# Virtual Process Dossier (VPD)
+# Virtual Process Dossier
 
-A web application that lets non-expert users browse, document, and trace manufacturing process data stored in a Knowledge Graph. It abstracts RDF/SPARQL complexity behind a clean UI backed by [Apache Jena Fuseki](https://jena.apache.org/documentation/fuseki2/).
+VPD lets manufacturing users prepare production runs and explore their recorded context without writing SPARQL.
 
-## What it does
+The overview connects production runs, input laminates, machine initialization settings, equipment, observations, and external datasets. Run preparation uses a four-step wizard: choose defaults or copy a run, confirm the laminate, configure the three machines, and review the initialization. The demonstrator records execution afterwards.
 
-- **Data Catalog** — browse datasets produced by manufacturing steps; filter by keyword, workflow run, or workflow model
-- **Workflow Models** — define reusable process templates as hierarchical step trees (sequential / parallel) using the [WiLD](http://purl.org/wild/vocab) ontology
-- **Workflow Runs** — register executions of a model; track activity state; attach observation datasets to individual steps
-- **Activity Library** — maintain a library of reusable atomic activities with linked systems and inputs
-- **System Library** — manage machine/station hierarchies (`ssn:System`, `sosa:Sensor`, `sosa:Actuator`) with arbitrary sub-system nesting
+## Start with example data
 
-All data is stored as RDF (Turtle) in Fuseki and queried via SPARQL. Ontologies used: [DCAT 3](https://www.w3.org/TR/vocab-dcat-3/), [SOSA/SSN](https://www.w3.org/TR/vocab-ssn/), [PROV-O](https://www.w3.org/TR/prov-o/), [WiLD](http://purl.org/wild/vocab), [QUDT](https://qudt.org/).
-
-## Prerequisites
-
-- [Docker](https://docs.docker.com/get-docker/) and Docker Compose — for the recommended setup
-- [Node.js](https://nodejs.org/) 18+ and npm — only needed for local development
-
-## Quick start (Docker)
-
-```bash
+```sh
 docker compose up --build
 ```
 
-| Service | URL |
-|---------|-----|
-| VPD UI | http://localhost:8080 |
-| Jena Fuseki admin | http://localhost:3030 (admin / admin) |
+- UI: http://localhost:8080
+- Fuseki: http://localhost:3030 (development credentials: admin / admin)
 
-The `seed` service automatically creates two Fuseki datasets and loads sample data on first start:
+On an empty store, the seed service validates and loads the examples before starting the UI. It creates two **different** run identities: the supplied completed example and a remapped initialized example. Three additional, explicitly synthetic datasets demonstrate connected provenance, with small downloadable files served by the UI. The original standalone catalog examples retain their missing execution context.
 
-- **`vpd`** — application data seeded from `data/catalog.ttl`
-- **`qudt`** — static QUDT units and quantity kinds (read-only)
+Existing nonempty stores are preserved. The seed does not migrate older models or replace existing records. To explicitly reset this project's development data:
 
-Seeding is skipped on subsequent starts if data already exists. To reset to a clean state:
-
-```bash
-docker compose down -v   # removes the jena-data volume
+```sh
+docker compose down -v
 docker compose up --build
 ```
 
-## Local development
+The reset deletes this Compose project's data volume. To use another port/origin, set `UI_PORT`, `FUSEKI_PORT`, and `PUBLIC_BASE_URL` before startup. Set `PUBLIC_BASE_URL` to the public UI origin so synthetic file links resolve correctly. `ADMIN_PASSWORD` configures the development Fuseki administrator.
 
-```bash
-npm install
-npm run dev   # http://localhost:5173
+## Develop locally
+
+Use Node 22 and npm.
+
+```sh
+npm ci
+docker compose up -d jena seed
+npm run dev
 ```
 
-The Vite dev server proxies `/sparql` and `/update` to `http://localhost:3030`. Fuseki must be running separately — the easiest way is to start only the backend services:
+Vite proxies `/sparql` and `/update` to the `vpd` dataset on localhost:3030. Vite and nginx attach the Fuseki write credentials on the server; credentials are never included in the SPA bundle. Set `ADMIN_PASSWORD` consistently when changing the development administrator password. Copy `.env.example` when overriding endpoints. For another local Fuseki, set `FUSEKI_PROXY_TARGET` and, if needed, `FUSEKI_DATASET` when starting Vite.
 
-```bash
-docker compose up jena seed
+```sh
+npm run build
+npm run lint
+npm test
 ```
 
-### Environment variables
+Lint is read-only. Unit and Vue component tests cover RDF serialization, shape validation, list handling, defaults, copying, and machine forms.
 
-Copy `.env.example` to `.env` and adjust if your Fuseki runs elsewhere:
+## Verify the triple-store contract
 
-```
-VITE_SPARQL_ENDPOINT=http://localhost:3030/vpd/sparql
-VITE_SPARQL_UPDATE_ENDPOINT=http://localhost:3030/vpd/update
-```
+The integration suite creates a uniquely named dataset on an isolated Fuseki instance and removes that dataset afterwards. It does not use the application's `vpd` dataset.
 
-### Other commands
-
-```bash
-npm run build   # type-check + production build
-npm run lint    # ESLint with auto-fix
+```sh
+docker compose -p vpd-tests -f docker-compose.test.yml up -d
+npm run test:integration
+docker compose -p vpd-tests -f docker-compose.test.yml down
 ```
 
-## Tech stack
+The test Fuseki listens on localhost:3330. Set `FUSEKI_URL` to use another test instance and `ADMIN_PASSWORD` if needed.
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | Vue 3 (Composition API), TypeScript, Vite |
-| State | Pinia |
-| Routing | Vue Router |
-| HTTP | Axios |
-| Backend | Apache Jena Fuseki 5.1 |
-| Container | Docker Compose (nginx + Fuseki + curl seed) |
+Tests compare the UI's generated RDF with the supplied initialization snapshot and plans using RDF dataset canonicalization, independently query the resulting triples, verify retry safety, execute the demonstrator update templates against UI-created identities, and check provenance-aware discovery.
 
-## Project structure
+Browser end-to-end testing is intentionally left to the user. See [the competency coverage and manual checks](data/docs/ui-verification.md).
 
-```
-src/
-  services/    # SPARQL query/update helpers
-  stores/      # Pinia stores (catalog, workflow, graph config)
-  components/  # Reusable modals and recursive tree nodes
-  views/       # One view per route
-data/
-  catalog.ttl       # Sample DCAT dataset seed
-  unit.ttl          # QUDT unit definitions
-  quantitykind.ttl  # QUDT quantity-kind definitions
-  seed.sh           # Init script run by the seed service
-```
+## Model and implementation
+
+The authoritative model is under [data](data), including the parameter shapes, material shapes, example snapshots, and SPARQL templates. The original examples are unchanged.
+
+- A run selects its laminate through `for:workflowInitialization/for:laminate`.
+- Initialization creates 43 activity instances for the supplied model and three fresh plans, all initialized.
+- Plans link through `for:initialization` and `for:initialized`, retaining quantities, units, component references, and ordered RDF lists.
+- Datasets link to generating observations through `prov:wasGeneratedBy`; observations supply sensor, measured property, feature of interest, and workflow membership.
+- Specified settings and expected sensor configuration are distinct from recorded execution facts.
+- Initialization writes no execution times, completed states, output-part assumptions, or observations.
+
+Source layout:
+
+| Directory             | Responsibility                                                         |
+| --------------------- | ---------------------------------------------------------------------- |
+| `src/domain`          | RDF terms, list traversal, workflow structure, initialization contract |
+| `src/services`        | SPARQL repositories, filtering, pagination, guarded writes             |
+| `src/stores`          | Cached reference data and explicit refresh                             |
+| `src/components`      | Machine forms, context links, recursive metadata and process views     |
+| `src/views`           | Overview, browsing, entity detail, run preparation                     |
+| `scripts/seed.ts`     | Validated, non-destructive startup seeding                             |
+| `data/demo`           | Supplemental synthetic dataset metadata                                |
+| `public/example-data` | Synthetic downloadable example files                                   |
+| `tests`               | Unit, component, and real-Fuseki integration tests                     |
+
+The UI retains no legacy workflow, equipment, activity, or dataset authoring editors. Saved runs are read-only; copy their settings to prepare another run.

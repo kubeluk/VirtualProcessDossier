@@ -1,615 +1,352 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { computed, shallowRef, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useWorkflowStore, type RunDetail } from '@/stores/workflow'
-import { useMaterialStore } from '@/stores/material'
-import AddDatasetModal from '@/components/AddDatasetModal.vue'
-import RunActivityNode from '@/components/RunActivityNode.vue'
-
-const route = useRoute()
-const router = useRouter()
-const workflowStore = useWorkflowStore()
-const materialStore = useMaterialStore()
-
-const run = ref<RunDetail | null>(null)
-const loading = ref(true)
-const error = ref<string | null>(null)
-const rootExpanded = ref(true)
-
-// Inline edit
-const editingRun = ref(false)
-const runTitleInput = ref('')
-const runDescInput = ref('')
-const savingRun = ref(false)
-const saveRunError = ref<string | null>(null)
-
-// Activity to highlight/open from external navigation (e.g. dossier click)
-const openActivityUri = ref<string | undefined>(undefined)
-
-// Add dataset modal
-const showAddModal = ref(false)
-const addToStepUri = ref<string | undefined>(undefined)
-
-onMounted(async () => {
-  const uri = route.query.uri as string
-  if (!uri) {
-    router.replace({ name: 'workflows' })
+import { useKnowledgeStore } from '../stores/knowledge'
+import { useLoad } from '../composables/useLoad'
+import { repository } from '../services/repository'
+import {
+  NS,
+  Store,
+  merge,
+  label,
+  value,
+  typed,
+  isType,
+  dateTime,
+  interval,
+  objects,
+} from '../domain/rdf'
+import { workflowTree, runLaminate, runActivities, datasetsFor, flatten } from '../domain/model'
+import { copySettings } from '../domain/initialization'
+import { observationExpectations } from '../domain/expectations'
+import AsyncState from '../components/AsyncState.vue'
+import EntityLink from '../components/EntityLink.vue'
+import AllMetadata from '../components/AllMetadata.vue'
+import StateBadge from '../components/StateBadge.vue'
+import ActivityTree from '../components/ActivityTree.vue'
+import MachineParameters from '../components/MachineParameters.vue'
+import LaminateSummary from '../components/LaminateSummary.vue'
+const route = useRoute(),
+  router = useRouter(),
+  knowledge = useKnowledgeStore(),
+  context = shallowRef(new Store()),
+  observationSearch = ref('')
+const uri = computed(() => String(route.query.uri ?? ''))
+const tab = computed(() =>
+  ['overview', 'process', 'parameters', 'observations', 'metadata'].includes(
+    String(route.query.tab),
+  )
+    ? String(route.query.tab)
+    : 'overview',
+)
+let serial = 0
+const { loading, error, reload } = useLoad(async () => {
+  const current = ++serial
+  await knowledge.loadReferences()
+  if (!uri.value) {
+    context.value = new Store()
     return
   }
-  const targetActivity = route.query.openActivity as string | undefined
-  if (targetActivity) openActivityUri.value = targetActivity
+  const graph = await repository.getRunContext(uri.value)
+  if (current === serial) context.value = graph
+}, [() => uri.value, () => knowledge.revision])
+const g = computed(() => merge(knowledge.references, context.value))
+const model = computed(() => value(g.value, uri.value, NS.wild + 'workflowInstanceOf'))
+const tree = computed(() => workflowTree(g.value, model.value))
+const laminate = computed(() => runLaminate(g.value, uri.value))
+const observations = computed(() =>
+  runActivities(g.value, uri.value).filter((t) => isType(g.value, t, NS.sosa + 'Observation')),
+)
+const filteredObservations = computed(() =>
+  observations.value.filter((t) => {
+    const fields = [
+      label(g.value, value(g.value, t, NS.wild + 'activityInstanceOf')),
+      ...[
+        NS.sosa + 'madeBySensor',
+        NS.sosa + 'observedProperty',
+        NS.sosa + 'hasFeatureOfInterest',
+      ].map((p) => label(g.value, value(g.value, t, p))),
+    ]
+    return fields.join(' ').toLowerCase().includes(observationSearch.value.toLowerCase())
+  }),
+)
+const datasets = computed(() => typed(context.value, NS.dcat + 'Dataset'))
+const expectedObservations = computed(() =>
+  tree.value
+    ? flatten(tree.value).filter((node) => observationExpectations.has(node.uri)).length
+    : 0,
+)
+const settings = computed(() => {
   try {
-    run.value = await workflowStore.fetchRun(uri)
-    if (!run.value) error.value = 'Run not found.'
-    if (targetActivity) {
-      await nextTick()
-      document.querySelector(`[data-actinst]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    return { draft: copySettings(g.value, uri.value, knowledge.references, 'read-only'), error: '' }
+  } catch (e) {
+    return {
+      draft: undefined,
+      error: e instanceof Error ? e.message : 'Initialization settings are incomplete.',
     }
-  } catch {
-    error.value = 'Failed to load run.'
-  } finally {
-    loading.value = false
   }
 })
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })
-}
-
-function openDataset(uri: string) {
-  router.push({ name: 'dataset', query: { uri } })
-}
-
-function openAddModal(modelActivityUri: string) {
-  addToStepUri.value = modelActivityUri
-  showAddModal.value = true
-}
-
-async function onDatasetCreated(uri: string) {
-  const runUri = route.query.uri as string
-  run.value = await workflowStore.fetchRun(runUri)
-  router.push({ name: 'dataset', query: { uri } })
-}
-
-// Inline edit handlers
-function startEditRun() {
-  runTitleInput.value = run.value?.title ?? ''
-  runDescInput.value = run.value?.description ?? ''
-  saveRunError.value = null
-  editingRun.value = true
-}
-
-function cancelEditRun() {
-  editingRun.value = false
-}
-
-async function openDossier() {
-  if (!run.value) return
-  const partUri = await materialStore.fetchPartForRun(run.value.uri)
-  if (partUri) router.push({ name: 'dossier', query: { part: partUri } })
-}
-
-async function saveRun() {
-  if (!run.value) return
-  if (!runTitleInput.value.trim()) {
-    saveRunError.value = 'Title is required.'
-    return
-  }
-  savingRun.value = true
-  saveRunError.value = null
-  try {
-    await workflowStore.updateWorkflowInstance(
-      run.value.uri,
-      runTitleInput.value.trim(),
-      runDescInput.value.trim(),
-    )
-    run.value = await workflowStore.fetchRun(route.query.uri as string)
-    editingRun.value = false
-  } catch {
-    saveRunError.value = 'Failed to save. Please try again.'
-  } finally {
-    savingRun.value = false
-  }
+const processSteps = computed(
+  () => tree.value?.children.find((c) => c.type === 'sequential')?.children ?? [],
+)
+function selectTab(next: string) {
+  void router.replace({ query: { ...route.query, tab: next } })
 }
 </script>
-
 <template>
-  <main class="run-view">
-    <button
-      v-if="run"
-      class="back-link"
-      @click="router.push({ name: 'workflow', query: { uri: run.modelUri } })"
-    >
-      ← {{ run.modelTitle ?? 'Back to workflow' }}
-    </button>
-    <button v-else class="back-link" @click="router.push({ name: 'workflows' })">
-      ← Back to workflows
-    </button>
-
-    <div v-if="loading" class="state-message">Loading…</div>
-
-    <div v-else-if="error" class="state-message error">{{ error }}</div>
-
-    <template v-else-if="run">
-      <!-- Run header -->
-      <div class="run-header">
-        <p class="run-type-label">Workflow Run</p>
-
-        <!-- View mode -->
-        <template v-if="!editingRun">
-          <div class="run-title-row">
-            <h1 class="run-title">{{ run.title ?? '(untitled run)' }}</h1>
-            <button class="dossier-btn" @click="openDossier">Dossier →</button>
-            <button class="edit-btn" @click="startEditRun">Edit</button>
-          </div>
-          <p v-if="run.description" class="run-description">{{ run.description }}</p>
-          <div class="run-meta-row">
-            <span v-if="run.started" class="run-meta-item">Started {{ formatDate(run.started) }}</span>
-            <span
-              v-if="run.state"
-              class="run-state-badge"
-              :class="run.state === 'active' ? 'run-state-badge--active' : 'run-state-badge--done'"
-            >
-              {{ run.state }}
-            </span>
-          </div>
-        </template>
-
-        <!-- Edit mode -->
-        <template v-else>
-          <div class="edit-form">
-            <label class="edit-label" for="run-title">Title</label>
-            <input
-              id="run-title"
-              v-model="runTitleInput"
-              class="edit-input"
-              type="text"
-              placeholder="Run title"
-            />
-            <label class="edit-label" for="run-desc">Description</label>
-            <textarea
-              id="run-desc"
-              v-model="runDescInput"
-              class="edit-textarea"
-              rows="3"
-              placeholder="Optional description"
-            />
-            <p v-if="saveRunError" class="edit-error">{{ saveRunError }}</p>
-            <div class="edit-actions">
-              <button class="btn-save" :disabled="savingRun" @click="saveRun">
-                {{ savingRun ? 'Saving…' : 'Save' }}
-              </button>
-              <button class="btn-cancel" :disabled="savingRun" @click="cancelEditRun">Cancel</button>
-            </div>
-          </div>
-        </template>
-      </div>
-
-      <!-- Activity instances tree -->
-      <section class="instances-section">
-        <h2>Activity Instances</h2>
-
-        <div v-if="run.activityInstances.length === 0" class="state-message">
-          No activity instances found for this run.
+  <RouterLink to="/runs" class="back-link">← Production runs</RouterLink>
+  <AsyncState
+    :loading="loading"
+    :error="error"
+    :empty="!uri || !isType(context, uri, NS.wild + 'WorkflowInstance')"
+    @retry="reload"
+  >
+    <template #empty>Run not found.</template>
+    <div class="page-heading heading-with-action">
+      <div>
+        <div class="button-row">
+          <p class="eyebrow">Production run</p>
+          <StateBadge :state="value(g, uri, NS.wild + 'hasState')" />
         </div>
-
-        <template v-else>
-          <!-- Root behaviour badge — mirrors WorkflowView for consistency -->
-          <div class="root-behaviour-header">
-            <button
-              class="root-toggle"
-              :aria-label="rootExpanded ? 'Collapse' : 'Expand'"
-              @click="rootExpanded = !rootExpanded"
-            >
-              {{ rootExpanded ? '▼' : '▶' }}
-            </button>
-            <span
-              class="step-badge"
-              :class="run.rootType === 'ParallelActivity' ? 'step-badge--parallel' : 'step-badge--sequential'"
-            >
-              {{ run.rootType === 'ParallelActivity' ? '⟷ Parallel' : '↕ Sequential' }}
-            </span>
-            <span v-if="!rootExpanded" class="root-collapsed-hint">
-              {{ run.activityInstances.length }}
-              {{ run.activityInstances.length === 1 ? 'activity' : 'activities' }}
-            </span>
-          </div>
-
-          <div
-            v-if="rootExpanded"
-            class="instances-list"
-            :class="run.rootType === 'ParallelActivity' ? 'instances-list--parallel' : 'instances-list--sequential'"
-          >
-            <RunActivityNode
-              v-for="(inst, i) in run.activityInstances"
-              :key="inst.uri"
-              :inst="inst"
-              :index="i"
-              :total="run.activityInstances.length"
-              :context="run.rootType === 'ParallelActivity' ? 'parallel' : 'sequential'"
-              :open-activity-uri="openActivityUri"
-              @open-dataset="openDataset"
-              @add-dataset="openAddModal"
-            />
-          </div>
-        </template>
-      </section>
-
-      <!-- Cross-cutting datasets -->
-      <section class="cross-cutting-section">
-        <h2>Full-run Datasets</h2>
-        <p class="section-note">
-          These datasets cover the entire run and are not tied to a single activity.
+        <h1>{{ label(g, uri) }}</h1>
+        <p v-if="value(g, uri, NS.rdfs + 'comment')" class="lede">
+          {{ value(g, uri, NS.rdfs + 'comment') }}
         </p>
-        <div class="dataset-chips">
-          <button
-            v-for="ds in run.crossCuttingDatasets"
-            :key="ds.uri"
-            class="dataset-chip"
-            :title="ds.description ?? undefined"
-            @click="openDataset(ds.uri)"
-          >
-            {{ ds.title ?? ds.uri }}
+      </div>
+      <RouterLink :to="{ path: '/runs/new', query: { copy: uri } }" class="button secondary"
+        >Copy settings to a new run</RouterLink
+      >
+    </div>
+    <nav class="section-tabs" aria-label="Run sections">
+      <button
+        v-for="section in [
+          { id: 'overview', name: 'Overview' },
+          { id: 'process', name: 'Process' },
+          { id: 'parameters', name: 'Parameters' },
+          { id: 'observations', name: 'Observations & datasets' },
+          { id: 'metadata', name: 'All metadata' },
+        ]"
+        :key="section.id"
+        :aria-current="tab === section.id ? 'page' : undefined"
+        :class="{ active: tab === section.id }"
+        @click="selectTab(section.id)"
+      >
+        {{ section.name }}
+      </button>
+    </nav>
+    <template v-if="tab === 'overview'">
+      <div class="run-overview-grid">
+        <section class="panel">
+          <p class="eyebrow">Input & procedure</p>
+          <h2>Manufacturing context</h2>
+          <dl class="compact-facts">
+            <dt>Laminate</dt>
+            <dd><EntityLink :uri="laminate" :graph="g" kind="laminate" /></dd>
+            <dt>Process</dt>
+            <dd><EntityLink :uri="model" :graph="g" kind="process" /></dd>
+            <dt>Recorded start</dt>
+            <dd>{{ dateTime(value(g, uri, NS.prov + 'startedAtTime')) }}</dd>
+            <dt>Recorded end</dt>
+            <dd>{{ dateTime(value(g, uri, NS.prov + 'endedAtTime')) }}</dd>
+            <dt>Duration</dt>
+            <dd>
+              {{
+                interval(
+                  value(g, uri, NS.prov + 'startedAtTime'),
+                  value(g, uri, NS.prov + 'endedAtTime'),
+                )
+              }}
+            </dd>
+          </dl>
+        </section>
+        <section class="panel">
+          <p class="eyebrow">Recorded measurements</p>
+          <div class="measurement-count">
+            <strong>{{ datasets.length }}</strong
+            ><span>datasets</span>
+          </div>
+          <p>
+            {{ observations.length }} recorded observations · {{ expectedObservations }} planned
+            observation activities
+          </p>
+          <p class="small muted">A recorded observation can have no dataset attached.</p>
+          <button class="button secondary" @click="selectTab('observations')">
+            Explore observations & datasets →
           </button>
-          <button class="dataset-chip dataset-chip--add" @click="openAddModal(run.modelUri)">
-            + Add dataset
+        </section>
+      </div>
+      <section class="panel">
+        <div class="section-heading">
+          <h2>Through the process</h2>
+          <button class="text-button" @click="selectTab('process')">Inspect activities →</button>
+        </div>
+        <ol class="process-overview">
+          <li v-for="step in processSteps" :key="step.uri">
+            <span>{{ step.label }}</span
+            ><StateBadge
+              :state="
+                value(
+                  g,
+                  runActivities(g, uri).find(
+                    (i) => value(g, i, NS.wild + 'activityInstanceOf') === step.uri,
+                  ),
+                  NS.wild + 'hasState',
+                )
+              "
+            />
+          </li>
+        </ol>
+        <p class="small muted">
+          Gripping and its sensor observations form a parallel branch throughout the process.
+        </p>
+      </section>
+      <section class="panel">
+        <div class="section-heading">
+          <h2>Initialization settings</h2>
+          <button class="text-button" @click="selectTab('parameters')">
+            View all parameters →
           </button>
         </div>
+        <div v-if="settings.draft" class="fact-strip">
+          <div>
+            <small>Oven threshold</small
+            ><strong>{{ settings.draft.oven.threshold }} <span>°C</span></strong>
+          </div>
+          <div>
+            <small>Stable holding time</small
+            ><strong>{{ settings.draft.oven.holding }} <span>s</span></strong>
+          </div>
+          <div>
+            <small>Press force</small
+            ><strong>{{ settings.draft.press.force }} <span>kN</span></strong>
+          </div>
+          <div>
+            <small>Grippers</small><strong>{{ settings.draft.grippers.length }}</strong>
+          </div>
+        </div>
+        <p v-else class="muted">{{ settings.error }}</p>
+        <p class="small muted">
+          These are specified settings. Actual measurements are linked through observations.
+        </p>
+      </section>
+      <section v-if="laminate" class="panel">
+        <h2>Input laminate</h2>
+        <EntityLink :uri="laminate" :graph="g" kind="laminate" /><LaminateSummary :uri="laminate" />
       </section>
     </template>
-  </main>
-
-  <AddDatasetModal
-    v-if="run"
-    v-model="showAddModal"
-    :preselected-step-uri="addToStepUri"
-    :workflow-instance-uri="run.uri"
-    @created="onDatasetCreated"
-  />
+    <template v-else-if="tab === 'process'"
+      ><p class="section-intro">
+        Expand a stage to inspect its state, timing, equipment, parameters, and datasets.
+      </p>
+      <ActivityTree
+        v-if="tree"
+        :node="tree"
+        :graph="g"
+        :run="uri"
+        :selected="String(route.query.activity ?? route.query.openActivity ?? '')"
+      />
+      <p v-else class="notice">The process definition is not recorded.</p></template
+    >
+    <template v-else-if="tab === 'parameters'"
+      ><p class="section-intro">
+        Initialization settings are preserved as recorded. To reuse them, copy them into a new run.
+      </p>
+      <MachineParameters v-if="settings.draft" :model-value="settings.draft" readonly />
+      <div v-else class="notice">
+        {{ settings.error }}
+        <div v-for="activity in runActivities(g, uri)" :key="activity.value">
+          <EntityLink
+            v-for="plan in objects(g, activity, NS.for + 'initialization')"
+            :key="plan.value"
+            :uri="plan.value"
+            :graph="g"
+          />
+        </div></div
+    ></template>
+    <template v-else-if="tab === 'observations'">
+      <div class="section-heading">
+        <div>
+          <h2>Recorded observations</h2>
+          <p class="muted">
+            {{ observations.length }} observations · {{ datasets.length }} datasets
+          </p>
+        </div>
+        <RouterLink :to="{ path: '/datasets', query: { run: uri } }"
+          >Open datasets in catalog →</RouterLink
+        >
+      </div>
+      <label class="search-field panel"
+        ><span class="sr-only">Search observations</span
+        ><input
+          v-model="observationSearch"
+          type="search"
+          placeholder="Find a sensor, property, or observed entity…"
+      /></label>
+      <p v-if="!observations.length" class="notice">
+        No observations have been recorded for this run. Planned observation activities are
+        available in Process.
+      </p>
+      <div v-else class="panel table-panel">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Observation</th>
+                <th>Sensor</th>
+                <th>Property / entity</th>
+                <th>Recorded interval</th>
+                <th>Datasets</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="obs in filteredObservations" :key="obs.value">
+                <td>
+                  <EntityLink
+                    :uri="obs.value"
+                    :text="label(g, value(g, obs, NS.wild + 'activityInstanceOf'))"
+                    :graph="g"
+                  />
+                </td>
+                <td><EntityLink :uri="value(g, obs, NS.sosa + 'madeBySensor')" :graph="g" /></td>
+                <td>
+                  <EntityLink
+                    :uri="value(g, obs, NS.sosa + 'observedProperty')"
+                    :graph="g"
+                  /><br /><EntityLink
+                    :uri="value(g, obs, NS.sosa + 'hasFeatureOfInterest')"
+                    :graph="g"
+                  /><small>{{
+                    value(g, obs, NS.sosa + 'hasFeatureOfInterest') === laminate
+                      ? 'Direct laminate observation'
+                      : 'Equipment observation'
+                  }}</small>
+                </td>
+                <td>
+                  {{ dateTime(value(g, obs, NS.prov + 'startedAtTime'))
+                  }}<small>{{
+                    interval(
+                      value(g, obs, NS.prov + 'startedAtTime'),
+                      value(g, obs, NS.prov + 'endedAtTime'),
+                    )
+                  }}</small>
+                </td>
+                <td>
+                  <div v-for="dataset in datasetsFor(g, obs)" :key="dataset.value">
+                    <EntityLink :uri="dataset.value" :graph="g" kind="dataset" />
+                  </div>
+                  <span v-if="!datasetsFor(g, obs).length" class="muted small"
+                    >No dataset attached</span
+                  >
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <p v-if="observations.length && !filteredObservations.length" class="notice">
+        No observations match your search.
+      </p>
+    </template>
+    <AllMetadata v-else :uri="uri" expanded />
+  </AsyncState>
 </template>
-
-<style scoped>
-.run-view {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 2rem 1.5rem;
-}
-
-.back-link {
-  background: none;
-  border: none;
-  padding: 0;
-  font-size: 0.9rem;
-  color: var(--color-primary);
-  cursor: pointer;
-  margin-bottom: 1.5rem;
-  display: inline-block;
-}
-
-.back-link:hover {
-  color: var(--color-primary-dark);
-}
-
-.state-message {
-  padding: 2rem;
-  text-align: center;
-  color: #6b7280;
-}
-
-.state-message.error {
-  color: #dc2626;
-}
-
-/* Run header */
-.run-header {
-  margin-bottom: 2rem;
-}
-
-.run-type-label {
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: #6b7280;
-  margin: 0 0 0.35rem;
-}
-
-.run-title-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  margin-bottom: 0.5rem;
-}
-
-.run-title {
-  font-size: 1.75rem;
-  font-weight: 600;
-  color: var(--color-text);
-  margin: 0;
-  flex: 1;
-}
-
-.run-description {
-  font-size: 1rem;
-  color: #4b5563;
-  line-height: 1.6;
-  margin: 0 0 0.5rem;
-}
-
-.run-meta-row {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.run-meta-item {
-  font-size: 0.8rem;
-  color: #6b7280;
-}
-
-.run-state-badge {
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 0.15rem 0.55rem;
-  border-radius: 20px;
-  text-transform: lowercase;
-}
-
-.run-state-badge--active {
-  background: #f0fdf4;
-  color: #166534;
-  border: 1px solid #bbf7d0;
-}
-
-.run-state-badge--done {
-  background: #f3f4f6;
-  color: #6b7280;
-  border: 1px solid #e5e7eb;
-}
-
-/* Inline edit */
-.dossier-btn {
-  background: #fefce8;
-  border: 1px solid #fde68a;
-  border-radius: 6px;
-  padding: 0.25rem 0.75rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #b45309;
-  cursor: pointer;
-  font-family: inherit;
-  flex-shrink: 0;
-  margin-top: 0.4rem;
-  transition: background 0.15s, border-color 0.15s;
-}
-
-.dossier-btn:hover {
-  background: #fef3c7;
-  border-color: #fbbf24;
-}
-
-.edit-btn {
-  background: none;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 0.25rem 0.75rem;
-  font-size: 0.8rem;
-  color: var(--color-primary);
-  cursor: pointer;
-  font-family: inherit;
-  flex-shrink: 0;
-  margin-top: 0.4rem;
-}
-
-.edit-btn:hover {
-  background: #f0fdf4;
-  border-color: var(--color-primary);
-}
-
-.edit-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.edit-label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #374151;
-}
-
-.edit-input,
-.edit-textarea {
-  font-family: inherit;
-  font-size: 0.9rem;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 0.45rem 0.6rem;
-  color: var(--color-text);
-  background: #fff;
-  resize: vertical;
-}
-
-.edit-input:focus,
-.edit-textarea:focus {
-  outline: none;
-  border-color: var(--color-primary);
-}
-
-.edit-error {
-  font-size: 0.8rem;
-  color: #dc2626;
-  margin: 0;
-}
-
-.edit-actions {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 0.25rem;
-}
-
-.btn-save {
-  background: var(--color-primary);
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 0.4rem 1rem;
-  font-size: 0.875rem;
-  font-family: inherit;
-  cursor: pointer;
-}
-
-.btn-save:hover:not(:disabled) {
-  background: var(--color-primary-dark);
-}
-
-.btn-save:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-cancel {
-  background: none;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 0.4rem 1rem;
-  font-size: 0.875rem;
-  font-family: inherit;
-  cursor: pointer;
-  color: #374151;
-}
-
-.btn-cancel:hover:not(:disabled) {
-  background: #f3f4f6;
-}
-
-.btn-cancel:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* Sections */
-section {
-  margin-bottom: 2.5rem;
-}
-
-section h2 {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--color-text);
-  margin: 0 0 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.section-note {
-  font-size: 0.875rem;
-  color: #6b7280;
-  margin: 0 0 0.75rem;
-}
-
-/* Root behaviour header (mirrors WorkflowView) */
-.root-behaviour-header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-}
-
-.root-toggle {
-  background: none;
-  border: none;
-  padding: 0;
-  font-size: 0.65rem;
-  color: #6b7280;
-  cursor: pointer;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.root-toggle:hover {
-  color: var(--color-text);
-}
-
-.step-badge {
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 0.15rem 0.55rem;
-  border-radius: 20px;
-  letter-spacing: 0.02em;
-}
-
-.step-badge--parallel {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
-}
-
-.step-badge--sequential {
-  background: #f0fdf4;
-  color: #166534;
-  border: 1px solid #bbf7d0;
-}
-
-.root-collapsed-hint {
-  font-size: 0.78rem;
-  color: #9ca3af;
-}
-
-.instances-list {
-  display: flex;
-  flex-direction: column;
-}
-
-.instances-list--sequential {
-  padding: 0.75rem 1rem;
-  border-left: 3px solid #bbf7d0;
-  border-radius: 0 6px 6px 0;
-  background: #f0fdf4;
-}
-
-.instances-list--parallel {
-  padding: 0.75rem 1rem;
-  border-left: 3px solid #bfdbfe;
-  border-radius: 0 6px 6px 0;
-  background: #f8faff;
-}
-
-/* Dataset chips (cross-cutting section) */
-.dataset-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.4rem;
-}
-
-.dataset-chip {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #166534;
-  border-radius: 20px;
-  padding: 0.3rem 0.85rem;
-  font-size: 0.8rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-  font-family: inherit;
-}
-
-.dataset-chip:hover {
-  background: #dcfce7;
-  border-color: #86efac;
-}
-
-.dataset-chip--add {
-  background: #fff;
-  border-style: dashed;
-  color: var(--color-primary);
-}
-
-.dataset-chip--add:hover {
-  background: #f0fdf4;
-  border-color: var(--color-primary);
-}
-</style>
