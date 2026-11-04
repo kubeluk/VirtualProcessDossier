@@ -3,13 +3,14 @@ import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useKnowledgeStore } from '../stores/knowledge'
 import { useLoad } from '../composables/useLoad'
-import { repository } from '../services/repository'
+import { repository, LAMINATE_IN_USE_MESSAGE } from '../services/repository'
 import { NS, typed, label, value, merge, isType } from '../domain/rdf'
 import {
   MODEL,
   createDraft,
   copySettings,
   draftErrors,
+  initializationIris,
   validateInitialization,
 } from '../domain/initialization'
 import type { InitializationDraft } from '../domain/types'
@@ -27,6 +28,7 @@ const draft = ref<InitializationDraft>(),
   source = ref('defaults'),
   copyRun = ref(''),
   choices = ref<{ uri: string; label: string }[]>([]),
+  usedLaminates = ref(new Set<string>()),
   materialSearch = ref('')
 const saving = ref(false),
   errors = ref<string[]>([]),
@@ -34,6 +36,12 @@ const saving = ref(false),
   storageError = ref(''),
   submitted = ref(false)
 const steps = ['Starting point', 'Run & laminate', 'Machine settings', 'Review & initialize']
+const laminateUnavailable = computed(() => usedLaminates.value.has(draft.value?.laminate ?? ''))
+async function loadLaminateAvailability() {
+  usedLaminates.value = new Set(
+    await repository.usedLaminates(draft.value ? initializationIris(draft.value).run : undefined),
+  )
+}
 function goToStep(next: number) {
   step.value = next
   errors.value = []
@@ -42,13 +50,17 @@ async function loadCopy(uri: string) {
   if (!draft.value) return
   const graph = merge(knowledge.references, await repository.getRunContext(uri))
   draft.value = copySettings(graph, uri, knowledge.references, draft.value.id)
+  draft.value.laminate = ''
   source.value = 'copy'
   copyRun.value = uri
 }
 const { loading, error, reload } = useLoad(async () => {
   await knowledge.loadReferences()
   choices.value = (await repository.facets()).filter((f) => f.kind === 'run')
-  if (draft.value) return
+  if (draft.value) {
+    await loadLaminateAvailability()
+    return
+  }
   if (!isType(knowledge.references, MODEL, NS.wild + 'WorkflowModel'))
     throw new Error('The stamp-forming process is not available. Check the example data.')
   let saved: { draft: InitializationDraft; step: number; machine: string } | undefined
@@ -84,8 +96,9 @@ const { loading, error, reload } = useLoad(async () => {
     draft.value.laminate = String(route.query.laminate)
     step.value = 2
   }
+  await loadLaminateAvailability()
   if (route.query.copy || route.query.laminate) await router.replace({ path: '/runs/new' })
-})
+}, [() => knowledge.revision])
 const laminates = computed(() =>
   typed(knowledge.references, NS.for + 'Laminate').filter((t) =>
     (label(knowledge.references, t) + ' ' + value(knowledge.references, t, NS.dct + 'identifier'))
@@ -121,6 +134,10 @@ async function next() {
   errors.value = []
   saving.value = true
   try {
+    if (step.value >= 2) {
+      await loadLaminateAvailability()
+      if (laminateUnavailable.value) throw new Error(LAMINATE_IN_USE_MESSAGE)
+    }
     if (step.value === 1) {
       if (source.value === 'copy') {
         if (!copyRun.value) throw new Error('Choose a previous run.')
@@ -157,6 +174,8 @@ async function submit() {
   errors.value = []
   saving.value = true
   try {
+    await loadLaminateAvailability()
+    if (laminateUnavailable.value) throw new Error(LAMINATE_IN_USE_MESSAGE)
     const uri = await repository.initializeRun(draft.value, knowledge.references)
     submitted.value = true
     try {
@@ -170,6 +189,8 @@ async function submit() {
     errors.value = [
       e instanceof Error ? e.message : 'Could not initialize the run. Your draft is retained.',
     ]
+    if (e instanceof Error && e.message === LAMINATE_IN_USE_MESSAGE)
+      usedLaminates.value = new Set([...usedLaminates.value, draft.value.laminate])
   } finally {
     saving.value = false
   }
@@ -191,6 +212,9 @@ async function submit() {
         <button class="text-button" @click="reset">Start a fresh draft</button>
       </p>
       <p v-if="storageError" class="notice small">{{ storageError }}</p>
+      <p v-if="laminateUnavailable" class="notice error" role="alert">
+        {{ LAMINATE_IN_USE_MESSAGE }}
+      </p>
       <ol class="wizard-steps" aria-label="Preparation steps">
         <li
           v-for="(title, index) in steps"
@@ -234,7 +258,7 @@ async function submit() {
                 ><input v-model="source" type="radio" value="copy" name="source" /><span
                   ><strong>Copy a previous run</strong
                   ><small
-                    >Reuse its specified settings, then confirm the laminate and review every
+                    >Reuse its specified settings, then choose an unused laminate and review every
                     machine.</small
                   ></span
                 ></label
@@ -273,6 +297,9 @@ async function submit() {
               </label>
             </div>
             <h3>Choose a laminate</h3>
+            <p class="small muted">
+              A laminate can only be used to initialize one run, including completed runs.
+            </p>
             <label class="search-field"
               ><span class="sr-only">Search laminates</span
               ><input
@@ -285,18 +312,23 @@ async function submit() {
                 v-for="laminate in laminates"
                 :key="laminate.value"
                 class="choice-card"
-                :class="{ chosen: draft.laminate === laminate.value }"
+                :class="{
+                  chosen: draft.laminate === laminate.value,
+                  unavailable: usedLaminates.has(laminate.value),
+                }"
                 ><input
                   v-model="draft.laminate"
                   type="radio"
                   :value="laminate.value"
                   name="laminate"
+                  :disabled="usedLaminates.has(laminate.value)"
                   @change="draft.laminateConfirmed = false"
                 /><span
                   ><strong>{{ label(knowledge.references, laminate) }}</strong
-                  ><small>{{
-                    value(knowledge.references, laminate, NS.dct + 'identifier')
-                  }}</small></span
+                  ><small>{{ value(knowledge.references, laminate, NS.dct + 'identifier') }}</small>
+                  <small v-if="usedLaminates.has(laminate.value)">
+                    Already assigned to a run · unavailable
+                  </small></span
                 ></label
               >
             </div>
@@ -307,8 +339,11 @@ async function submit() {
                 kind="laminate"
                 text="Open laminate details"
               /><LaminateSummary :uri="draft.laminate" /><label class="confirm-field"
-                ><input v-model="draft.laminateConfirmed" type="checkbox" />I confirm this is the
-                input laminate for this run.</label
+                ><input
+                  v-model="draft.laminateConfirmed"
+                  type="checkbox"
+                  :disabled="laminateUnavailable"
+                />I confirm this is the input laminate for this run.</label
               >
             </div>
           </section>
@@ -401,7 +436,11 @@ async function submit() {
               ← Back</button
             ><button v-else class="text-button" type="button" @click="reset">Reset draft</button
             ><span class="small muted">Draft retained in this tab</span
-            ><button type="submit" class="button primary">
+            ><button
+              type="submit"
+              class="button primary"
+              :disabled="step > 1 && laminateUnavailable"
+            >
               {{
                 saving
                   ? 'Working…'

@@ -23,6 +23,7 @@ import {
 import { seed } from '../../scripts/seed'
 import { canonical, expectedInitialization, initializationSource, sourceRun } from '../helpers'
 import { runActivities, runLaminate, datasetsFor } from '../../src/domain/model'
+import type { InitializationDraft } from '../../src/domain/types'
 const url = process.env.FUSEKI_URL ?? 'http://localhost:3330'
 const dataset = 'vpd_it_' + Date.now()
 const headers = {
@@ -48,6 +49,17 @@ afterAll(async () => {
   await fetch(url + '/$/datasets/' + dataset, { method: 'DELETE', headers })
 })
 const all = () => repo.construct('CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }')
+async function useFreshLaminate(draft: InitializationDraft) {
+  const laminate = BASE + 'laminate/' + draft.id + '#it'
+  const material = new Store(
+    refs
+      .getQuads(n(BASE + 'laminate/1#it'), null, null, null)
+      .map((quad) => df.quad(n(laminate), quad.predicate, quad.object, quad.graph)),
+  )
+  await repo.update('INSERT DATA { ' + serialize(material) + ' }')
+  refs = merge(refs, material)
+  draft.laminate = laminate
+}
 describe('real Fuseki reads', () => {
   it('seeds two distinct run states and skips repeated startup without duplicating blank nodes', async () => {
     const before = await canonical(await all())
@@ -139,6 +151,7 @@ describe('real Fuseki writes', () => {
     )
     draft.name = 'UI dataset protocol'
     draft.laminateConfirmed = true
+    await useFreshLaminate(draft)
     const publicRepository = new KnowledgeRepository(repo.queryEndpoint, repo.updateEndpoint)
     await expect(publicRepository.initializeRun(draft, refs)).rejects.toThrow('(401)')
     await expect(repo.initializeRun(draft, refs)).resolves.toBe(initializationIris(draft).run)
@@ -166,13 +179,14 @@ describe('real Fuseki writes', () => {
     }
   })
   it('writes precisely the supplied initialization contract and leaves the existing graph unchanged', async () => {
-    const before = await all(),
-      source = await initializationSource()
+    const source = await initializationSource()
     const draft = copySettings(merge(refs, source), sourceRun, refs, 'integration-create')
     draft.name = 'Integration "quoted"\nrun'
     draft.notes = 'Backslash \\ Unicode ä'
     draft.laminateConfirmed = true
-    const generated = buildInitialization(draft, refs),
+    await useFreshLaminate(draft)
+    const before = await all(),
+      generated = buildInitialization(draft, refs),
       expected = expectedInitialization(source, generated, draft)
     const uri = await repo.initializeRun(draft, refs)
     expect(uri).toBe(initializationIris(draft).run)
@@ -203,6 +217,7 @@ describe('real Fuseki writes', () => {
     )
     draft.name = 'Retry test'
     draft.laminateConfirmed = true
+    await useFreshLaminate(draft)
     let failed = false
     const loseResponse: typeof fetch = async (input, init) => {
       const response = await authorizedFetch(input, init)
@@ -230,6 +245,7 @@ describe('real Fuseki writes', () => {
     )
     draft.name = 'Concurrent retry'
     draft.laminateConfirmed = true
+    await useFreshLaminate(draft)
     const before = await all(),
       graph = buildInitialization(draft, refs)
     const result = await Promise.all([
@@ -238,6 +254,54 @@ describe('real Fuseki writes', () => {
     ])
     expect(result[0]).toBe(result[1])
     expect(await canonical(await all())).toBe(await canonical(merge(before, graph)))
+  })
+  it.each(['initialized', 'done'])(
+    'rejects reuse of a laminate from an %s run without writing triples',
+    async (state) => {
+      const draft = copySettings(
+        merge(refs, await repo.getRunContext(sourceRun)),
+        sourceRun,
+        refs,
+        'integration-used-' + state,
+      )
+      draft.name = 'Laminate reuse test'
+      draft.laminateConfirmed = true
+      await useFreshLaminate(draft)
+      const existing = BASE + 'workflow/instance/used-' + state + '#it'
+      await repo.update(`INSERT DATA {
+      <${existing}> a wild:WorkflowInstance ; wild:hasState wild:${state} ;
+        for:workflowInitialization [ for:laminate <${draft.laminate}> ] .
+    }`)
+      expect(await repo.usedLaminates()).toContain(draft.laminate)
+      expect(await repo.usedLaminates(existing)).not.toContain(draft.laminate)
+      const before = await canonical(await all())
+      await expect(repo.initializeRun(draft, refs)).rejects.toThrow('Choose an unused laminate')
+      expect(await canonical(await all())).toBe(before)
+    },
+  )
+  it('allows only one of two different workflows to claim the same unused laminate', async () => {
+    const first = copySettings(
+      merge(refs, await repo.getRunContext(sourceRun)),
+      sourceRun,
+      refs,
+      'integration-competing-first',
+    )
+    first.name = 'First workflow'
+    first.laminateConfirmed = true
+    await useFreshLaminate(first)
+    const second = { ...first, id: 'integration-competing-second', name: 'Second workflow' }
+    const before = await all()
+    const results = await Promise.allSettled([
+      repo.initializeRun(first, refs),
+      repo.initializeRun(second, refs),
+    ])
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1)
+    const rejected = results.find((result) => result.status === 'rejected')!
+    expect(rejected.reason.message).toContain('Choose an unused laminate')
+    const winner = results[0]!.status === 'fulfilled' ? first : second
+    expect(await canonical(await all())).toBe(
+      await canonical(merge(before, buildInitialization(winner, refs))),
+    )
   })
   it('accepts demonstrator completion and dataset templates while preserving UI-created identities', async () => {
     const draft = copySettings(
@@ -248,6 +312,7 @@ describe('real Fuseki writes', () => {
     )
     draft.name = 'Execution interoperability'
     draft.laminateConfirmed = true
+    await useFreshLaminate(draft)
     const run = await repo.initializeRun(draft, refs)
     const graph = await repo.getRunContext(run)
     const heating = runActivities(graph, run).find(

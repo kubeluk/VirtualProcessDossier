@@ -1194,6 +1194,12 @@ details[open] > summary {
   background: #f5f9ee;
   box-shadow: 0 0 0 1px #7da16d;
 }
+.choice-card.unavailable {
+  background: #f4f4f0;
+  border-color: #dce4d4;
+  box-shadow: none;
+  cursor: not-allowed;
+}
 .choice-card input {
   margin-top: 4px;
 }

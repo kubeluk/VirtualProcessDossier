@@ -42,9 +42,13 @@ const { loading, error, reload } = useLoad(async () => {
         <h1>{{ label(knowledge.references, uri) }}</h1>
         <p class="lede">Material, geometry, and manufacturing history.</p>
       </div>
-      <RouterLink :to="{ path: '/runs/new', query: { laminate: uri } }" class="button primary"
+      <RouterLink
+        v-if="!total"
+        :to="{ path: '/runs/new', query: { laminate: uri } }"
+        class="button primary"
         >Prepare run with this laminate</RouterLink
       >
+      <p v-else class="notice small">Already assigned to a run · unavailable for a new run.</p>
     </div>
     <section class="panel"><LaminateSummary :uri="uri" expanded /></section>
     <section class="panel">

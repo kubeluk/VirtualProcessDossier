@@ -34,7 +34,10 @@ export function expectedInitialization(
   draft: InitializationDraft,
 ): Store {
   const ids = initializationIris(draft),
-    substitutions = new Map([[sourceRun, ids.run]])
+    substitutions = new Map([
+      [sourceRun, ids.run],
+      [BASE + 'laminate/1#it', draft.laminate],
+    ])
   for (const old of runActivities(source, sourceRun)) {
     const model = value(source, old, NS.wild + 'activityInstanceOf')
     const replacement = runActivities(actual, ids.run).find(

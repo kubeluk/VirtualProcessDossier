@@ -29,6 +29,9 @@ import type {
 interface Binding {
   [key: string]: { value: string; type: string }
 }
+export const LAMINATE_IN_USE_MESSAGE =
+  'This laminate has already been used to initialize another run. Choose an unused laminate.'
+
 export class KnowledgeRepository {
   constructor(
     readonly queryEndpoint = '/sparql',
@@ -246,17 +249,32 @@ export class KnowledgeRepository {
     } GROUP BY ?kind`)
     return Object.fromEntries(rows.map((b) => [b.kind!.value, Number(b.count!.value)]))
   }
+  async usedLaminates(excludeRun?: string): Promise<string[]> {
+    const rows = await this.select(`SELECT DISTINCT ?laminate WHERE {
+      ?run a wild:WorkflowInstance ; for:workflowInitialization/for:laminate ?laminate .
+      ${excludeRun ? `FILTER(?run != ${safeIri(excludeRun)})` : ''}
+    }`)
+    return rows.map((row) => row.laminate!.value)
+  }
   async initializeRun(draft: InitializationDraft, references: Store): Promise<string> {
     const graph = await validateInitialization(draft, references)
     const run = initializationIris(draft).run
+    const conflictingRun = `?otherRun a wild:WorkflowInstance ;
+      for:workflowInitialization/for:laminate ${safeIri(draft.laminate)} .
+      FILTER(?otherRun != ${safeIri(run)})`
     await this.update(
-      `INSERT { ${serialize(graph)} } WHERE { FILTER NOT EXISTS { ${safeIri(run)} ?p ?o } }`,
+      `INSERT { ${serialize(graph)} } WHERE {
+        FILTER NOT EXISTS { ${safeIri(run)} ?p ?o }
+        FILTER NOT EXISTS { ${conflictingRun} }
+      }`,
     )
-    const stored = merge(references, await this.getRunContext(run))
-    if (!(await this.ask(`ASK { ${safeIri(run)} a wild:WorkflowInstance }`)))
+    if (!(await this.ask(`ASK { ${safeIri(run)} a wild:WorkflowInstance }`))) {
+      if (await this.ask(`ASK { ${conflictingRun} }`)) throw new Error(LAMINATE_IN_USE_MESSAGE)
       throw new Error(
         'The run could not be confirmed. Your draft has been kept; retry with the same identity.',
       )
+    }
+    const stored = merge(references, await this.getRunContext(run))
     const saved = copySettings(stored, run, references, draft.id)
     saved.name = label(stored, run)
     saved.notes = value(stored, run, NS.rdfs + 'comment')
