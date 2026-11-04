@@ -1,0 +1,50 @@
+BASE <http://purl.org/for/>
+
+PREFIX prov: <http://www.w3.org/ns/prov#>
+PREFIX wild: <http://purl.org/wild/vocab#>
+PREFIX sosa: <http://www.w3.org/ns/sosa/>
+PREFIX activity: <http://purl.org/for/activity#>
+PREFIX prop: <http://purl.org/for/property#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+# Record a completed execution of activity:observeGripperAngle2.
+# Link its generated datasets separately with template-insert-dataset.rq.
+# Insert a new sensor activity instance for this execution.
+INSERT
+{
+    ?sensor_activity_instance
+        a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+        prov:startedAtTime ?start_time ;
+        prov:endedAtTime ?end_time ;
+        wild:activityInstanceOf ?activity ;
+        wild:inWorkflowInstance ?workflow_instance ;
+        wild:hasState wild:done ;
+        sosa:madeBySensor ?sensor ;
+        sosa:hasFeatureOfInterest ?observed_entity ;
+        sosa:observedProperty ?observed_property_of_entity .
+}
+WHERE
+{
+    # TODO: replace 000 with a fresh UUID for every execution.
+    # Reuse this instance IRI when linking its generated datasets.
+    BIND(<activity/instance/000-observe-gripper-angle-2#it> AS ?sensor_activity_instance)
+
+    # TODO: use the actual start and end times of this execution.
+    BIND("2026-09-24T10:00:00Z"^^xsd:dateTime AS ?start_time)
+    BIND("2026-09-24T10:02:34Z"^^xsd:dateTime AS ?end_time)
+
+    # Reference the activity exactly as declared in data/workflow.ttl.
+    BIND(activity:observeGripperAngle2 AS ?activity)
+
+    # TODO: use the existing workflow instance IRI for this manufacturing run.
+    BIND(<workflow/instance/000#it> AS ?workflow_instance)
+
+    # Sensor from data/system.ttl.
+    BIND(<sensor/angle/2#it> AS ?sensor)
+
+    # Observe gripper 2, as declared in data/system.ttl.
+    BIND(<system/gripper/2#it> AS ?observed_entity)
+
+    # Observable property from data/properties.ttl.
+    BIND(prop:angle AS ?observed_property_of_entity)
+}
