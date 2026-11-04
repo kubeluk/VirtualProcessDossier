@@ -1,8 +1,8 @@
-/** Expand scientific notation for display without rounding the recorded digits. */
+/** Show plain numbers without redundant zeros or rounding the recorded digits. */
 export function formatNumber(value: string): string {
-  const match = value.match(/^([+-]?)(\d*\.?\d+)[eE]([+-]?\d+)$/)
+  const match = value.match(/^([+-]?)(\d*\.?\d+)(?:[eE]([+-]?\d+))?$/)
   if (!match || !Number.isFinite(Number(value))) return value
-  const [, sign, mantissa, exponent] = match as [string, string, string, string]
+  const [, sign, mantissa, exponent = '0'] = match as [string, string, string, string?]
   const digits = mantissa.replace('.', '')
   const point =
     (mantissa.includes('.') ? mantissa.indexOf('.') : mantissa.length) + Number(exponent)
@@ -12,5 +12,5 @@ export function formatNumber(value: string): string {
   else decimal = digits.slice(0, point) + '.' + digits.slice(point)
   decimal = decimal.replace(/^0+(?=\d)/, '')
   if (decimal.includes('.')) decimal = decimal.replace(/0+$/, '').replace(/\.$/, '')
-  return (sign === '-' ? '-' : '') + decimal
+  return (sign === '-' && decimal !== '0' ? '-' : '') + decimal
 }

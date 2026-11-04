@@ -18,6 +18,7 @@ import AsyncState from '../components/AsyncState.vue'
 import EntityLink from '../components/EntityLink.vue'
 import LaminateSummary from '../components/LaminateSummary.vue'
 import MachineParameters from '../components/MachineParameters.vue'
+import { formatNumber } from '../utils/formatNumber'
 const SESSION_KEY = 'vpd.initialization.v1'
 const route = useRoute(),
   router = useRouter(),
@@ -403,16 +404,19 @@ async function submit() {
                   id: 'heating',
                   name: 'Infrared oven',
                   summary:
-                    draft.oven.threshold +
+                    formatNumber(draft.oven.threshold) +
                     ' °C threshold · ' +
-                    draft.oven.holding +
+                    formatNumber(draft.oven.holding) +
                     ' s holding time',
                 },
                 {
                   id: 'pressing',
                   name: 'Press',
                   summary:
-                    draft.press.force + ' kN · ' + draft.press.steps.length + ' closing steps',
+                    formatNumber(draft.press.force) +
+                    ' kN · ' +
+                    draft.press.steps.length +
+                    ' closing steps',
                 },
               ]"
               :key="item.id"

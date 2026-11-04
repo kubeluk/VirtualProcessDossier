@@ -19,7 +19,7 @@ The graph-equivalence oracle comes from the supplied RDF files, not the writer u
 
 The user performs browser testing; no automated end-to-end suite is included.
 
-1. Start a fresh development Compose project. Confirm two separate runs (completed and initialized), one laminate, and five datasets. Open a synthetic dataset's file link.
+1. Start a fresh development Compose project. Confirm two separate runs (completed and initialized), each linked to its own laminate, and five datasets. Open a synthetic dataset's file link.
 2. Open the completed run. Check its input laminate, execution interval, parameter overview, process structure, 29 recorded observations, and three connected datasets.
 3. Expand gripping observations by angle, force, and extension. Navigate from an observation to its sensor, observed property, observed entity, and dataset.
 4. Start from defaults. Confirm the laminate, enter all eight gripper positions, change machine settings, reorder the closing profile, review, and initialize. The result must remain initialized with no recorded execution times.
@@ -29,7 +29,7 @@ The user performs browser testing; no automated end-to-end suite is included.
 8. Browse the laminate's six tape layers in order, fiber orientations, composition, dimensions, and eight needle points with the laminate reference.
 9. Open a standalone catalog dataset. It must explicitly show missing run and sensor context without assigning the example run.
 10. Use dataset and run filters; reload their URLs and navigate back. Confirm the selected context and filters remain understandable.
-11. Explore All metadata, nested quantities, ordered lists, and referring records. Check direct links, missing resources, and empty results.
+11. Explore All metadata, nested quantities, ordered lists, and referring records. Compare both seed laminates: dimensions should use the same plain number formatting and expand inline, with an Open record link for quantities that have a URI. Expand Value type to inspect the recorded numeric literal. Check direct links, missing resources, and empty results.
 12. Repeat the main navigation and preparation flow on a narrow screen and with a keyboard.
 
 ## Startup behavior

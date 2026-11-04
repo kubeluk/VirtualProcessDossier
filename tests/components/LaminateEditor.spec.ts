@@ -82,7 +82,7 @@ describe('laminate editor', () => {
     const { wrapper, router } = await setup('/laminate/edit?uri=' + encodeURIComponent(uri))
     expect(wrapper.findAll('h3')).toHaveLength(14)
     expect((wrapper.get('input[aria-label="Length *"]').element as HTMLInputElement).value).toBe(
-      '400.0',
+      '400',
     )
     await wrapper.get('input[aria-label="Laminate name"]').setValue('Edited')
     await wrapper.get('form').trigger('submit')

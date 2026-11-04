@@ -117,6 +117,15 @@ export class KnowledgeRepository {
       .construct(`CONSTRUCT { ?s ?p ?o . ?related ?incoming ${entity} . ?related rdfs:label ?label . ?related dct:title ?title }
       WHERE {
         { ${entity} (!<urn:vpd:unused>)* ?s . FILTER(?s = ${entity} || isBlank(?s)) ?s ?p ?o }
+        UNION {
+          { BIND(${entity} AS ?quantity) }
+          UNION {
+            ${entity} (!<urn:vpd:unused>)* ?owner . FILTER(?owner = ${entity} || isBlank(?owner))
+            ?owner ?property ?quantity .
+          }
+          ?quantity qudt:value ?value .
+          ?quantity (qudt:value|rdf:rest)* ?s . ?s ?p ?o
+        }
         UNION { { SELECT ?related ?incoming WHERE { ?related ?incoming ${entity} } ORDER BY STR(?related) STR(?incoming) LIMIT 50 OFFSET ${Math.max(0, incomingPage) * 50} }
           OPTIONAL { ?related rdfs:label ?label } OPTIONAL { ?related dct:title ?title }
         }

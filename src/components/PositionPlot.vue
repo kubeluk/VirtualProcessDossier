@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { formatNumber } from '../utils/formatNumber'
 const props = defineProps<{
   points: { name: string; x: string; y: string }[]
   title: string
@@ -35,7 +36,9 @@ const y = (v: string | number) =>
       <text :x="x(0) + 8" y="20">Y</text>
       <g v-for="(point, index) in points" :key="point.name">
         <circle :cx="x(point.x)" :cy="y(point.y)" r="7" class="plot-point">
-          <title>{{ point.name }}: {{ point.x }}, {{ point.y }} mm</title>
+          <title>
+            {{ point.name }}: {{ formatNumber(point.x) }}, {{ formatNumber(point.y) }} mm
+          </title>
         </circle>
         <text :x="x(point.x) + 10" :y="y(point.y) - 9">{{ index + 1 }}</text>
       </g>

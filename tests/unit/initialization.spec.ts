@@ -24,7 +24,8 @@ import {
   validatePlans,
   settingsFingerprint,
 } from '../../src/domain/initialization'
-import { flatten, workflowTree, runActivities } from '../../src/domain/model'
+import { flatten, workflowTree, runActivities, runLaminate } from '../../src/domain/model'
+import { readLaminate } from '../../src/domain/laminate'
 import { observationExpectations } from '../../src/domain/expectations'
 import {
   references,
@@ -247,6 +248,64 @@ describe('RDF integrity and seed fixtures', () => {
     )
     expect(typed(graph, NS.dcat + 'Dataset')).toHaveLength(5)
     expect(value(graph, BASE + 'observation#ex1', NS.wild + 'inWorkflowInstance')).toBe('')
+  })
+  it('seeds an independent laminate for the initialized workflow without execution facts', async () => {
+    const graph = await buildSeedGraph()
+    const run = BASE + 'workflow/instance/demo-initialized#it'
+    const original = BASE + 'laminate/1#it'
+    const laminate = BASE + 'laminate/demo-initialized#it'
+    expect(typed(graph, NS.for + 'Laminate')).toHaveLength(2)
+    expect(runLaminate(graph, sourceRun)).toBe(original)
+    expect(runLaminate(graph, run)).toBe(laminate)
+    const material = readLaminate(graph, original)
+    expect(readLaminate(graph, laminate)).toMatchObject({
+      uri: laminate,
+      name: 'BASF PA6-GF60 (initialized example)',
+      identifier: 'demo-initialized',
+      length: '400',
+      width: '400',
+      thickness: '1.56',
+      layupName: material.layupName,
+      layers: material.layers,
+      needles: material.needles.map((point) => ({
+        ...point,
+        x: String(Number(point.x)),
+        y: String(Number(point.y)),
+      })),
+    })
+    for (const predicate of [
+      NS.geo + 'hasSize',
+      NS.param + 'hasNeedlePoint',
+      NS.prov + 'wasDerivedFrom',
+    ]) {
+      const originalResources = objects(graph, original, predicate).map((term) => term.value)
+      for (const resource of objects(graph, laminate, predicate))
+        expect(originalResources).not.toContain(resource.value)
+    }
+    expect(runActivities(graph, run)).toHaveLength(43)
+    for (const instance of [n(run), ...runActivities(graph, run)]) {
+      expect(value(graph, instance, NS.wild + 'hasState')).toBe(NS.wild + 'initialized')
+      expect(objects(graph, instance, NS.prov + 'startedAtTime')).toHaveLength(0)
+      expect(objects(graph, instance, NS.prov + 'endedAtTime')).toHaveLength(0)
+      expect(objects(graph, instance, NS.sosa + 'hasFeatureOfInterest')).toHaveLength(0)
+    }
+  })
+  it('rejects seed workflows that share a laminate', async () => {
+    const graph = await buildSeedGraph()
+    const initialization = object(
+      graph,
+      BASE + 'workflow/instance/demo-initialized#it',
+      NS.for + 'workflowInitialization',
+    )!
+    graph.removeQuads(graph.getQuads(initialization, n(NS.for + 'laminate'), null, null))
+    graph.addQuad(
+      initialization as ReturnType<typeof n>,
+      n(NS.for + 'laminate'),
+      n(BASE + 'laminate/1#it'),
+    )
+    await expect(validateSeedGraph(graph)).rejects.toThrow(
+      'A seed laminate is assigned to more than one workflow instance.',
+    )
   })
   it('rejects malformed seed values before they can be uploaded', async () => {
     const graph = await buildSeedGraph()

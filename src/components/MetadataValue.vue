@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { NS, objects, object, list, human, compact, quantity } from '../domain/rdf'
 import type { Store, Term } from '../domain/rdf'
 import EntityLink from './EntityLink.vue'
+import { formatNumber } from '../utils/formatNumber'
 const props = withDefaults(defineProps<{ graph: Store; term: Term; ancestors?: string[] }>(), {
   ancestors: () => [],
 })
@@ -26,17 +27,36 @@ const q = computed(() =>
     ? quantity(props.graph, props.term)
     : undefined,
 )
+const quantitySummary = computed(() =>
+  q.value
+    ? [q.value.value.split(', ').map(formatNumber).join(', '), q.value.unit]
+        .filter(Boolean)
+        .join(' ')
+    : 'Details',
+)
+const literalDisplay = computed(() => {
+  const term = props.term
+  if (
+    term.termType === 'Literal' &&
+    /^http:\/\/www\.w3\.org\/2001\/XMLSchema#(?:decimal|double|float|integer|int|long|short|byte|nonPositiveInteger|negativeInteger|nonNegativeInteger|positiveInteger|unsignedLong|unsignedInt|unsignedShort|unsignedByte)$/.test(
+      term.datatype.value,
+    )
+  )
+    return formatNumber(term.value)
+  return term.value
+})
 </script>
 <template>
   <span v-if="term.termType === 'Literal'" class="literal"
-    >{{ term.value }}<small v-if="term.language" class="muted"> [{{ term.language }}]</small>
+    >{{ literalDisplay }}<small v-if="term.language" class="muted"> [{{ term.language }}]</small>
     <details class="literal-type">
       <summary>Value type</summary>
       {{ compact(term.datatype.value) }}
+      <div v-if="literalDisplay !== term.value">Recorded value: {{ term.value }}</div>
     </details></span
   >
   <EntityLink
-    v-else-if="term.termType === 'NamedNode' && !isList"
+    v-else-if="term.termType === 'NamedNode' && !isList && !q"
     :uri="term.value"
     :graph="graph"
   />
@@ -46,8 +66,11 @@ const q = computed(() =>
     class="nested-metadata"
     @toggle="open = ($event.target as HTMLDetailsElement).open"
   >
-    <summary>{{ isList ? 'Ordered list' : q ? q.value + ' ' + q.unit : 'Details' }}</summary>
+    <summary>{{ isList ? 'Ordered list' : quantitySummary }}</summary>
     <template v-if="open">
+      <p v-if="term.termType === 'NamedNode'">
+        <EntityLink :uri="term.value" :graph="graph" text="Open record" />
+      </p>
       <p v-if="isList && listResult.error" class="error">{{ listResult.error }}</p>
       <ol v-else-if="isList">
         <li v-for="(item, index) in listResult.items" :key="index">

@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { formatNumber } from '../utils/formatNumber'
 const model = defineModel<string>({ required: true })
+const focused = ref(false)
 const displayValue = computed({
-  get: () => formatNumber(model.value),
+  get: () => (focused.value ? model.value : formatNumber(model.value)),
   set: (value: string) => {
     model.value = value
   },
@@ -24,6 +25,8 @@ defineProps<{ label: string; unit: string; readonly?: boolean; help?: string; co
         :inputmode="unit === 'unitless' ? 'numeric' : 'decimal'"
         :title="help"
         autocomplete="off"
+        @focus="focused = true"
+        @blur="focused = false"
       /><span>{{ unit }}</span></span
     >
     <small v-if="help && !compact" class="muted">{{ help }}</small>

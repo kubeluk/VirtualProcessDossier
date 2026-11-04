@@ -76,7 +76,8 @@ describe('real Fuseki reads', () => {
   })
   it('filters, counts, and paginates on the server without requiring complete provenance', async () => {
     expect((await repo.listRuns({ state: NS.wild + 'done' })).total).toBe(1)
-    expect((await repo.listRuns({ laminate: BASE + 'laminate/1#it' })).total).toBe(2)
+    expect((await repo.listRuns({ laminate: BASE + 'laminate/1#it' })).total).toBe(1)
+    expect((await repo.listRuns({ laminate: BASE + 'laminate/demo-initialized#it' })).total).toBe(1)
     expect((await repo.listRuns({ from: '2026-09-24', to: '2026-09-24' })).total).toBe(1)
     expect((await repo.listRuns({}, 1)).items).toHaveLength(1)
     expect((await repo.listRuns({ page: 1 }, 1)).items[0]?.uri).not.toBe(
@@ -117,6 +118,33 @@ describe('real Fuseki reads', () => {
     const standalone = await repo.getDatasetContext(BASE + 'dataset#ex1')
     expect(value(standalone, BASE + 'observation#ex1', NS.wild + 'inWorkflowInstance')).toBe('')
     expect(objects(standalone, BASE + 'dataset#ex1', NS.dcat + 'distribution')).toHaveLength(1)
+  })
+  it('loads linked quantity metadata and named coordinate lists without the reference cache', async () => {
+    await repo.update(`INSERT DATA {
+      <urn:test:metadata> geo:hasSize <urn:test:dimension>, [ qudt:value 400.0 ; qudt:hasUnit unit:MilliM ] ;
+        qudt:quantityValue <urn:test:position> ; rdfs:seeAlso <urn:test:linked-record> .
+      <urn:test:dimension> qudt:value "4.00e2"^^xsd:double ; qudt:hasUnit unit:MilliM .
+      <urn:test:position> qudt:value <urn:test:coordinate-x> ; qudt:hasUnit unit:MilliM .
+      <urn:test:coordinate-x> rdf:first 190.0 ; rdf:rest <urn:test:coordinate-y> .
+      <urn:test:coordinate-y> rdf:first -100.0 ; rdf:rest rdf:nil .
+      <urn:test:linked-record> rdfs:label "Separate linked record" .
+    }`)
+    const graph = await repo.getEntityMetadata('urn:test:metadata')
+    const sizes = objects(graph, 'urn:test:metadata', NS.geo + 'hasSize')
+    expect(sizes).toHaveLength(2)
+    for (const size of sizes) {
+      expect(Number(value(graph, size, NS.qudt + 'value'))).toBe(400)
+      expect(value(graph, size, NS.qudt + 'hasUnit')).toBe(NS.unit + 'MilliM')
+    }
+    const coordinates = list(graph, object(graph, 'urn:test:position', NS.qudt + 'value'))
+    expect(coordinates.map((term) => Number(term.value))).toEqual([190, -100])
+    expect(graph.getQuads(n('urn:test:linked-record'), null, null, null)).toHaveLength(0)
+    const position = await repo.getEntityMetadata('urn:test:position')
+    expect(
+      list(position, object(position, 'urn:test:position', NS.qudt + 'value')).map((term) =>
+        Number(term.value),
+      ),
+    ).toEqual([190, -100])
   })
   it('executes the supplied read-query contracts and preserves list, unit, and reference information', async () => {
     const readQuery = async (name: string) =>

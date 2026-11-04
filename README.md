@@ -13,7 +13,7 @@ docker compose up --build
 - UI: http://localhost:8080
 - Fuseki: http://localhost:3030 (development credentials: admin / admin)
 
-On an empty store, the seed service validates and loads the examples before starting the UI. It creates two **different** run identities: the supplied completed example and a remapped initialized example. Three additional, explicitly synthetic datasets demonstrate connected provenance, with small downloadable files served by the UI. The original standalone catalog examples retain their missing execution context.
+On an empty store, the seed service validates and loads the examples before starting the UI. It creates two **different** run identities: the supplied completed example and a remapped initialized example, each linked to its own laminate. Three additional, explicitly synthetic datasets demonstrate connected provenance, with small downloadable files served by the UI. The original standalone catalog examples retain their missing execution context.
 
 Existing nonempty stores are preserved. The seed does not migrate older models or replace existing records. To explicitly reset this project's development data:
 

@@ -3,6 +3,10 @@ import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
 import { BASE, NS, Store, df, n, parse, serialize, typed, value } from '../src/domain/rdf'
 import { SHAPES, validatePlans } from '../src/domain/initialization'
+import { buildLaminate, readLaminate } from '../src/domain/laminate'
+import { runLaminate } from '../src/domain/model'
+
+const readyLaminate = BASE + 'laminate/demo-initialized#it'
 
 export const seedFiles = [
   'workflow.ttl',
@@ -23,6 +27,7 @@ export function remapReadyGraph(graph: Store): Store {
     const iri = term.value
       .replace(BASE + 'workflow/instance/1#', BASE + 'workflow/instance/demo-initialized#')
       .replace(BASE + 'plan/1#', BASE + 'plan/demo-initialized#')
+      .replace(BASE + 'laminate/1#it', readyLaminate)
     return n(iri)
   }
   const ready = new Store(
@@ -45,6 +50,17 @@ export function remapReadyGraph(graph: Store): Store {
 export async function buildSeedGraph(publicBaseUrl = 'http://localhost:8080'): Promise<Store> {
   const graph = new Store()
   for (const file of seedFiles) graph.addQuads((await read(file)).getQuads(null, null, null, null))
+  graph.addQuads([
+    ...buildLaminate(
+      {
+        ...readLaminate(graph, BASE + 'laminate/1#it'),
+        uri: readyLaminate,
+        name: 'BASF PA6-GF60 (initialized example)',
+        identifier: 'demo-initialized',
+      },
+      graph,
+    ),
+  ])
   const source = new Store([...(await read('run-view-after-ui.ttl')), ...(await read('plan.ttl'))])
   graph.addQuads(remapReadyGraph(source).getQuads(null, null, null, null))
   const supplemental = await read('demo/connected-datasets.ttl')
@@ -82,9 +98,16 @@ export async function validateSeedGraph(graph: Store): Promise<void> {
   })
   const materials = await validator.validate({ dataset: graph })
   if (!materials.conforms) errors.push('The material examples do not satisfy the supplied shapes.')
+  const assignedLaminates = new Set<string>()
   for (const run of typed(graph, NS.wild + 'WorkflowInstance')) {
     if (graph.getObjects(run, n(NS.wild + 'hasState'), null).length !== 1)
       errors.push('A seed run has conflicting states.')
+    const laminate = runLaminate(graph, run.value)
+    if (laminate) {
+      if (assignedLaminates.has(laminate))
+        errors.push('A seed laminate is assigned to more than one workflow instance.')
+      assignedLaminates.add(laminate)
+    }
   }
   if (errors.length) throw new Error(errors.join('\n'))
 }
