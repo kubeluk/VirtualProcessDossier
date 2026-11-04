@@ -18,6 +18,13 @@ const route = useRoute(),
   router = useRouter(),
   knowledge = useKnowledgeStore()
 const editing = computed(() => route.path === '/laminate/edit')
+const runDraft = computed(() =>
+  !editing.value && typeof route.query.runDraft === 'string' ? route.query.runDraft : '',
+)
+const runPreparation = computed(() => ({
+  path: '/runs/new',
+  query: { runDraft: runDraft.value },
+}))
 const draft = ref<LaminateDraft>(),
   saving = ref(false),
   saveError = ref('')
@@ -63,7 +70,11 @@ async function save() {
   try {
     const uri = await repository.saveLaminate(draft.value, knowledge.references, editing.value)
     await knowledge.refresh()
-    await router.push({ path: '/laminate', query: { uri } })
+    await router.push(
+      runDraft.value
+        ? { ...runPreparation.value, query: { runDraft: runDraft.value, laminate: uri } }
+        : { path: '/laminate', query: { uri } },
+    )
   } catch (e) {
     saveError.value =
       e instanceof Error ? e.message : 'Could not save the laminate. Your inputs are retained.'
@@ -73,10 +84,15 @@ async function save() {
 }
 </script>
 <template>
-  <RouterLink to="/laminates" class="back-link">← Laminates</RouterLink>
+  <RouterLink :to="runDraft ? runPreparation : '/laminates'" class="back-link">
+    {{ runDraft ? '← Back to run preparation' : '← Laminates' }}
+  </RouterLink>
   <div class="page-heading">
     <p class="eyebrow">Material traceability</p>
     <h1>{{ editing ? 'Edit laminate' : 'Create laminate' }}</h1>
+    <p v-if="runDraft" class="lede">
+      Save this laminate to select it for the run you’re preparing. Your run draft is retained.
+    </p>
   </div>
   <AsyncState :loading="loading" :error="error" @retry="reload">
     <form v-if="draft" novalidate @submit.prevent="save">
@@ -216,12 +232,18 @@ async function save() {
         </section>
         <div class="wizard-actions">
           <RouterLink
-            :to="editing ? { path: '/laminate', query: { uri: draft.uri } } : '/laminates'"
+            :to="
+              runDraft
+                ? runPreparation
+                : editing
+                  ? { path: '/laminate', query: { uri: draft.uri } }
+                  : '/laminates'
+            "
             class="button secondary"
             >Cancel</RouterLink
           >
           <button class="button primary" type="submit">
-            {{ saving ? 'Saving…' : 'Save laminate' }}
+            {{ saving ? 'Saving…' : runDraft ? 'Save & use for run' : 'Save laminate' }}
           </button>
         </div>
       </fieldset>

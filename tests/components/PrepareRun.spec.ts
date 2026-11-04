@@ -4,10 +4,12 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import PrepareRunView from '../../src/views/PrepareRunView.vue'
+import LaminateEditorView from '../../src/views/LaminateEditorView.vue'
 import { repository } from '../../src/services/repository'
 import { useKnowledgeStore } from '../../src/stores/knowledge'
 import { BASE, NS, Store, merge, n, df } from '../../src/domain/rdf'
 import { copySettings, initializationIris } from '../../src/domain/initialization'
+import { buildLaminate } from '../../src/domain/laminate'
 import { references, initializationSource, sourceRun } from '../helpers'
 
 let refs: Store, source: Store
@@ -46,18 +48,21 @@ describe('run preparation lifecycle', () => {
     )
     return draft
   }
-  async function setup(query = '') {
+  async function setup(query = '', routed = false) {
     const pinia = createPinia()
     setActivePinia(pinia)
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [
         { path: '/runs/new', component: PrepareRunView },
+        { path: '/laminates/new', component: LaminateEditorView },
         { path: '/:pathMatch(.*)*', component: { template: '<div />' } },
       ],
     })
     await router.push('/runs/new' + query)
-    const wrapper = mount(PrepareRunView, { global: { plugins: [pinia, router] } })
+    const wrapper = mount(routed ? { template: '<RouterView />' } : PrepareRunView, {
+      global: { plugins: [pinia, router] },
+    })
     await flushPromises()
     return { wrapper, router }
   }
@@ -102,6 +107,100 @@ describe('run preparation lifecycle', () => {
     expect(wrapper.text()).toContain('Choose an unused laminate.')
     expect(wrapper.get('input[type="checkbox"]').attributes('disabled')).toBeDefined()
     expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeDefined()
+    wrapper.unmount()
+  })
+  it('creates and selects a laminate while retaining the run draft when all laminates are assigned', async () => {
+    const draft = restoreDraft(usedLaminate, 2)
+    vi.mocked(repository.usedLaminates).mockResolvedValue([usedLaminate, unusedLaminate])
+    const save = vi.spyOn(repository, 'saveLaminate').mockImplementation(async (laminate) => {
+      vi.mocked(repository.getReferenceGraph).mockResolvedValue(
+        merge(refs, buildLaminate(laminate, refs)),
+      )
+      return laminate.uri
+    })
+    const { wrapper, router } = await setup('', true)
+    expect(wrapper.text()).toContain('No unused laminates are available.')
+    await wrapper.get('input[aria-label="Run name"]').setValue('Run with a new laminate')
+    await wrapper.get('textarea[aria-label="Run notes"]').setValue('Retain my settings')
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Create a new laminate')!
+      .trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/laminates/new')
+    expect(router.currentRoute.value.query.runDraft).toBe(draft.id)
+    expect(wrapper.text()).toContain('Save & use for run')
+    await wrapper.get('input[aria-label="Laminate name"]').setValue('New run input')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    const laminate = save.mock.calls[0]![0]
+    expect(router.currentRoute.value.path).toBe('/runs/new')
+    expect(router.currentRoute.value.query).toEqual({})
+    expect(wrapper.get<HTMLInputElement>(`input[value="${laminate.uri}"]`).element.checked).toBe(
+      true,
+    )
+    expect(wrapper.get<HTMLInputElement>('input[type="checkbox"]').element.checked).toBe(false)
+    expect(wrapper.text()).not.toContain('No unused laminates are available.')
+    expect(JSON.parse(sessionStorage.getItem('vpd.initialization.v1')!).draft).toEqual({
+      ...draft,
+      name: 'Run with a new laminate',
+      notes: 'Retain my settings',
+      laminate: laminate.uri,
+      laminateConfirmed: false,
+    })
+    await wrapper.get('input[type="checkbox"]').setValue(true)
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(wrapper.find('nav[aria-label="Machine settings"]').exists()).toBe(true)
+    wrapper.unmount()
+  })
+  it('returns to the retained run draft when laminate creation is cancelled', async () => {
+    const draft = restoreDraft(unusedLaminate, 2)
+    const save = vi.spyOn(repository, 'saveLaminate')
+    const { wrapper, router } = await setup('', true)
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Create a new laminate')!
+      .trigger('click')
+    await flushPromises()
+    await wrapper
+      .findAll('a')
+      .find((link) => link.text() === 'Cancel')!
+      .trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/runs/new')
+    expect(wrapper.find('input[aria-label="Run name"]').exists()).toBe(true)
+    expect(JSON.parse(sessionStorage.getItem('vpd.initialization.v1')!).draft).toEqual(draft)
+    expect(save).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+  it('retains a failed laminate form and its run draft until the save is retried', async () => {
+    const draft = restoreDraft(unusedLaminate, 2)
+    vi.spyOn(repository, 'saveLaminate').mockRejectedValue(new Error('Connection failed'))
+    const { wrapper, router } = await setup('', true)
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Create a new laminate')!
+      .trigger('click')
+    await flushPromises()
+    await wrapper.get('input[aria-label="Laminate name"]').setValue('Keep my laminate')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/laminates/new')
+    expect(wrapper.get('[role="alert"]').text()).toContain('Connection failed')
+    expect(wrapper.get<HTMLInputElement>('input[aria-label="Laminate name"]').element.value).toBe(
+      'Keep my laminate',
+    )
+    expect(JSON.parse(sessionStorage.getItem('vpd.initialization.v1')!).draft).toEqual(draft)
+    wrapper.unmount()
+  })
+  it('does not replace a different retained draft when an outdated return URL is opened', async () => {
+    const draft = restoreDraft(unusedLaminate, 2)
+    const { wrapper } = await setup(
+      '?runDraft=outdated&laminate=' + encodeURIComponent(usedLaminate),
+    )
+    expect(wrapper.text()).toContain('The run draft could not be restored.')
+    expect(JSON.parse(sessionStorage.getItem('vpd.initialization.v1')!).draft).toEqual(draft)
     wrapper.unmount()
   })
   it('blocks a restored review draft whose laminate is already assigned', async () => {

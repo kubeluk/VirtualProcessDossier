@@ -65,7 +65,7 @@ const { loading, error, reload } = useLoad(async () => {
   if (!isType(knowledge.references, MODEL, NS.wild + 'WorkflowModel'))
     throw new Error('The stamp-forming process is not available. Check the example data.')
   let saved: { draft: InitializationDraft; step: number; machine: string } | undefined
-  if (!route.query.copy && !route.query.laminate) {
+  if (!route.query.copy && (!route.query.laminate || route.query.runDraft)) {
     try {
       const text = sessionStorage.getItem(SESSION_KEY)
       if (text) saved = JSON.parse(text) as typeof saved
@@ -76,6 +76,7 @@ const { loading, error, reload } = useLoad(async () => {
   if (
     saved?.draft &&
     typeof saved.draft.id === 'string' &&
+    (!route.query.runDraft || saved.draft.id === route.query.runDraft) &&
     Array.isArray(saved.draft.grippers) &&
     Array.isArray(saved.draft.press?.steps) &&
     Array.isArray(saved.draft.oven?.fields)
@@ -88,18 +89,30 @@ const { loading, error, reload } = useLoad(async () => {
     restored.value = true
     source.value = saved.draft.copiedFrom ? 'copy' : 'defaults'
     copyRun.value = saved.draft.copiedFrom
-  } else draft.value = createDraft(knowledge.references)
+  } else {
+    if (route.query.runDraft)
+      throw new Error(
+        'The run draft could not be restored. Open run preparation to start a new draft.',
+      )
+    draft.value = createDraft(knowledge.references)
+  }
+  if (route.query.runDraft) step.value = 2
   if (route.query.copy) {
     await loadCopy(String(route.query.copy))
     step.value = 2
   }
   if (route.query.laminate && draft.value) {
     draft.value.laminate = String(route.query.laminate)
+    draft.value.laminateConfirmed = false
     step.value = 2
   }
   await loadLaminateAvailability()
-  if (route.query.copy || route.query.laminate) await router.replace({ path: '/runs/new' })
+  if (route.query.copy || route.query.laminate || route.query.runDraft)
+    await router.replace({ path: '/runs/new' })
 }, [() => knowledge.revision])
+const availableLaminate = computed(() =>
+  typed(knowledge.references, NS.for + 'Laminate').some((t) => !usedLaminates.value.has(t.value)),
+)
 const laminates = computed(() =>
   typed(knowledge.references, NS.for + 'Laminate').filter((t) =>
     (label(knowledge.references, t) + ' ' + value(knowledge.references, t, NS.dct + 'identifier'))
@@ -108,16 +121,22 @@ const laminates = computed(() =>
   ),
 )
 function persist() {
-  if (!draft.value || submitted.value) return
+  if (!draft.value || submitted.value) return false
   try {
     sessionStorage.setItem(
       SESSION_KEY,
       JSON.stringify({ draft: draft.value, step: step.value, machine: machine.value }),
     )
+    return true
   } catch {
     storageError.value =
       'This browser cannot retain your draft between page loads. Keep this tab open until submission.'
+    return false
   }
+}
+async function createLaminate() {
+  if (!draft.value || !persist()) return
+  await router.push({ path: '/laminates/new', query: { runDraft: draft.value.id } })
 }
 watch([draft, step, machine], persist, { deep: true })
 onBeforeUnmount(persist)
@@ -301,6 +320,15 @@ async function submit() {
             <p class="small muted">
               A laminate can only be used to initialize one run, including completed runs.
             </p>
+            <p v-if="!availableLaminate" class="notice">
+              No unused laminates are available. Create a laminate to continue.
+            </p>
+            <div class="wizard-actions">
+              <button type="button" class="button secondary" @click="createLaminate">
+                Create a new laminate
+              </button>
+              <span class="small muted">Return here with the new laminate selected.</span>
+            </div>
             <label class="search-field"
               ><span class="sr-only">Search laminates</span
               ><input
