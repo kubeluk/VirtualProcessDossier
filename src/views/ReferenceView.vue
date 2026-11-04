@@ -88,6 +88,9 @@ function setSearch() {
       }}
     </p>
   </div>
+  <RouterLink v-if="kind === 'laminates'" to="/laminates/new" class="button primary"
+    >Create laminate</RouterLink
+  >
   <AsyncState :loading="loading" :error="error" @retry="reload">
     <template v-if="!uri">
       <form class="panel search-only" role="search" @submit.prevent="setSearch">

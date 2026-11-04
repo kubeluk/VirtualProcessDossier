@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useKnowledgeStore } from '../stores/knowledge'
 import { useLoad } from '../composables/useLoad'
 import { repository } from '../services/repository'
@@ -11,6 +11,24 @@ import EntityLink from '../components/EntityLink.vue'
 import LaminateSummary from '../components/LaminateSummary.vue'
 import AllMetadata from '../components/AllMetadata.vue'
 import StateBadge from '../components/StateBadge.vue'
+const router = useRouter()
+const deleting = ref(false),
+  confirmDelete = ref(false),
+  deleteError = ref('')
+async function remove() {
+  if (deleting.value) return
+  deleting.value = true
+  deleteError.value = ''
+  try {
+    await repository.deleteLaminate(uri.value)
+    await knowledge.refresh()
+    await router.push('/laminates')
+  } catch (e) {
+    deleteError.value = e instanceof Error ? e.message : 'Could not delete the laminate.'
+  } finally {
+    deleting.value = false
+  }
+}
 const route = useRoute(),
   knowledge = useKnowledgeStore(),
   runs = ref<RunSummary[]>([]),
@@ -50,6 +68,31 @@ const { loading, error, reload } = useLoad(async () => {
       >
       <p v-else class="notice small">Already assigned to a run · unavailable for a new run.</p>
     </div>
+    <div class="wizard-actions">
+      <RouterLink :to="{ path: '/laminates/new', query: { copy: uri } }" class="button secondary"
+        >Create from copy</RouterLink
+      >
+      <RouterLink :to="{ path: '/laminate/edit', query: { uri } }" class="button secondary"
+        >Edit laminate</RouterLink
+      >
+      <button class="text-button" :disabled="deleting" @click="confirmDelete = true">
+        Delete laminate
+      </button>
+    </div>
+    <section v-if="confirmDelete" class="panel" aria-label="Confirm deletion">
+      <h2>Delete this laminate?</h2>
+      <p>
+        This removes the laminate and its unshared material and geometry records. Laminates
+        referenced by other records cannot be deleted.
+      </p>
+      <button class="button secondary" :disabled="deleting" @click="confirmDelete = false">
+        Cancel
+      </button>
+      <button class="button primary" :disabled="deleting" @click="remove">
+        {{ deleting ? 'Deleting…' : 'Confirm delete' }}
+      </button>
+    </section>
+    <p v-if="deleteError" class="notice error" role="alert">{{ deleteError }}</p>
     <section class="panel"><LaminateSummary :uri="uri" expanded /></section>
     <section class="panel">
       <div class="section-heading">

@@ -1,3 +1,4 @@
+import { newLaminate, readLaminate } from '../../src/domain/laminate'
 import { readFile } from 'node:fs/promises'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import {
@@ -400,5 +401,58 @@ describe('real Fuseki writes', () => {
         NS.dcat + 'distribution',
       ),
     ).toHaveLength(2)
+  })
+})
+
+describe('laminate CRUD', () => {
+  it('creates, updates and deletes the complete unshared graph', async () => {
+    const d = readLaminate(refs, BASE + 'laminate/1#it')
+    d.uri = newLaminate().uri
+    d.identifier = 'crud-test'
+    await repo.saveLaminate(d, refs)
+    const created = await repo.getReferenceGraph()
+    expect(readLaminate(created, d.uri).identifier).toBe('crud-test')
+    const oldLayup = value(created, d.uri, NS.prov + 'wasDerivedFrom')
+    // Unmanaged metadata is retained by edits.
+    await repo.update(`INSERT DATA { <${d.uri}> rdfs:comment "Keep me" }`)
+    d.name = 'Changed laminate'
+    d.layers.splice(1)
+    d.needles = []
+    await repo.saveLaminate(d, created, true)
+    const updated = await repo.getReferenceGraph()
+    expect(readLaminate(updated, d.uri)).toMatchObject({
+      name: d.name,
+      layers: [expect.objectContaining({ polymer: 'PA6', fiber: 'GF' })],
+      needles: [],
+    })
+    const savedLayer = readLaminate(updated, d.uri).layers[0]!
+    expect(Number(savedLayer.angle)).toBe(0)
+    expect(Number(savedLayer.fraction)).toBe(60)
+    expect(value(updated, d.uri, NS.rdfs + 'comment')).toBe('Keep me')
+    expect(await repo.ask(`ASK { <${oldLayup}> ?p ?o }`)).toBe(false)
+    await repo.deleteLaminate(d.uri)
+    expect(await repo.ask(`ASK { <${d.uri}> ?p ?o }`)).toBe(false)
+    expect(
+      await repo.ask(`ASK { ?s ?p ?o FILTER(STRSTARTS(STR(?s), "${d.uri.split('#')[0]}")) }`),
+    ).toBe(false)
+    expect(await repo.ask(`ASK { <${BASE}laminate#origin> a for:ReferencePoint }`)).toBe(true)
+  })
+  it('preserves a shared layup and blocks deletion of referenced laminates', async () => {
+    const d = readLaminate(refs, BASE + 'laminate/1#it')
+    d.uri = newLaminate().uri
+    await repo.saveLaminate(d, refs)
+    const graph = await repo.getReferenceGraph()
+    const layup = value(graph, d.uri, NS.prov + 'wasDerivedFrom')
+    await repo.update(
+      `INSERT DATA { <urn:test:shared-owner> prov:wasDerivedFrom <${layup}> . <urn:test:run> for:laminate <${d.uri}> }`,
+    )
+    await expect(repo.deleteLaminate(d.uri)).rejects.toThrow('referenced')
+    await repo.update(`DELETE DATA { <urn:test:run> for:laminate <${d.uri}> }`)
+    await repo.deleteLaminate(d.uri)
+    expect(
+      await repo.ask(
+        `ASK { <${layup}> param:tapeStack/rdf:rest*/rdf:first/param:hasFiberMassFraction/qudt:value ?v }`,
+      ),
+    ).toBe(true)
   })
 })

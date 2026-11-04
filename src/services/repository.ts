@@ -1,3 +1,4 @@
+import { validateLaminate, type LaminateDraft } from '../domain/laminate'
 import {
   NS,
   BASE,
@@ -25,6 +26,9 @@ import type {
   Page,
   RunSummary,
 } from '../domain/types'
+
+const LAMINATE_PATH =
+  '(geo:hasSize|param:hasNeedlePoint|qudt:quantityValue|qudt:value|rdf:first|rdf:rest|prov:wasDerivedFrom|param:tapeStack|prov:qualifiedDerivation|prov:entity|param:fiberOrientation|param:hasFiberMassFraction)'
 
 interface Binding {
   [key: string]: { value: string; type: string }
@@ -83,12 +87,16 @@ export class KnowledgeRepository {
   }
   async getReferenceGraph(): Promise<Store> {
     return this.construct(`CONSTRUCT { ?s ?p ?o } WHERE {
-      ?root a ?type .
+      { ?root a ?type .
       VALUES ?type { sh:NodeShape wild:WorkflowModel wild:AtomicActivity wild:SequentialActivity wild:ParallelActivity
         ssn:System sosa:Sensor sosa:Actuator for:Laminate for:Layup for:Tape for:NeedlePoint for:ReferencePoint sosa:ObservableProperty }
       ?root (!<urn:vpd:unused>)* ?s .
       FILTER(?s = ?root || isBlank(?s))
-      ?s ?p ?o .
+      ?s ?p ?o . }
+      UNION {
+        ?laminate a for:Laminate .
+        ?laminate ${LAMINATE_PATH}* ?s . ?s ?p ?o .
+      }
     }`)
   }
   async getRunContext(uri: string): Promise<Store> {
@@ -255,6 +263,58 @@ export class KnowledgeRepository {
       ${excludeRun ? `FILTER(?run != ${safeIri(excludeRun)})` : ''}
     }`)
     return rows.map((row) => row.laminate!.value)
+  }
+  private laminateDeletion(uri: string, preserveMetadata = false) {
+    const root = safeIri(uri)
+    const path = LAMINATE_PATH
+    // A shared resource and everything below it must survive. Reference points,
+    // vocabulary terms and shapes are never traversed by this ownership path.
+    return `${root} ${path}* ?s . ?s ?p ?o .
+      FILTER(?s != rdf:nil)
+      FILTER(?s = ${root} || NOT EXISTS {
+        ${root} ${path}* ?ancestor . ?ancestor ${path}* ?s .
+        FILTER(?ancestor != ${root})
+        ?outside ?link ?ancestor .
+        FILTER NOT EXISTS { ${root} ${path}* ?outside }
+      })
+      ${preserveMetadata ? `FILTER(?s != ${root} || (?p = rdf:type && ?o = for:Laminate) || ?p IN (rdfs:label, dct:identifier, geo:hasSize, prov:wasDerivedFrom, param:hasNeedlePoint))` : ''}`
+  }
+  async saveLaminate(draft: LaminateDraft, references: Store, editing = false): Promise<string> {
+    const graph = await validateLaminate(draft, references)
+    const root = safeIri(draft.uri)
+    if (!editing && (await this.ask(`ASK { ${root} ?p ?o }`)))
+      throw new Error('This laminate identity is already registered. Start a new laminate.')
+    if (editing && !(await this.ask(`ASK { ${root} a for:Laminate }`)))
+      throw new Error('This laminate no longer exists.')
+    await this.update(
+      editing
+        ? `DELETE { ?s ?p ?o } INSERT { ${serialize(graph)} } WHERE {
+          ${root} a for:Laminate . ${this.laminateDeletion(draft.uri, true)}
+        }`
+        : `INSERT { ${serialize(graph)} } WHERE { FILTER NOT EXISTS { ${root} ?p ?o } }`,
+    )
+    const layup = value(graph, draft.uri, NS.prov + 'wasDerivedFrom')
+    if (!layup || !(await this.ask(`ASK { ${root} prov:wasDerivedFrom ${safeIri(layup)} }`)))
+      throw new Error(
+        'The save could not be confirmed. Your inputs are retained; refresh before retrying.',
+      )
+    return draft.uri
+  }
+  async deleteLaminate(uri: string): Promise<void> {
+    const root = safeIri(uri)
+    const incoming = `?source ?relation ${root} . FILTER(?source != ${root})`
+    if (await this.ask(`ASK { ${incoming} }`))
+      throw new Error(
+        'This laminate is referenced by other records and cannot be deleted. Remove those references first.',
+      )
+    await this.update(`DELETE { ?s ?p ?o } WHERE {
+      ${root} a for:Laminate . FILTER NOT EXISTS { ${incoming} }
+      ${this.laminateDeletion(uri)}
+    }`)
+    if (await this.ask(`ASK { ${root} a for:Laminate }`))
+      throw new Error(
+        'The laminate could not be deleted. It may have acquired a reference; refresh and try again.',
+      )
   }
   async initializeRun(draft: InitializationDraft, references: Store): Promise<string> {
     const graph = await validateInitialization(draft, references)

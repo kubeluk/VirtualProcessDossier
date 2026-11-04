@@ -53,6 +53,16 @@ export default createRouter({
       meta: { title: 'Laminates' },
     },
     {
+      path: '/laminates/new',
+      component: () => import('../views/LaminateEditorView.vue'),
+      meta: { title: 'Create laminate' },
+    },
+    {
+      path: '/laminate/edit',
+      component: () => import('../views/LaminateEditorView.vue'),
+      meta: { title: 'Edit laminate' },
+    },
+    {
       path: '/laminate',
       name: 'laminate',
       component: () => import('../views/LaminateView.vue'),
