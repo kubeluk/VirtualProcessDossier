@@ -179,17 +179,29 @@ frame:referencePoint a for:ReferencePoint ;
     ssn:hasSubSystem <system/press/1#upperMold>, <system/press/1#lowerMold>, <system/heater/1#it>, <system/heater/2#it> ;
     for:takesParameters <system/press/1#parameters> .
 
-<system/press/1#upperMold> a ssn:System .
+<system/press/1#upperMold> a ssn:System ;
+    rdfs:label "Upper Mold"@en ;
+    rdfs:comment "The upper mold is used for forming the laminate."@en .
 
-<system/press/1#lowerMold> a ssn:System .
+<system/press/1#lowerMold> a ssn:System ;
+    rdfs:label "Lower Mold"@en ;
+    rdfs:comment "The lower mold is used for forming the laminate."@en .
 
-<system/heater/1#it> a ssn:System .
+<system/heater/1#it> a ssn:System ;
+    rdfs:label "Heater 1"@en ;
+    rdfs:comment "The heater is used for heating the mold in the press."@en .
 
-<system/heater/2#it> a ssn:System .
+<system/heater/2#it> a ssn:System ;
+    rdfs:label "Heater 2"@en ;
+    rdfs:comment "The heater is used for heating the mold in the press."@en .
 
 ## Inspection
 
 <system/inspector/1#it> a ssn:System ;
+    rdfs:label "Inspector"@en ;
+    rdfs:comment "The inspector is used for inspecting the laminate after forming."@en ;
     ssn:hasSubSystem <sensor/camera/1#it> .
 
-<sensor/camera/1#it> a sosa:Sensor .
+<sensor/camera/1#it> a sosa:Sensor ;
+    rdfs:label "Camera"@en ;
+    rdfs:comment "The camera is used for taking images of the laminate after forming."@en .
