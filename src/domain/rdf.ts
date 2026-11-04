@@ -9,7 +9,7 @@ export const NS = {
   for: 'http://purl.org/for/terms#',
   param: 'http://purl.org/for/parameter#',
   activity: 'http://purl.org/for/activity#',
-  frame: 'http://purl.org/system/gripper-frame/1#',
+  frame: 'http://purl.org/system/frame/1#',
   oven: 'http://purl.org/system/oven/1#',
   press: 'http://purl.org/system/press/1#',
   prov: 'http://www.w3.org/ns/prov#',

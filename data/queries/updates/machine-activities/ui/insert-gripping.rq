@@ -4,7 +4,7 @@ PREFIX wild: <http://purl.org/wild/vocab#>
 PREFIX activity: <http://purl.org/for/activity#>
 PREFIX for: <http://purl.org/for/terms#>
 PREFIX prov: <http://www.w3.org/ns/prov#>
-PREFIX frame: <http://purl.org/system/gripper-frame/1#>
+PREFIX frame: <http://purl.org/system/frame/1#>
 PREFIX qudt: <http://qudt.org/schema/qudt/>
 PREFIX quantitykind: <http://qudt.org/vocab/quantitykind/>
 PREFIX unit: <http://qudt.org/vocab/unit/>

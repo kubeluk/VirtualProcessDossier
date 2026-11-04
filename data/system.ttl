@@ -17,7 +17,7 @@
 <system/demonstrator#it> a ssn:System ;
     rdfs:label "FoFa Demonstrator"@en ;
     rdfs:comment "The demonstrator as set up at the Forschungsfabrik"@en ;
-    ssn:hasSubSystem <system/frame/1#it>, <system/oven/1#it>, <system/press/1#it>, <sensor/camera/1#it> .
+    ssn:hasSubSystem <system/frame/1#it>, <system/oven/1#it>, <system/press/1#it>, <system/inspector/1#it> .
 
 ## Gripper Frame
 

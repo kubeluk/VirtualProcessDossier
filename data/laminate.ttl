@@ -1,5 +1,6 @@
 @base <http://purl.org/for/> .
 
+@prefix laminate: <http://purl.org/for/laminate#> .
 @prefix for: <http://purl.org/for/terms#> .
 @prefix qudt: <http://qudt.org/schema/qudt/> .
 @prefix param: <http://purl.org/for/parameter#> .
@@ -387,7 +388,7 @@ param:tapeStack a rdf:Property ;
 
 ## Reference point
 
-<laminate/1#origin>
+laminate:origin
     a for:ReferencePoint ;
     rdfs:label "Laminate Reference Point"@en ;
     rdfs:comment "Die Mitte des Laminats bildet den Bezugspunkt für die Positionen der Greiferpunkte."@de .
@@ -433,7 +434,7 @@ param:tapeStack a rdf:Property ;
         qudt:hasUnit unit:MilliM ;
         qudt:value ( 190.0 100.0 )
     ] ;
-    param:referencePoint <laminate/1#origin> .
+    param:referencePoint laminate:origin .
 
 <laminate/1#needle-point-2> a for:NeedlePoint ;
     qudt:hasQuantityKind quantitykind:PositionVector ;
@@ -442,7 +443,7 @@ param:tapeStack a rdf:Property ;
         qudt:hasUnit unit:MilliM ;
         qudt:value ( 190.0 -100.0 )
     ] ;
-    param:referencePoint <laminate/1#origin> .
+    param:referencePoint laminate:origin .
 
 <laminate/1#needle-point-3> a for:NeedlePoint ;
     qudt:hasQuantityKind quantitykind:PositionVector ;
@@ -451,7 +452,7 @@ param:tapeStack a rdf:Property ;
         qudt:hasUnit unit:MilliM ;
         qudt:value ( -190.0 100.0 )
     ] ;
-    param:referencePoint <laminate/1#origin> .
+    param:referencePoint laminate:origin .
 
 <laminate/1#needle-point-4> a for:NeedlePoint ;
     qudt:hasQuantityKind quantitykind:PositionVector ;
@@ -460,7 +461,7 @@ param:tapeStack a rdf:Property ;
         qudt:hasUnit unit:MilliM ;
         qudt:value ( -190.0 -100.0 )
     ] ;
-    param:referencePoint <laminate/1#origin> .
+    param:referencePoint laminate:origin .
 
 <laminate/1#needle-point-5> a for:NeedlePoint ;
     qudt:hasQuantityKind quantitykind:PositionVector ;
@@ -469,7 +470,7 @@ param:tapeStack a rdf:Property ;
         qudt:hasUnit unit:MilliM ;
         qudt:value ( 100.0 190.0 )
     ] ;
-    param:referencePoint <laminate/1#origin> .
+    param:referencePoint laminate:origin .
 
 <laminate/1#needle-point-6> a for:NeedlePoint ;
     qudt:hasQuantityKind quantitykind:PositionVector ;
@@ -478,7 +479,7 @@ param:tapeStack a rdf:Property ;
         qudt:hasUnit unit:MilliM ;
         qudt:value ( -100.0 190.0 )
     ] ;
-    param:referencePoint <laminate/1#origin> .
+    param:referencePoint laminate:origin .
 
 <laminate/1#needle-point-7> a for:NeedlePoint ;
     qudt:hasQuantityKind quantitykind:PositionVector ;
@@ -487,7 +488,7 @@ param:tapeStack a rdf:Property ;
         qudt:hasUnit unit:MilliM ;
         qudt:value ( 100.0 -190.0 )
     ] ;
-    param:referencePoint <laminate/1#origin> .
+    param:referencePoint laminate:origin .
 
 <laminate/1#needle-point-8> a for:NeedlePoint ;
     qudt:hasQuantityKind quantitykind:PositionVector ;
@@ -496,7 +497,7 @@ param:tapeStack a rdf:Property ;
         qudt:hasUnit unit:MilliM ;
         qudt:value ( -100.0 -190.0 )
     ] ;
-    param:referencePoint <laminate/1#origin> .
+    param:referencePoint laminate:origin .
 
 ## Layup
 
