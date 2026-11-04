@@ -4,16 +4,18 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import LaminateEditorView from '../../src/views/LaminateEditorView.vue'
+import LaminateSummary from '../../src/components/LaminateSummary.vue'
+import { useKnowledgeStore } from '../../src/stores/knowledge'
 import { repository } from '../../src/services/repository'
-import { references } from '../helpers'
-import { BASE, Store } from '../../src/domain/rdf'
+import { readStore } from '../helpers'
+import { BASE, NS, Store, df, n } from '../../src/domain/rdf'
 let refs: Store
 beforeAll(async () => {
-  refs = await references()
+  refs = await readStore('laminate.ttl')
 })
 afterEach(() => vi.restoreAllMocks())
-async function setup(path: string) {
-  vi.spyOn(repository, 'getReferenceGraph').mockResolvedValue(refs)
+async function setup(path: string, graph = refs) {
+  vi.spyOn(repository, 'getReferenceGraph').mockResolvedValue(graph)
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
@@ -28,6 +30,52 @@ async function setup(path: string) {
   return { wrapper, router }
 }
 describe('laminate editor', () => {
+  it('displays saved scientific literals as plain numbers in copies and summaries', async () => {
+    // Fuseki canonicalizes saved doubles into scientific notation.
+    const graph = new Store(
+      [...refs].map((quad) => {
+        const term = quad.object
+        if (
+          term.termType !== 'Literal' ||
+          !['integer', 'decimal', 'float', 'double'].some(
+            (type) => term.datatype.value === NS.xsd + type,
+          )
+        )
+          return quad
+        return df.quad(
+          quad.subject,
+          quad.predicate,
+          df.literal(Number(term.value).toExponential(2), n(NS.xsd + 'double')),
+          quad.graph,
+        )
+      }),
+    )
+    const uri = BASE + 'laminate/1#it'
+    const save = vi.spyOn(repository, 'saveLaminate').mockImplementation(async (draft) => draft.uri)
+    const { wrapper } = await setup('/laminates/new?copy=' + encodeURIComponent(uri), graph)
+    const input = (label: string) => wrapper.get<HTMLInputElement>(`input[aria-label="${label}"]`)
+    expect(input('Width *').element.value).toBe('400')
+    expect(input('Thickness *').element.value).toBe('1.56')
+    expect(input('Layer 2 orientation *').element.value).toBe('60')
+    expect(input('Layer 1 fiber mass fraction *').element.value).toBe('60')
+    expect(input('Point 2 Y').element.value).toBe('-100')
+    await input('Width *').setValue('450.5')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(save.mock.calls[0]![0].width).toBe('450.5')
+
+    const pinia = createPinia()
+    useKnowledgeStore(pinia).references = graph
+    const summary = mount(LaminateSummary, {
+      props: { uri },
+      global: { plugins: [pinia], stubs: { EntityLink: true } },
+    })
+    expect(summary.get('.fact-strip').text()).toContain('400 mm')
+    expect(summary.get('.fact-strip').text()).toContain('1.56 mm')
+    expect(summary.text()).toContain('-100 mm')
+    expect(summary.text()).not.toMatch(/\d(?:\.\d+)?[eE][+-]?\d/)
+    expect([...graph].some((quad) => quad.object.value === '4.00e+2')).toBe(true)
+  })
   it('loads existing dimensions and layers, saves the same identity and refreshes', async () => {
     const uri = BASE + 'laminate/1#it'
     const save = vi.spyOn(repository, 'saveLaminate').mockResolvedValue(uri)

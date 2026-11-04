@@ -4,6 +4,7 @@ import { useKnowledgeStore } from '../stores/knowledge'
 import { NS, objects, object, value, quantity, human, list, label } from '../domain/rdf'
 import EntityLink from './EntityLink.vue'
 import PositionPlot from './PositionPlot.vue'
+import { formatNumber } from '../utils/formatNumber'
 const props = defineProps<{ uri: string; expanded?: boolean }>()
 const knowledge = useKnowledgeStore()
 const g = computed(() => knowledge.references)
@@ -35,8 +36,8 @@ const needles = computed(() =>
     return {
       iri: point.value,
       name: 'Needle point ' + (index + 1),
-      x: coordinates[0] ?? '',
-      y: coordinates[1] ?? '',
+      x: formatNumber(coordinates[0] ?? ''),
+      y: formatNumber(coordinates[1] ?? ''),
       reference: value(g.value, point, NS.param + 'referencePoint'),
       unit: quantity(g.value, q).unit,
     }
@@ -49,7 +50,8 @@ const needles = computed(() =>
       <div v-for="size in objects(g, uri, NS.geo + 'hasSize')" :key="size.value">
         <small>{{ human(quantity(g, size).kind) }}</small
         ><strong
-          >{{ quantity(g, size).value }} <span>{{ quantity(g, size).unit }}</span></strong
+          >{{ formatNumber(quantity(g, size).value) }}
+          <span>{{ quantity(g, size).unit }}</span></strong
         >
       </div>
     </div>
@@ -76,13 +78,17 @@ const needles = computed(() =>
               <th>{{ index + 1 }}</th>
               <td><EntityLink :uri="tape.value" :graph="g" /></td>
               <td>
-                {{ orientation(tape.value).value || 'Not recorded' }}
+                {{ formatNumber(orientation(tape.value).value) || 'Not recorded' }}
                 {{ orientation(tape.value).unit }}
               </td>
               <td>{{ value(g, tape, NS.param + 'polymer') || 'Not recorded' }}</td>
               <td>{{ value(g, tape, NS.param + 'fiberType') || 'Not recorded' }}</td>
               <td>
-                {{ quantity(g, object(g, tape, NS.param + 'hasFiberMassFraction')).value }}
+                {{
+                  formatNumber(
+                    quantity(g, object(g, tape, NS.param + 'hasFiberMassFraction')).value,
+                  )
+                }}
                 {{ quantity(g, object(g, tape, NS.param + 'hasFiberMassFraction')).unit }}
               </td>
             </tr>

@@ -1,16 +1,24 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { formatNumber } from '../utils/formatNumber'
 const model = defineModel<string>({ required: true })
+const displayValue = computed({
+  get: () => formatNumber(model.value),
+  set: (value: string) => {
+    model.value = value
+  },
+})
 defineProps<{ label: string; unit: string; readonly?: boolean; help?: string; compact?: boolean }>()
 </script>
 <template>
   <label class="number-field" :class="{ compact }">
     <span v-if="!compact" class="field-label">{{ label }}</span>
     <span v-if="readonly" class="read-value"
-      >{{ model || 'Not recorded' }} <small>{{ unit }}</small></span
+      >{{ displayValue || 'Not recorded' }} <small>{{ unit }}</small></span
     >
     <span v-else class="input-unit"
       ><input
-        v-model="model"
+        v-model="displayValue"
         :aria-label="label"
         type="text"
         :inputmode="unit === 'unitless' ? 'numeric' : 'decimal'"
