@@ -11,7 +11,7 @@ PREFIX unit: <http://qudt.org/vocab/unit/>
 
 # Initialize an instance of activity:heating.
 # Replace the BIND placeholders below with the requested initialization values.
-# Placeholder defaults match data/run-view-after-ui.ttl.
+# Placeholder defaults match data/plan.ttl.
 INSERT
 {
     ?activity_instance
@@ -107,24 +107,6 @@ INSERT
                 qudt:value ?field_8_target_temperature
             ] ;
             oven:atField <system/field/8#it>
-        ] ;
-        oven:heatingDeviceTargetTemperature [
-            oven:deviceTemperature [
-                a qudt:Quantity ;
-                qudt:hasQuantityKind quantitykind:AreaTemperature ;
-                qudt:hasUnit unit:DEG_C ;
-                qudt:value ?heating_device_1_target_temperature
-            ] ;
-            oven:atDevice <system/heater/1#it>
-        ] ;
-        oven:heatingDeviceTargetTemperature [
-            oven:deviceTemperature [
-                a qudt:Quantity ;
-                qudt:hasQuantityKind quantitykind:AreaTemperature ;
-                qudt:hasUnit unit:DEG_C ;
-                qudt:value ?heating_device_2_target_temperature
-            ] ;
-            oven:atDevice <system/heater/2#it>
         ] .
 }
 WHERE
@@ -157,8 +139,4 @@ WHERE
     BIND(280.0 AS ?field_6_target_temperature)
     BIND(280.0 AS ?field_7_target_temperature)
     BIND(280.0 AS ?field_8_target_temperature)
-
-    # Target temperatures for each heating device.
-    BIND(300.0 AS ?heating_device_1_target_temperature)
-    BIND(300.0 AS ?heating_device_2_target_temperature)
 }

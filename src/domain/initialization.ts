@@ -121,19 +121,19 @@ export function createDraft(g: Store, id: string = crypto.randomUUID()): Initial
           NS.qudt + 'value',
         ]),
       })),
-      devices: allowed(g, SHAPES.heating, [
+    },
+    press: {
+      devices: allowed(g, SHAPES.pressing, [
         NS.oven + 'heatingDeviceTargetTemperature',
         NS.oven + 'atDevice',
       ]).map((iri) => ({
         iri,
-        value: defaultAt(g, SHAPES.heating, [
+        value: defaultAt(g, SHAPES.pressing, [
           NS.oven + 'heatingDeviceTargetTemperature',
           NS.oven + 'deviceTemperature',
           NS.qudt + 'value',
         ]),
       })),
-    },
-    press: {
       force: defaultAt(g, SHAPES.pressing, [NS.press + 'force', NS.qudt + 'value']),
       cooling: defaultAt(g, SHAPES.pressing, [NS.press + 'moldCoolingTime', NS.qudt + 'value']),
       remaining: defaultAt(g, SHAPES.pressing, [NS.press + 'remainingPath', NS.qudt + 'value']),
@@ -194,22 +194,29 @@ export function copySettings(
   })
   draft.oven.threshold = q(oven, NS.oven + 'thresholdTemperature')
   draft.oven.holding = q(oven, NS.oven + 'stableHoldingTime')
-  for (const [rows, pred, component, quantity] of [
+  for (const [plan, rows, pred, component, quantity] of [
     [
+      oven,
       draft.oven.fields,
       NS.oven + 'fieldTargetTemperature',
       NS.oven + 'atField',
       NS.oven + 'fieldTarget',
     ],
     [
-      draft.oven.devices,
+      press,
+      draft.press.devices,
       NS.oven + 'heatingDeviceTargetTemperature',
       NS.oven + 'atDevice',
       NS.oven + 'deviceTemperature',
     ],
-    [draft.press.molds, NS.press + 'moldTemperature', NS.press + 'mold', NS.press + 'temperature'],
+    [
+      press,
+      draft.press.molds,
+      NS.press + 'moldTemperature',
+      NS.press + 'mold',
+      NS.press + 'temperature',
+    ],
   ] as const) {
-    const plan = pred.startsWith(NS.oven) ? oven : press
     for (const row of rows)
       row.value = q(
         objects(g, plan, pred).find((t) => value(g, t, component) === row.iri),
@@ -251,7 +258,7 @@ export function draftErrors(draft: InitializationDraft, references: Store): stri
   }
   checkComponents(draft.grippers, expected.grippers, 'gripper')
   checkComponents(draft.oven.fields, expected.oven.fields, 'oven field')
-  checkComponents(draft.oven.devices, expected.oven.devices, 'heating device')
+  checkComponents(draft.press.devices, expected.press.devices, 'press heater')
   checkComponents(draft.press.molds, expected.press.molds, 'mold')
   const decimal = (v: string, field: string) => {
     if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(v) || !Number.isFinite(Number(v)))
@@ -266,7 +273,7 @@ export function draftErrors(draft: InitializationDraft, references: Store): stri
   }
   decimal(draft.oven.threshold, 'Threshold temperature')
   decimal(draft.oven.holding, 'Stable holding time')
-  for (const row of [...draft.oven.fields, ...draft.oven.devices, ...draft.press.molds])
+  for (const row of [...draft.oven.fields, ...draft.press.devices, ...draft.press.molds])
     decimal(row.value, row.iri)
   decimal(draft.press.force, 'Press force')
   decimal(draft.press.cooling, 'Mold cooling time')
@@ -364,15 +371,29 @@ export function buildInitialization(draft: InitializationDraft, references: Stor
     q(draft.oven.threshold, 'DEG_C', 'AreaTemperature'),
   )
   add(heating, NS.oven + 'stableHoldingTime', q(draft.oven.holding, 'SEC', 'Time'))
-  for (const [rows, predicate, component, quant] of [
-    [draft.oven.fields, 'fieldTargetTemperature', 'atField', 'fieldTarget'],
-    [draft.oven.devices, 'heatingDeviceTargetTemperature', 'atDevice', 'deviceTemperature'],
+  for (const [plan, rows, predicate, component, quant, kind] of [
+    [
+      heating,
+      draft.oven.fields,
+      'fieldTargetTemperature',
+      'atField',
+      'fieldTarget',
+      'AreaTemperature',
+    ],
+    [
+      pressing,
+      draft.press.devices,
+      'heatingDeviceTargetTemperature',
+      'atDevice',
+      'deviceTemperature',
+      'Temperature',
+    ],
   ] as const)
     for (const row of rows) {
       const entry = df.blankNode()
-      add(heating, NS.oven + predicate, entry)
+      add(plan, NS.oven + predicate, entry)
       add(entry, NS.oven + component, n(row.iri))
-      add(entry, NS.oven + quant, q(row.value, 'DEG_C', 'AreaTemperature'))
+      add(entry, NS.oven + quant, q(row.value, 'DEG_C', kind))
     }
   add(pressing, NS.press + 'force', q(draft.press.force, 'KiloN', 'Force'))
   add(pressing, NS.press + 'moldCoolingTime', q(draft.press.cooling, 'SEC', 'Time'))
@@ -463,12 +484,12 @@ export function settingsFingerprint(draft: InitializationDraft): string {
       normalized(draft.oven.threshold),
       normalized(draft.oven.holding),
       rows(draft.oven.fields),
-      rows(draft.oven.devices),
     ],
     press: [
       normalized(draft.press.force),
       normalized(draft.press.cooling),
       normalized(draft.press.remaining),
+      rows(draft.press.devices),
       rows(draft.press.molds),
       draft.press.steps.map((row) => [normalized(row.speed), normalized(row.distance)]),
     ],

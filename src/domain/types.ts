@@ -63,11 +63,12 @@ export interface InitializationDraft {
   laminateConfirmed: boolean
   copiedFrom: string
   grippers: Gripper[]
-  oven: { threshold: string; holding: string; fields: ScalarEntry[]; devices: ScalarEntry[] }
+  oven: { threshold: string; holding: string; fields: ScalarEntry[] }
   press: {
     force: string
     cooling: string
     remaining: string
+    devices: ScalarEntry[]
     molds: ScalarEntry[]
     steps: ClosingStep[]
   }

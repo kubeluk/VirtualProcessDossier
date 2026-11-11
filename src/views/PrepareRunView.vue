@@ -64,7 +64,15 @@ const { loading, error, reload } = useLoad(async () => {
   }
   if (!isType(knowledge.references, MODEL, NS.wild + 'WorkflowModel'))
     throw new Error('The stamp-forming process is not available. Check the example data.')
-  let saved: { draft: InitializationDraft; step: number; machine: string } | undefined
+  let saved:
+    | {
+        draft: InitializationDraft & {
+          oven: InitializationDraft['oven'] & { devices?: InitializationDraft['press']['devices'] }
+        }
+        step: number
+        machine: string
+      }
+    | undefined
   if (!route.query.copy && (!route.query.laminate || route.query.runDraft)) {
     try {
       const text = sessionStorage.getItem(SESSION_KEY)
@@ -79,9 +87,16 @@ const { loading, error, reload } = useLoad(async () => {
     (!route.query.runDraft || saved.draft.id === route.query.runDraft) &&
     Array.isArray(saved.draft.grippers) &&
     Array.isArray(saved.draft.press?.steps) &&
-    Array.isArray(saved.draft.oven?.fields)
+    Array.isArray(saved.draft.oven?.fields) &&
+    Array.isArray(saved.draft.press?.devices ?? saved.draft.oven?.devices)
   ) {
-    draft.value = saved.draft
+    // Retain heater values from drafts saved before the fields moved to the press.
+    const { devices: legacyDevices, ...oven } = saved.draft.oven
+    draft.value = {
+      ...saved.draft,
+      oven,
+      press: { ...saved.draft.press, devices: saved.draft.press.devices ?? legacyDevices! },
+    }
     step.value = Math.min(4, Math.max(1, Number(saved.step) || 1))
     machine.value = ['gripping', 'heating', 'pressing'].includes(saved.machine)
       ? saved.machine

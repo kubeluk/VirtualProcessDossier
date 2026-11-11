@@ -164,20 +164,6 @@ function moveStep(index: number, direction: number) {
     >
       Apply field 1 target to all fields
     </button>
-    <h3>Heating devices</h3>
-    <p class="small muted">
-      Targets follow the declared parameter references; equipment membership is shown in Equipment.
-    </p>
-    <div class="field-grid">
-      <NumberField
-        v-for="(device, index) in model.oven.devices"
-        :key="device.iri"
-        v-model="device.value"
-        :label="'Heating device ' + (index + 1) + ' target'"
-        unit="°C"
-        :readonly="readonly"
-      />
-    </div>
   </section>
   <section v-if="section === 'all' || section === 'pressing'" class="panel machine-panel">
     <div class="section-heading">
@@ -213,6 +199,20 @@ function moveStep(index: number, direction: number) {
         :key="mold.iri"
         v-model="mold.value"
         :label="human(mold.iri) + ' temperature'"
+        unit="°C"
+        :readonly="readonly"
+      />
+    </div>
+    <h3>Press heaters</h3>
+    <p class="small muted">
+      Heater 1 and Heater 2 heat the press molds. Their targets belong to the pressing plan.
+    </p>
+    <div class="field-grid">
+      <NumberField
+        v-for="(device, index) in model.press.devices"
+        :key="device.iri"
+        v-model="device.value"
+        :label="'Heater ' + (index + 1) + ' target'"
         unit="°C"
         :readonly="readonly"
       />
