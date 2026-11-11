@@ -8,12 +8,16 @@
 
 # Workflow Model
 
-## Stamp Forming Flow
+## Stamp Forming
 
 workflow:stampForming a wild:WorkflowModel ;
     rdfs:label "Stamp Forming Workflow Model" ;
     rdfs:comment "Workflow for the stamp forming process of a composite laminate." ;
     wild:hasBehaviour activity:stampFormingFlow .
+
+# Workflow Behaviour
+
+## Stamp Forming Flow
 
 activity:stampFormingFlow a wild:ParallelActivity ;
     ssn:implementedBy <system/demonstrator#it> ;
@@ -22,6 +26,8 @@ activity:stampFormingFlow a wild:ParallelActivity ;
     wild:hasChildActivities ( activity:gripAndObserve activity:manufactureAndObserve ) ;
     wild:hasChildActivity activity:gripAndObserve ;
     wild:hasChildActivity activity:manufactureAndObserve .
+
+## Composite Activities
 
 activity:gripAndObserve a wild:ParallelActivity ;
     rdfs:label "Grip and observe" ;
