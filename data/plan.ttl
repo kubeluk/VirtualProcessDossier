@@ -405,24 +405,6 @@
             qudt:value 280.0
         ] ;
         oven:atField <system/field/8#it>
-    ] ;
-    oven:heatingDeviceTargetTemperature [
-        oven:deviceTemperature [
-            a qudt:Quantity ;
-            qudt:hasQuantityKind quantitykind:AreaTemperature ;
-            qudt:hasUnit unit:DEG_C ;
-            qudt:value 300.0
-        ] ;
-        oven:atDevice <system/heater/1#it>
-    ] ;
-    oven:heatingDeviceTargetTemperature [
-        oven:deviceTemperature [
-            a qudt:Quantity ;
-            qudt:hasQuantityKind quantitykind:AreaTemperature ;
-            qudt:hasUnit unit:DEG_C ;
-            qudt:value 300.0
-        ] ;
-        oven:atDevice <system/heater/2#it>
     ] .
 
 # Pressing
@@ -523,4 +505,22 @@
                 qudt:value 0.0
             ]
         ]
-    ) .
+    ) ;
+    oven:heatingDeviceTargetTemperature [
+        oven:deviceTemperature [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:Temperature ;
+            qudt:hasUnit unit:DEG_C ;
+            qudt:value 300.0
+        ] ;
+        oven:atDevice <system/heater/1#it>
+    ] ;
+    oven:heatingDeviceTargetTemperature [
+        oven:deviceTemperature [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:Temperature ;
+            qudt:hasUnit unit:DEG_C ;
+            qudt:value 300.0
+        ] ;
+        oven:atDevice <system/heater/2#it>
+    ] .
