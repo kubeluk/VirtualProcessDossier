@@ -56,17 +56,17 @@ docker compose -p vpd-tests -f docker-compose.test.yml down
 
 The test Fuseki listens on localhost:3330. Set `FUSEKI_URL` to use another test instance and `ADMIN_PASSWORD` if needed.
 
-Tests compare the UI's generated RDF with the supplied initialization snapshot and plans using RDF dataset canonicalization, independently query the resulting triples, verify retry safety, execute the demonstrator update templates against UI-created identities, and check provenance-aware discovery.
+Tests compare the UI's generated RDF with the supplied initialization snapshot and plans using RDF dataset canonicalization, independently query the resulting triples, verify retry safety, simulate shop-floor creation of atomic instances before executing the demonstrator completion templates, and check provenance-aware discovery.
 
 Browser end-to-end testing is intentionally left to the user. See [the competency coverage and manual checks](data/docs/ui-verification.md).
 
 ## Model and implementation
 
-The authoritative model is under [data](data), including the parameter shapes, material shapes, example snapshots, and SPARQL templates. The original examples are unchanged.
+The authoritative model is under [data](data), including the parameter shapes, material shapes, example snapshots, and SPARQL templates. Historical snapshots are preserved; the initialized seed example is projected onto the current initialization contract.
 
 - A run selects its laminate through `for:workflowInitialization/for:laminate`.
-- Initialization creates 43 activity instances for the supplied model and three fresh plans, all initialized.
-- Plans link through `for:initialization` and `for:initialized`, retaining quantities, units, component references, and ordered RDF lists.
+- Initialization creates one initialized workflow, five initialized composite activity instances, and three fresh parameter plans. The shop-floor system creates atomic activity instances; all 43 activities remain in the process definition.
+- Plans belong to the run's `for:workflowInitialization/for:parameterization/prov:hadMember` collection, retaining quantities, units, component references, and ordered RDF lists. The shop-floor system adds `for:initialization` and `for:initialized` links when atomic instances are created. Existing completion templates require this shop-floor initialization step.
 - Datasets link to generating observations through `prov:wasGeneratedBy`; observations supply sensor, measured property, feature of interest, and workflow membership.
 - Specified settings and expected sensor configuration are distinct from recorded execution facts.
 - Initialization writes no execution times, completed states, output-part assumptions, or observations.

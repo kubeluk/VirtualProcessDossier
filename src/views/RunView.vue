@@ -14,9 +14,15 @@ import {
   isType,
   dateTime,
   interval,
-  objects,
 } from '../domain/rdf'
-import { workflowTree, runLaminate, runActivities, datasetsFor, flatten } from '../domain/model'
+import {
+  workflowTree,
+  runLaminate,
+  runActivities,
+  runPlans,
+  datasetsFor,
+  flatten,
+} from '../domain/model'
 import { copySettings } from '../domain/initialization'
 import { observationExpectations } from '../domain/expectations'
 import AsyncState from '../components/AsyncState.vue'
@@ -254,9 +260,9 @@ function selectTab(next: string) {
       <MachineParameters v-if="settings.draft" :model-value="settings.draft" readonly />
       <div v-else class="notice">
         {{ settings.error }}
-        <div v-for="activity in runActivities(g, uri)" :key="activity.value">
+        <div>
           <EntityLink
-            v-for="plan in objects(g, activity, NS.for + 'initialization')"
+            v-for="plan in runPlans(g, uri)"
             :key="plan.value"
             :uri="plan.value"
             :graph="g"

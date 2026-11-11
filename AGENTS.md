@@ -49,9 +49,9 @@ Never automatically clear, migrate, or reseed nonempty application data. Use `.e
 
 ## Domain Contract
 
-- Initialize one workflow instance and all model activity instances with `wild:initialized`. The supplied workflow has 43 nodes, including 38 atomic activities and 29 planned observation activities.
+- Initialize one workflow instance and only the five composite activity instances with `wild:initialized`. The shop-floor system creates the 38 atomic activity instances, including 29 observation activities. The model retains all 43 nodes.
 - Link the laminate with `for:workflowInitialization/for:laminate`.
-- Link the three parameter plans through the run's parameterization collection, `for:initialization`, and reverse `for:initialized`.
+- Link the three parameter plans through the run's parameterization collection. The shop-floor system adds `for:initialization` and reverse `for:initialized` when it creates atomic instances.
 - Preserve exact namespaces, quantity types, units, component identities, and ordered RDF lists.
 - Never fabricate execution timestamps, completed states, observation metadata, execution associations, or a separate physical output part.
 - Read dataset context through `prov:wasGeneratedBy` → observation → `wild:inWorkflowInstance`.

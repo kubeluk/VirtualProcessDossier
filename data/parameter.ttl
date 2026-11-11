@@ -460,14 +460,13 @@
 param:planShape
     a sh:NodeShape ;
     rdfs:label "Initialization plan"@en ;
-    rdfs:comment "Plan that identifies the activity instance it initializes."@en ;
+    rdfs:comment "Saved parameter plan; the shop-floor system links its activity instance when execution is initialized."@en ;
     sh:class prov:Plan ;
     sh:property [
         sh:path for:initialized ;
         sh:name "Initialized activity"@en ;
         sh:description "Activity instance initialized by this plan."@en ;
         sh:nodeKind sh:IRI ;
-        sh:minCount 1 ;
         sh:maxCount 1
     ] .
 

@@ -6,6 +6,7 @@ PREFIX frame: <http://purl.org/system/frame/1#>
 PREFIX oven: <http://purl.org/system/oven/1#>
 PREFIX press: <http://purl.org/system/press/1#>
 PREFIX qudt: <http://qudt.org/schema/qudt/>
+PREFIX prov: <http://www.w3.org/ns/prov#>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
 # Input: scheduled workflow instance IRI.
@@ -14,6 +15,9 @@ PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 # Extend it when introducing new nested parameter structures.
 CONSTRUCT
 {
+    ?workflow_instance for:workflowInitialization ?workflow_initialization .
+    ?workflow_initialization for:parameterization ?collection .
+    ?collection a prov:Collection ; prov:hadMember ?initialization_plan .
     ?activity_instance for:initialization ?initialization_plan .
     ?subject ?predicate ?object .
 }
@@ -22,10 +26,17 @@ WHERE
     VALUES ?workflow_instance { <workflow/instance/1#it> }
 
     ?workflow_instance a wild:WorkflowInstance .
-    ?activity_instance
-        a wild:ActivityInstance ;
-        wild:inWorkflowInstance ?workflow_instance ;
-        for:initialization ?initialization_plan .
+    {
+        ?workflow_instance for:workflowInitialization ?workflow_initialization .
+        ?workflow_initialization for:parameterization ?collection .
+        ?collection prov:hadMember ?initialization_plan .
+    }
+    UNION
+    {
+        ?activity_instance a wild:ActivityInstance ;
+            wild:inWorkflowInstance ?workflow_instance ;
+            for:initialization ?initialization_plan .
+    }
 
     ?initialization_plan (
         frame:gripperPosition | frame:position | frame:gripperSetpoint | frame:setpoint |

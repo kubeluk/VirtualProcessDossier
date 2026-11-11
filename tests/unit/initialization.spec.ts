@@ -24,7 +24,7 @@ import {
   validatePlans,
   settingsFingerprint,
 } from '../../src/domain/initialization'
-import { flatten, workflowTree, runActivities, runLaminate } from '../../src/domain/model'
+import { flatten, workflowTree, runActivities, runLaminate, runPlans } from '../../src/domain/model'
 import { readLaminate } from '../../src/domain/laminate'
 import { observationExpectations } from '../../src/domain/expectations'
 import {
@@ -51,12 +51,30 @@ describe('initialization contract', () => {
     const actual = await validateInitialization(draft, refs)
     const expected = expectedInitialization(source, actual, draft)
     expect(await canonical(actual)).toBe(await canonical(expected))
-    expect(actual.size).toBe(source.size)
+    expect(actual.size).toBe(expected.size)
   })
-  it('instantiates all 43 activities without fabrication of execution facts', () => {
+  it('instantiates only the five composite activities without fabrication of execution facts', () => {
     const graph = buildInitialization(draft, refs),
       ids = initializationIris(draft)
-    expect(runActivities(graph, ids.run)).toHaveLength(43)
+    expect(runActivities(graph, ids.run)).toHaveLength(5)
+    expect(
+      runActivities(graph, ids.run)
+        .map((instance) => value(graph, instance, NS.wild + 'activityInstanceOf'))
+        .sort(),
+    ).toEqual(
+      [
+        'stampFormingFlow',
+        'gripAndObserve',
+        'manufactureAndObserve',
+        'heatAndObserve',
+        'inspection',
+      ]
+        .map((name) => NS.activity + name)
+        .sort(),
+    )
+    expect(runPlans(graph, ids.run)).toHaveLength(3)
+    for (const predicate of ['initialization', 'initialized'])
+      expect(graph.getQuads(null, n(NS.for + predicate), null, null)).toHaveLength(0)
     expect(typed(graph, NS.prov + 'Plan')).toHaveLength(3)
     expect(typed(graph, NS.sosa + 'Observation')).toHaveLength(0)
     for (const predicate of [
@@ -89,6 +107,51 @@ describe('initialization contract', () => {
       'moveToUnload',
       'unload',
     ])
+  })
+  it('copies collection-owned plans with arbitrary IRIs before atomic instances exist', () => {
+    const graph = buildInitialization(draft, refs),
+      ids = initializationIris(draft)
+    const replacements = new Map(
+      ['gripping', 'heating', 'pressing'].map((stage, i) => [
+        ids.plan(stage),
+        BASE + 'plan/random-' + i + '#it',
+      ]),
+    )
+    const remap = (term: Parameters<typeof df.quad>[2]) =>
+      replacements.has(term.value) ? n(replacements.get(term.value)!) : term
+    const renamed = new Store(
+      [...graph].map((q) => df.quad(q.subject, q.predicate, remap(q.object) as typeof q.object)),
+    )
+    for (const q of renamed.getQuads(null, null, null, null)) {
+      if (!replacements.has(q.subject.value)) continue
+      renamed.removeQuad(q)
+      renamed.addQuad(n(replacements.get(q.subject.value)!), q.predicate, q.object)
+    }
+    const copy = copySettings(merge(refs, renamed), ids.run, refs)
+    copy.name = draft.name
+    copy.notes = draft.notes
+    expect(settingsFingerprint(copy)).toBe(settingsFingerprint(draft))
+  })
+  it('rejects missing and ambiguous collection plans without guessing', () => {
+    const graph = buildInitialization(draft, refs),
+      ids = initializationIris(draft)
+    const collection = object(
+      graph,
+      object(graph, ids.run, NS.for + 'workflowInitialization'),
+      NS.for + 'parameterization',
+    )!
+    graph.addQuad(
+      collection as ReturnType<typeof n>,
+      n(NS.prov + 'hadMember'),
+      n(BASE + 'plan/extra'),
+    )
+    graph.addQuad(n(BASE + 'plan/extra'), n(NS.oven + 'thresholdTemperature'), df.blankNode())
+    expect(() => copySettings(graph, ids.run, refs)).toThrow('exactly one heating')
+    graph.removeQuads(
+      graph.getQuads(n(ids.plan('heating')), n(NS.oven + 'thresholdTemperature'), null, null),
+    )
+    graph.removeQuads(graph.getQuads(n(BASE + 'plan/extra'), null, null, null))
+    expect(() => copySettings(graph, ids.run, refs)).toThrow('exactly one heating')
   })
   it('uses scoped defaults and leaves undeclared gripper coordinates empty', () => {
     const fresh = createDraft(refs)
@@ -199,6 +262,20 @@ describe('initialization contract', () => {
     change(invalid)
     expect(draftErrors(invalid, refs).length).toBeGreaterThan(0)
     expect(() => buildInitialization(invalid, refs)).toThrow()
+  })
+  it('accepts older stored plan shapes without migrating them', async () => {
+    const older = new Store(refs.getQuads(null, null, null, null))
+    const link = objects(older, NS.param + 'planShape', NS.sh + 'property').find(
+      (node) => value(older, node, NS.sh + 'path') === NS.for + 'initialized',
+    )!
+    older.addQuad(
+      link as ReturnType<typeof n>,
+      n(NS.sh + 'minCount'),
+      df.literal('1', n(NS.xsd + 'integer')),
+    )
+    const before = await canonical(older)
+    await expect(validateInitialization(draft, older)).resolves.toBeInstanceOf(Store)
+    expect(await canonical(older)).toBe(before)
   })
   it('validates targetless equipment shapes explicitly and rejects incorrect units and datatypes', async () => {
     const graph = buildInitialization(draft, refs),
@@ -380,7 +457,7 @@ describe('RDF integrity and seed fixtures', () => {
       for (const resource of objects(graph, laminate, predicate))
         expect(originalResources).not.toContain(resource.value)
     }
-    expect(runActivities(graph, run)).toHaveLength(43)
+    expect(runActivities(graph, run)).toHaveLength(5)
     for (const instance of [n(run), ...runActivities(graph, run)]) {
       expect(value(graph, instance, NS.wild + 'hasState')).toBe(NS.wild + 'initialized')
       expect(objects(graph, instance, NS.prov + 'startedAtTime')).toHaveLength(0)

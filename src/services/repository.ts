@@ -104,6 +104,7 @@ export class KnowledgeRepository {
     return this.construct(`CONSTRUCT { ?s ?p ?o } WHERE {
       { BIND(${run} AS ?root) }
       UNION { ?root wild:inWorkflowInstance ${run} . }
+      UNION { ${run} for:workflowInitialization/for:parameterization/prov:hadMember ?root . }
       UNION { ?activity wild:inWorkflowInstance ${run} ; for:initialization ?root . }
       UNION { ?observation wild:inWorkflowInstance ${run} . ?root prov:wasGeneratedBy ?observation . }
       ?root (!<urn:vpd:unused>)* ?s .

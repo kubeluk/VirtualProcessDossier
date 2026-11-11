@@ -13,7 +13,7 @@ import {
   safeIri,
 } from './rdf'
 import type { Term } from './rdf'
-import { flatten, workflowTree, runActivities, runLaminate } from './model'
+import { flatten, workflowTree, runPlans, runLaminate } from './model'
 import type { InitializationDraft } from './types'
 
 export const SYSTEMS = {
@@ -28,6 +28,17 @@ export const SHAPES = {
 }
 export const MODEL = BASE + 'workflow#stampForming'
 export const REFERENCE = BASE + 'system/frame#referencePoint'
+
+const PLAN_PREDICATES = {
+  gripping: NS.frame + 'gripperPosition',
+  heating: NS.oven + 'thresholdTemperature',
+  pressing: NS.press + 'force',
+}
+export function planStages(g: Store, plan: Term): (keyof typeof SHAPES)[] {
+  return (Object.keys(PLAN_PREDICATES) as (keyof typeof SHAPES)[]).filter(
+    (stage) => objects(g, plan, PLAN_PREDICATES[stage]).length > 0,
+  )
+}
 
 function property(
   g: Store,
@@ -164,17 +175,16 @@ export function copySettings(
   draft.model = value(g, run, NS.wild + 'workflowInstanceOf')
   draft.copiedFrom = run
   draft.laminate = runLaminate(g, run)
-  const plans = new Map(
-    runActivities(g, run).map((activity) => [
-      value(g, activity, NS.wild + 'activityInstanceOf'),
-      object(g, activity, NS.for + 'initialization'),
-    ]),
-  )
-  const frame = plans.get(NS.activity + 'gripping'),
-    oven = plans.get(NS.activity + 'heating'),
-    press = plans.get(NS.activity + 'pressing')
-  if (!frame || !oven || !press)
-    throw new Error('This run does not have all three initialization plans to copy.')
+  const plans = runPlans(g, run)
+  const stagePlan = (stage: keyof typeof PLAN_PREDICATES) => {
+    const matches = plans.filter((plan) => planStages(g, plan).includes(stage))
+    if (matches.length !== 1 || planStages(g, matches[0]!).length !== 1)
+      throw new Error('This run must have exactly one ' + stage + ' initialization plan to copy.')
+    return matches[0]!
+  }
+  const frame = stagePlan('gripping'),
+    oven = stagePlan('heating'),
+    press = stagePlan('pressing')
   const q = (s: Term | undefined, p: string) => value(g, object(g, s, p), NS.qudt + 'value')
   draft.grippers = draft.grippers.map((gripper) => {
     const position = objects(g, frame, NS.frame + 'gripperPosition').find(
@@ -324,11 +334,6 @@ export function buildInitialization(draft: InitializationDraft, references: Stor
     if (!activities.some((a) => a.uri === NS.activity + stage))
       throw new Error('The required machine activity is missing: ' + stage)
   activities.forEach((activity, index) => {
-    const instance = n(ids.activity(index))
-    type(instance, NS.wild + 'ActivityInstance')
-    add(instance, NS.wild + 'activityInstanceOf', n(activity.uri))
-    add(instance, NS.wild + 'inWorkflowInstance', run)
-    add(instance, NS.wild + 'hasState', n(NS.wild + 'initialized'))
     const system = object(references, activity.uri, NS.ssn + 'implementedBy')
     const shape = value(references, system, NS.for + 'takesParameters')
     const stage = (Object.keys(SYSTEMS) as (keyof typeof SYSTEMS)[]).find(
@@ -336,13 +341,18 @@ export function buildInitialization(draft: InitializationDraft, references: Stor
     )
     if (shape && (!stage || shape !== SHAPES[stage]))
       throw new Error('Unsupported equipment parameter shape: ' + shape)
-    if (!stage) return
+    if (activity.type === 'atomic') return
+    const instance = n(ids.activity(index))
+    type(instance, NS.wild + 'ActivityInstance')
+    add(instance, NS.wild + 'activityInstanceOf', n(activity.uri))
+    add(instance, NS.wild + 'inWorkflowInstance', run)
+    add(instance, NS.wild + 'hasState', n(NS.wild + 'initialized'))
+  })
+  for (const stage of Object.keys(SYSTEMS)) {
     const plan = n(ids.plan(stage))
     type(plan, NS.prov + 'Plan')
-    add(instance, NS.for + 'initialization', plan)
-    add(plan, NS.for + 'initialized', instance)
     add(collection, NS.prov + 'hadMember', plan)
-  })
+  }
   const gripping = n(ids.plan('gripping')),
     heating = n(ids.plan('heating')),
     pressing = n(ids.plan('pressing'))
@@ -427,7 +437,14 @@ export async function validatePlans(
   plans: { plan: string; shape: string }[],
 ): Promise<string[]> {
   const { default: Validator } = await import('shacl-engine/Validator.js')
-  const validator = new Validator(shapes, { factory: { ...df, dataset: () => new Store() } })
+  // Nonempty stores may retain the earlier requirement for an atomic instance link.
+  // Apply the current plan contract locally without migrating stored shapes or data.
+  const planShapes = new Store(shapes.getQuads(null, null, null, null))
+  for (const property of objects(planShapes, NS.param + 'planShape', NS.sh + 'property')) {
+    if (value(planShapes, property, NS.sh + 'path') === NS.for + 'initialized')
+      planShapes.removeQuads(planShapes.getQuads(property, n(NS.sh + 'minCount'), null, null))
+  }
+  const validator = new Validator(planShapes, { factory: { ...df, dataset: () => new Store() } })
   const errors: string[] = []
   for (const item of plans) {
     const report = await validator.validate({ dataset: data, terms: [n(item.plan)] }, [

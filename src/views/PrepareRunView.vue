@@ -432,8 +432,9 @@ async function submit() {
                 </dd>
               </dl>
               <p class="notice small">
-                Initializing saves the input and specified settings. The demonstrator records
-                execution state, timing, observations, and datasets.
+                Initializing saves the input, machine settings, and initialized workflow groups.
+                The shop-floor system creates atomic activity instances and records execution
+                state, timing, observations, and datasets.
               </p>
             </section>
             <details

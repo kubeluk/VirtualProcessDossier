@@ -38,7 +38,23 @@ export function expectedInitialization(
       [sourceRun, ids.run],
       [BASE + 'laminate/1#it', draft.laminate],
     ])
-  for (const old of runActivities(source, sourceRun)) {
+  const atomic = new Set(
+    runActivities(source, sourceRun)
+      .filter((activity) => {
+        const model = value(source, activity, NS.wild + 'activityInstanceOf')
+        return ![
+          'stampFormingFlow',
+          'gripAndObserve',
+          'manufactureAndObserve',
+          'heatAndObserve',
+          'inspection',
+        ].some((name) => model === NS.activity + name)
+      })
+      .map((activity) => activity.value),
+  )
+  for (const old of runActivities(source, sourceRun).filter(
+    (activity) => !atomic.has(activity.value),
+  )) {
     const model = value(source, old, NS.wild + 'activityInstanceOf')
     const replacement = runActivities(actual, ids.run).find(
       (t) => value(actual, t, NS.wild + 'activityInstanceOf') === model,
@@ -55,6 +71,7 @@ export function expectedInitialization(
   const expected = new Store(
     source
       .getQuads(null, null, null, null)
+      .filter((q) => !atomic.has(q.subject.value) && q.predicate.value !== NS.for + 'initialized')
       .map((q) =>
         df.quad(
           remap(q.subject) as typeof q.subject,

@@ -20,10 +20,11 @@ import {
   copySettings,
   buildInitialization,
   initializationIris,
+  planStages,
 } from '../../src/domain/initialization'
 import { seed } from '../../scripts/seed'
 import { canonical, expectedInitialization, initializationSource, sourceRun } from '../helpers'
-import { runActivities, runLaminate, datasetsFor } from '../../src/domain/model'
+import { runActivities, runLaminate, datasetsFor, runPlans } from '../../src/domain/model'
 import type { InitializationDraft } from '../../src/domain/types'
 const url = process.env.FUSEKI_URL ?? 'http://localhost:3330'
 const dataset = 'vpd_it_' + Date.now()
@@ -152,7 +153,12 @@ describe('real Fuseki reads', () => {
     expect(await repo.select(await readQuery('get-activity-instances.rq'))).toHaveLength(43)
     expect(await repo.select(await readQuery('get-observation-bindings.rq'))).toHaveLength(29)
     expect(await repo.select(await readQuery('get-workflow-instance.rq'))).toHaveLength(1)
-    const graph = await repo.construct(await readQuery('get-initialization-plans.rq'))
+    const graph = await repo.construct(
+      await readFile(
+        new URL('../../data/queries/reads/get-initialization-plans.rq', import.meta.url),
+        'utf8',
+      ),
+    )
     const plan = BASE + 'plan/1#pressing'
     const steps = list(graph, object(graph, plan, NS.press + 'closingSteps'))
     expect(
@@ -221,11 +227,94 @@ describe('real Fuseki writes', () => {
     expect(uri).toBe(initializationIris(draft).run)
     expect(await canonical(await all())).toBe(await canonical(merge(before, expected)))
     const rows = await repo.select(
-      `SELECT ?instance ?plan ?back WHERE { ?instance wild:inWorkflowInstance <${uri}> ; for:initialization ?plan . ?plan for:initialized ?back }`,
+      `SELECT ?plan WHERE { <${uri}> for:workflowInitialization/for:parameterization/prov:hadMember ?plan . ?plan a prov:Plan }`,
     )
     expect(rows).toHaveLength(3)
-    expect(rows.every((row) => row.instance!.value === row.back!.value)).toBe(true)
+    expect(runActivities(await repo.getRunContext(uri), uri)).toHaveLength(5)
+    expect(
+      await repo.ask(
+        `ASK { ?instance wild:inWorkflowInstance <${uri}> ; for:initialization ?plan }`,
+      ),
+    ).toBe(false)
     expect(await repo.ask(`ASK { <${uri}> prov:startedAtTime ?time }`)).toBe(false)
+  })
+  it('executes the reference initialization query with complete collection-owned plans', async () => {
+    const draft = copySettings(
+      merge(refs, await initializationSource()),
+      sourceRun,
+      refs,
+      'reference-query',
+    )
+    draft.name = 'Reference query test'
+    draft.notes = 'Example Run Comment'
+    draft.laminateConfirmed = true
+    await useFreshLaminate(draft)
+    const query = (
+      await readFile(
+        new URL('../../data/queries/updates/initialize-stamp-forming-run.ttl', import.meta.url),
+        'utf8',
+      )
+    )
+      .replace('INSERT_CORRECT_UUID_HERE', draft.id)
+      .replace('Example Run Label', draft.name)
+    await repo.update(query)
+    const rows = await repo.select(
+      'SELECT ?run WHERE { ?run a wild:WorkflowInstance ; rdfs:label "Reference query test" }',
+    )
+    expect(rows).toHaveLength(1)
+    const run = rows[0]!.run!.value
+    const context = await repo.getRunContext(run)
+    const actual = new Store()
+    const pending = [n(run), ...runActivities(context, run), ...runPlans(context, run)]
+    const visited = new Set<string>()
+    while (pending.length) {
+      const subject = pending.pop()!
+      if (visited.has(subject.value)) continue
+      visited.add(subject.value)
+      for (const q of context.getQuads(subject, null, null, null)) {
+        actual.addQuad(q)
+        if (q.object.termType === 'BlankNode') pending.push(q.object)
+      }
+    }
+    const expected = buildInitialization(draft, refs),
+      ids = initializationIris(draft)
+    const substitutions = new Map([[run, ids.run]])
+    for (const instance of runActivities(actual, run)) {
+      const model = value(actual, instance, NS.wild + 'activityInstanceOf')
+      const target = runActivities(expected, ids.run).find(
+        (item) => value(expected, item, NS.wild + 'activityInstanceOf') === model,
+      )
+      expect(target).toBeDefined()
+      substitutions.set(instance.value, target!.value)
+    }
+    for (const plan of runPlans(actual, run)) {
+      const stages = planStages(actual, plan)
+      expect(stages).toHaveLength(1)
+      substitutions.set(plan.value, ids.plan(stages[0]!))
+    }
+    const remap = (term: Parameters<typeof df.quad>[2]) =>
+      substitutions.has(term.value) ? n(substitutions.get(term.value)!) : term
+    const mapped = new Store(
+      [...actual].map((q) =>
+        df.quad(
+          remap(q.subject) as typeof q.subject,
+          q.predicate,
+          remap(q.object) as typeof q.object,
+        ),
+      ),
+    )
+    expect(await canonical(mapped)).toBe(await canonical(expected))
+    const planRead = (
+      await readFile(
+        new URL('../../data/queries/reads/get-initialization-plans.rq', import.meta.url),
+        'utf8',
+      )
+    ).replace('<workflow/instance/1#it>', '<' + run + '>')
+    const plans = await repo.construct(planRead)
+    expect(runPlans(plans, run)).toHaveLength(3)
+    expect(copySettings(merge(refs, plans, actual), run, refs).press.steps).toEqual(
+      draft.press.steps,
+    )
   })
   it('rejects invalid input without sending an update or changing any triples', async () => {
     const before = await canonical(await all()),
@@ -332,7 +421,7 @@ describe('real Fuseki writes', () => {
       await canonical(merge(before, buildInitialization(winner, refs))),
     )
   })
-  it('accepts demonstrator completion and dataset templates while preserving UI-created identities', async () => {
+  it('accepts demonstrator completion and dataset templates while using shop-floor-created atomic identities', async () => {
     const draft = copySettings(
       merge(refs, await repo.getRunContext(sourceRun)),
       sourceRun,
@@ -343,10 +432,17 @@ describe('real Fuseki writes', () => {
     draft.laminateConfirmed = true
     await useFreshLaminate(draft)
     const run = await repo.initializeRun(draft, refs)
-    const graph = await repo.getRunContext(run)
-    const heating = runActivities(graph, run).find(
-      (t) => value(graph, t, NS.wild + 'activityInstanceOf') === NS.activity + 'heating',
-    )!
+    // The shop-floor system owns atomic identities and links plans when creating instances.
+    const heating = n(BASE + 'activity/instance/shop-floor-heating#it')
+    const obs = n(BASE + 'activity/instance/shop-floor-observation#it')
+    const plan = initializationIris(draft).plan('heating')
+    await repo.update(`INSERT DATA {
+      <${heating.value}> a wild:ActivityInstance ; wild:activityInstanceOf activity:heating ;
+        wild:inWorkflowInstance <${run}> ; wild:hasState wild:initialized ; for:initialization <${plan}> .
+      <${plan}> for:initialized <${heating.value}> .
+      <${obs.value}> a wild:ActivityInstance ; wild:activityInstanceOf activity:observeGripperAngle1 ;
+        wild:inWorkflowInstance <${run}> ; wild:hasState wild:initialized .
+    }`)
     let query = await readFile(
       new URL(
         '../../data/queries/updates/machine-activities/demonstrator/insert-heating.rq',
@@ -368,10 +464,6 @@ describe('real Fuseki writes', () => {
     expect(value(completed, association, NS.prov + 'hadPlan')).toBe(
       initializationIris(draft).plan('heating'),
     )
-    const obs = runActivities(graph, run).find(
-      (t) =>
-        value(graph, t, NS.wild + 'activityInstanceOf') === NS.activity + 'observeGripperAngle1',
-    )!
     let sensorQuery = await readFile(
       new URL(
         '../../data/queries/updates/sensor-activities/demonstrator/template-insert-observation.rq',

@@ -2,9 +2,9 @@ import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
 import { BASE, NS, Store, df, n, parse, serialize, typed, value } from '../src/domain/rdf'
-import { SHAPES, validatePlans } from '../src/domain/initialization'
+import { SHAPES, planStages, validatePlans } from '../src/domain/initialization'
 import { buildLaminate, readLaminate } from '../src/domain/laminate'
-import { runLaminate } from '../src/domain/model'
+import { runLaminate, runActivities } from '../src/domain/model'
 
 const readyLaminate = BASE + 'laminate/demo-initialized#it'
 
@@ -62,6 +62,12 @@ export async function buildSeedGraph(publicBaseUrl = 'http://localhost:8080'): P
     ),
   ])
   const source = new Store([...(await read('run-view-after-ui.ttl')), ...(await read('plan.ttl'))])
+  for (const activity of runActivities(source, BASE + 'workflow/instance/1#it')) {
+    const model = value(source, activity, NS.wild + 'activityInstanceOf')
+    if (graph.countQuads(n(model), n(NS.rdf + 'type'), n(NS.wild + 'AtomicActivity'), null))
+      source.removeQuads(source.getQuads(activity, null, null, null))
+  }
+  source.removeQuads(source.getQuads(null, n(NS.for + 'initialized'), null, null))
   graph.addQuads(remapReadyGraph(source).getQuads(null, null, null, null))
   const supplemental = await read('demo/connected-datasets.ttl')
   for (const q of supplemental) {
@@ -80,12 +86,10 @@ export async function buildSeedGraph(publicBaseUrl = 'http://localhost:8080'): P
 }
 export async function validateSeedGraph(graph: Store): Promise<void> {
   const plans = typed(graph, NS.prov + 'Plan').map((plan) => {
-    const activity = value(graph, plan, NS.for + 'initialized')
-    const model = value(graph, activity, NS.wild + 'activityInstanceOf').replace(
-      NS.activity,
-      '',
-    ) as keyof typeof SHAPES
-    if (!SHAPES[model]) throw new Error('No equipment shape found for plan ' + plan.value)
+    const stages = planStages(graph, plan)
+    if (stages.length !== 1)
+      throw new Error('No unique equipment shape found for plan ' + plan.value)
+    const model = stages[0]!
     return { plan: plan.value, shape: SHAPES[model] }
   })
   const errors = await validatePlans(graph, graph, plans)

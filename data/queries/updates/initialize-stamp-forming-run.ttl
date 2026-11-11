@@ -1,0 +1,677 @@
+BASE <http://purl.org/for/>
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX prov: <http://www.w3.org/ns/prov#>
+PREFIX wild: <http://purl.org/wild/vocab#>
+PREFIX workflow: <http://purl.org/for/workflow#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX for: <http://purl.org/for/terms#>
+PREFIX activity: <http://purl.org/for/activity#>
+
+PREFIX frame: <http://purl.org/system/frame/1#>
+PREFIX oven: <http://purl.org/system/oven/1#>
+PREFIX press: <http://purl.org/system/press/1#>
+PREFIX qudt: <http://qudt.org/schema/qudt/>
+PREFIX quantitykind: <http://qudt.org/vocab/quantitykind/>
+PREFIX unit: <http://qudt.org/vocab/unit/>
+
+# Only composite activities are initialized here; the shop-floor system creates atomic instances.
+INSERT
+{
+    ?workflow_instance
+        a wild:WorkflowInstance ;
+        rdfs:label "Example Run Label" ;
+        rdfs:comment "Example Run Comment" ;
+        wild:workflowInstanceOf workflow:stampForming ;
+        wild:hasState wild:initialized ;
+        for:workflowInitialization [
+            for:laminate ?laminate ;
+            for:parameterization [
+                a prov:Collection ;
+                prov:hadMember ?gripping_plan ;
+                prov:hadMember ?heating_plan ;
+                prov:hadMember ?pressing_plan
+            ]
+        ] .
+
+    ?behaviour
+        a wild:ActivityInstance ;
+        wild:inWorkflowInstance ?workflow_instance ;
+        wild:activityInstanceOf activity:stampFormingFlow ;
+        wild:hasState wild:initialized .
+
+    ?grip_and_observe
+        a wild:ActivityInstance ;
+        wild:inWorkflowInstance ?workflow_instance ;
+        wild:activityInstanceOf activity:gripAndObserve ;
+        wild:hasState wild:initialized .
+
+    ?manufacture_and_observe
+        a wild:ActivityInstance ;
+        wild:inWorkflowInstance ?workflow_instance ;
+        wild:activityInstanceOf activity:manufactureAndObserve ;
+        wild:hasState wild:initialized .
+
+    ?heat_and_observe
+        a wild:ActivityInstance ;
+        wild:inWorkflowInstance ?workflow_instance ;
+        wild:activityInstanceOf activity:heatAndObserve ;
+        wild:hasState wild:initialized .
+
+    ?inspection
+        a wild:ActivityInstance ;
+        wild:inWorkflowInstance ?workflow_instance ;
+        wild:activityInstanceOf activity:inspection ;
+        wild:hasState wild:initialized .
+
+    ?gripping_plan
+        a prov:Plan ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( ?gripper_1_x ?gripper_1_y ) ;
+                prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
+            ] ;
+            frame:ofGripper <system/gripper/1#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_1_gripping_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/1#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_1_heating_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/1#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_1_pressing_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/1#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( ?gripper_2_x ?gripper_2_y ) ;
+                prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
+            ] ;
+            frame:ofGripper <system/gripper/2#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_2_gripping_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/2#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_2_heating_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/2#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_2_pressing_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/2#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( ?gripper_3_x ?gripper_3_y ) ;
+                prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
+            ] ;
+            frame:ofGripper <system/gripper/3#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_3_gripping_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/3#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_3_heating_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/3#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_3_pressing_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/3#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( ?gripper_4_x ?gripper_4_y ) ;
+                prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
+            ] ;
+            frame:ofGripper <system/gripper/4#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_4_gripping_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/4#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_4_heating_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/4#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_4_pressing_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/4#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( ?gripper_5_x ?gripper_5_y ) ;
+                prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
+            ] ;
+            frame:ofGripper <system/gripper/5#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_5_gripping_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/5#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_5_heating_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/5#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_5_pressing_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/5#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( ?gripper_6_x ?gripper_6_y ) ;
+                prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
+            ] ;
+            frame:ofGripper <system/gripper/6#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_6_gripping_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/6#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_6_heating_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/6#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_6_pressing_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/6#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( ?gripper_7_x ?gripper_7_y ) ;
+                prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
+            ] ;
+            frame:ofGripper <system/gripper/7#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_7_gripping_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/7#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_7_heating_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/7#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_7_pressing_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/7#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( ?gripper_8_x ?gripper_8_y ) ;
+                prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
+            ] ;
+            frame:ofGripper <system/gripper/8#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_8_gripping_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/8#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_8_heating_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/8#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_8_pressing_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/8#it> ;
+            frame:atActivity activity:pressing
+        ] .
+
+    ?heating_plan
+        a prov:Plan ;
+        oven:thresholdTemperature [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:AreaTemperature ;
+            qudt:hasUnit unit:DEG_C ;
+            qudt:value ?oven_threshold_temperature
+        ] ;
+        oven:stableHoldingTime [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:Time ;
+            qudt:hasUnit unit:SEC ;
+            qudt:value ?oven_stable_holding_time
+        ] ;
+        oven:fieldTargetTemperature [
+            oven:fieldTarget [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value ?oven_field_1_target_temperature
+            ] ;
+            oven:atField <system/field/1#it>
+        ] ;
+        oven:fieldTargetTemperature [
+            oven:fieldTarget [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value ?oven_field_2_target_temperature
+            ] ;
+            oven:atField <system/field/2#it>
+        ] ;
+        oven:fieldTargetTemperature [
+            oven:fieldTarget [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value ?oven_field_3_target_temperature
+            ] ;
+            oven:atField <system/field/3#it>
+        ] ;
+        oven:fieldTargetTemperature [
+            oven:fieldTarget [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value ?oven_field_4_target_temperature
+            ] ;
+            oven:atField <system/field/4#it>
+        ] ;
+        oven:fieldTargetTemperature [
+            oven:fieldTarget [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value ?oven_field_5_target_temperature
+            ] ;
+            oven:atField <system/field/5#it>
+        ] ;
+        oven:fieldTargetTemperature [
+            oven:fieldTarget [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value ?oven_field_6_target_temperature
+            ] ;
+            oven:atField <system/field/6#it>
+        ] ;
+        oven:fieldTargetTemperature [
+            oven:fieldTarget [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value ?oven_field_7_target_temperature
+            ] ;
+            oven:atField <system/field/7#it>
+        ] ;
+        oven:fieldTargetTemperature [
+            oven:fieldTarget [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value ?oven_field_8_target_temperature
+            ] ;
+            oven:atField <system/field/8#it>
+        ] .
+
+    ?pressing_plan
+        a prov:Plan ;
+        press:force [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:Force ;
+            qudt:hasUnit unit:KiloN ;
+            qudt:value ?press_force
+        ] ;
+        press:moldCoolingTime [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:Time ;
+            qudt:hasUnit unit:SEC ;
+            qudt:value ?press_mold_cooling_time
+        ] ;
+        press:remainingPath [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:Distance ;
+            qudt:hasUnit unit:MilliM ;
+            qudt:value ?press_remaining_path
+        ] ;
+        press:moldTemperature [
+            press:temperature [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:Temperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value ?press_upper_mold_temperature
+            ] ;
+            press:mold <system/press/1#upperMold>
+        ] ;
+        press:moldTemperature [
+            press:temperature [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:Temperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value ?press_lower_mold_temperature
+            ] ;
+            press:mold <system/press/1#lowerMold>
+        ] ;
+        press:closingSteps (
+            [
+                press:closingSpeed [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:LinearVelocity ;
+                    qudt:hasUnit unit:MilliM-PER-SEC ;
+                    qudt:value ?press_closing_step_1_speed
+                ] ;
+                press:remainingDistance [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:Distance ;
+                    qudt:hasUnit unit:MilliM ;
+                    qudt:value ?press_closing_step_1_remaining_distance
+                ]
+            ]
+            [
+                press:closingSpeed [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:LinearVelocity ;
+                    qudt:hasUnit unit:MilliM-PER-SEC ;
+                    qudt:value ?press_closing_step_2_speed
+                ] ;
+                press:remainingDistance [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:Distance ;
+                    qudt:hasUnit unit:MilliM ;
+                    qudt:value ?press_closing_step_2_remaining_distance
+                ]
+            ]
+            [
+                press:closingSpeed [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:LinearVelocity ;
+                    qudt:hasUnit unit:MilliM-PER-SEC ;
+                    qudt:value ?press_closing_step_3_speed
+                ] ;
+                press:remainingDistance [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:Distance ;
+                    qudt:hasUnit unit:MilliM ;
+                    qudt:value ?press_closing_step_3_remaining_distance
+                ]
+            ]
+            [
+                press:closingSpeed [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:LinearVelocity ;
+                    qudt:hasUnit unit:MilliM-PER-SEC ;
+                    qudt:value ?press_closing_step_4_speed
+                ] ;
+                press:remainingDistance [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:Distance ;
+                    qudt:hasUnit unit:MilliM ;
+                    qudt:value ?press_closing_step_4_remaining_distance
+                ]
+            ]
+        ) ;
+        oven:heatingDeviceTargetTemperature [
+            oven:deviceTemperature [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:Temperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value ?heater_1_target_temperature
+            ] ;
+            oven:atDevice <system/heater/1#it>
+        ] ;
+        oven:heatingDeviceTargetTemperature [
+            oven:deviceTemperature [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:Temperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value ?heater_2_target_temperature
+            ] ;
+            oven:atDevice <system/heater/2#it>
+        ] .
+}
+WHERE
+{
+    BIND(STRUUID() AS ?workflow_instance_uuid)
+    BIND(IRI(CONCAT("http://purl.org/for/workflow/instance/", ?workflow_instance_uuid, "#it")) AS ?workflow_instance)
+
+    # TODO: insert the correct laminate identifier here
+    BIND("INSERT_CORRECT_UUID_HERE" AS ?laminate_uuid)
+    BIND(IRI(CONCAT("http://purl.org/for/laminate/", ?laminate_uuid, "#it")) AS ?laminate)
+
+    BIND(IRI(CONCAT("http://purl.org/for/plan/", ?workflow_instance_uuid, "#it")) AS ?gripping_plan)
+    BIND(IRI(CONCAT("http://purl.org/for/plan/", ?workflow_instance_uuid, "#it")) AS ?heating_plan)
+    BIND(IRI(CONCAT("http://purl.org/for/plan/", ?workflow_instance_uuid, "#it")) AS ?pressing_plan)
+
+    BIND(IRI(CONCAT("http://purl.org/for/workflow/instance/", ?workflow_instance_uuid, "#", "stampFormingFlow")) AS ?behaviour)
+
+    BIND(IRI(CONCAT("http://purl.org/for/workflow/instance/", ?workflow_instance_uuid, "#", "gripAndObserve")) AS ?grip_and_observe)
+
+    BIND(IRI(CONCAT("http://purl.org/for/workflow/instance/", ?workflow_instance_uuid, "#", "manufactureAndObserve")) AS ?manufacture_and_observe)
+
+    BIND(IRI(CONCAT("http://purl.org/for/workflow/instance/", ?workflow_instance_uuid, "#", "heatAndObserve")) AS ?heat_and_observe)
+
+    BIND(IRI(CONCAT("http://purl.org/for/workflow/instance/", ?workflow_instance_uuid, "#", "inspection")) AS ?inspection)
+
+    # TODO: replace these example values with the requested plan parameters.
+
+    # Gripper 1: position in mm and integer stage setpoints.
+    BIND(210.0 AS ?gripper_1_x)
+    BIND(100.0 AS ?gripper_1_y)
+    BIND(60 AS ?gripper_1_gripping_setpoint)
+    BIND(60 AS ?gripper_1_heating_setpoint)
+    BIND(60 AS ?gripper_1_pressing_setpoint)
+
+    # Gripper 2: position in mm and integer stage setpoints.
+    BIND(210.0 AS ?gripper_2_x)
+    BIND(-100.0 AS ?gripper_2_y)
+    BIND(60 AS ?gripper_2_gripping_setpoint)
+    BIND(60 AS ?gripper_2_heating_setpoint)
+    BIND(60 AS ?gripper_2_pressing_setpoint)
+
+    # Gripper 3: position in mm and integer stage setpoints.
+    BIND(-210.0 AS ?gripper_3_x)
+    BIND(100.0 AS ?gripper_3_y)
+    BIND(60 AS ?gripper_3_gripping_setpoint)
+    BIND(60 AS ?gripper_3_heating_setpoint)
+    BIND(60 AS ?gripper_3_pressing_setpoint)
+
+    # Gripper 4: position in mm and integer stage setpoints.
+    BIND(-210.0 AS ?gripper_4_x)
+    BIND(-100.0 AS ?gripper_4_y)
+    BIND(60 AS ?gripper_4_gripping_setpoint)
+    BIND(60 AS ?gripper_4_heating_setpoint)
+    BIND(60 AS ?gripper_4_pressing_setpoint)
+
+    # Gripper 5: position in mm and integer stage setpoints.
+    BIND(100.0 AS ?gripper_5_x)
+    BIND(210.0 AS ?gripper_5_y)
+    BIND(60 AS ?gripper_5_gripping_setpoint)
+    BIND(60 AS ?gripper_5_heating_setpoint)
+    BIND(60 AS ?gripper_5_pressing_setpoint)
+
+    # Gripper 6: position in mm and integer stage setpoints.
+    BIND(-100.0 AS ?gripper_6_x)
+    BIND(210.0 AS ?gripper_6_y)
+    BIND(60 AS ?gripper_6_gripping_setpoint)
+    BIND(60 AS ?gripper_6_heating_setpoint)
+    BIND(60 AS ?gripper_6_pressing_setpoint)
+
+    # Gripper 7: position in mm and integer stage setpoints.
+    BIND(100.0 AS ?gripper_7_x)
+    BIND(-210.0 AS ?gripper_7_y)
+    BIND(60 AS ?gripper_7_gripping_setpoint)
+    BIND(60 AS ?gripper_7_heating_setpoint)
+    BIND(60 AS ?gripper_7_pressing_setpoint)
+
+    # Gripper 8: position in mm and integer stage setpoints.
+    BIND(-100.0 AS ?gripper_8_x)
+    BIND(-210.0 AS ?gripper_8_y)
+    BIND(60 AS ?gripper_8_gripping_setpoint)
+    BIND(60 AS ?gripper_8_heating_setpoint)
+    BIND(60 AS ?gripper_8_pressing_setpoint)
+
+    # Oven: temperatures in degrees Celsius, holding time in seconds.
+    BIND(260.0 AS ?oven_threshold_temperature)
+    BIND(5.0 AS ?oven_stable_holding_time)
+    BIND(280.0 AS ?oven_field_1_target_temperature)
+    BIND(280.0 AS ?oven_field_2_target_temperature)
+    BIND(280.0 AS ?oven_field_3_target_temperature)
+    BIND(280.0 AS ?oven_field_4_target_temperature)
+    BIND(280.0 AS ?oven_field_5_target_temperature)
+    BIND(280.0 AS ?oven_field_6_target_temperature)
+    BIND(280.0 AS ?oven_field_7_target_temperature)
+    BIND(280.0 AS ?oven_field_8_target_temperature)
+
+    # Press: force in kN, times in seconds, distances in mm, speeds in mm/s, temperatures in degrees Celsius.
+    BIND(1000.0 AS ?press_force)
+    BIND(60.0 AS ?press_mold_cooling_time)
+    BIND(0.0 AS ?press_remaining_path)
+    BIND(110.0 AS ?press_upper_mold_temperature)
+    BIND(110.0 AS ?press_lower_mold_temperature)
+    BIND(80.0 AS ?press_closing_step_1_speed)
+    BIND(60.0 AS ?press_closing_step_1_remaining_distance)
+    BIND(60.0 AS ?press_closing_step_2_speed)
+    BIND(25.0 AS ?press_closing_step_2_remaining_distance)
+    BIND(35.0 AS ?press_closing_step_3_speed)
+    BIND(10.0 AS ?press_closing_step_3_remaining_distance)
+    BIND(10.0 AS ?press_closing_step_4_speed)
+    BIND(0.0 AS ?press_closing_step_4_remaining_distance)
+    BIND(300.0 AS ?heater_1_target_temperature)
+    BIND(300.0 AS ?heater_2_target_temperature)
+}
