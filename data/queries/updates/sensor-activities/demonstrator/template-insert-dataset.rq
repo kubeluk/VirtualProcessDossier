@@ -15,6 +15,7 @@ INSERT
         prov:wasGeneratedBy ?sensor_activity_instance ;
         dcat:distribution [
             a dcat:Distribution ;
+            dcat:mediaType ?media_type ;
             dcat:downloadURL ?dataset_download_url
         ] .
 }
@@ -25,6 +26,10 @@ WHERE
 
     # TODO: use the exact activity instance IRI recorded by the sensor query.
     BIND(<activity/instance/000-observe-laminate-surface-temperature-1#it> AS ?sensor_activity_instance)
+
+    # TODO: use the actual media type of the data file.
+    # e.g. "text/tab-separated-values" for TSV, "application/json" for JSON, "text/csv" for CSV, "model/stl" for STL, etc.
+    BIND("text/tab-separated-values" AS ?media_type)
 
     # TODO: use the actual download URL for the data file.
     BIND(<https://os-webdav.lsdf.kit.edu/kit/iar/projects/FOR_5339/path/to/file> AS ?dataset_download_url)
