@@ -1,0 +1,62 @@
+BASE <http://purl.org/for/>
+
+PREFIX prov: <http://www.w3.org/ns/prov#>
+PREFIX wild: <http://purl.org/wild/vocab#>
+PREFIX sosa: <http://www.w3.org/ns/sosa/>
+PREFIX activity: <http://purl.org/for/activity#>
+PREFIX prop: <http://purl.org/for/property#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX dcat: <http://www.w3.org/ns/dcat#>
+PREFIX vpd: <http://purl.org/for/vpd#>
+
+# Record a completed execution of activity:observeLaminateShape2.
+# Insert a new sensor activity instance for this execution.
+INSERT
+{
+    ?sensor_activity_instance
+        a wild:ActivityInstance, sosa:Observation, prov:Activity ;
+        prov:startedAtTime ?start_time ;
+        prov:endedAtTime ?end_time ;
+        wild:activityInstanceOf activity:observeLaminateShape2 ;
+        wild:inWorkflowInstance ?workflow_instance ;
+        wild:hasState wild:done ;
+        sosa:madeBySensor <sensor/camera/1#it> ;
+        sosa:hasFeatureOfInterest ?laminate ;
+        sosa:observedProperty prop:surfaceGeometry .
+
+    ?dataset
+        a dcat:Dataset ;
+        prov:wasGeneratedBy ?sensor_activity_instance ;
+        dcat:distribution [
+            a dcat:Distribution ;
+            dcat:downloadURL ?dataset_download_url
+        ] .
+
+    vpd:it
+        dcat:dataset ?dataset .
+}
+WHERE
+{
+    BIND(STRUUID() AS ?sensor_activity_instance_uuid)
+    BIND(IRI(CONCAT("http://purl.org/for/activity/instance/", ?sensor_activity_instance_uuid, "#it")) AS ?sensor_activity_instance)
+
+    # TODO: use the actual start and end times of this execution.
+    BIND("2026-09-24T10:00:00Z"^^xsd:dateTime AS ?start_time)
+    BIND("2026-09-24T10:02:34Z"^^xsd:dateTime AS ?end_time)
+
+    # TODO: use the existing workflow instance IRI for this manufacturing run.
+    BIND(IRI("http://purl.org/for/workflow/instance/EXAMPLE_UUID#it") AS ?workflow_instance)
+    # BIND("PLACE_UUID_OF_CONNECTED_WORKFLOW_INSTANCE_HERE" AS ?workflow_instance_uuid)
+    # BIND(IRI(CONCAT("http://purl.org/for/workflow/instance/", ?workflow_instance_uuid, "#it")) AS ?workflow_instance)
+
+    # TODO: use the actual laminate IRI for this laminate.
+    BIND(IRI("http://purl.org/for/laminate/EXAMPLE_UUID#it") AS ?laminate)
+
+    BIND(STRUUID() AS ?dataset_uuid)
+    BIND(IRI(CONCAT("http://purl.org/for/vpd/dataset/", ?dataset_uuid, "#it")) AS ?dataset)
+
+    # TODO: use the actual download URL for the data file.
+    BIND("/path/to/file" AS ?dataset_download_url_suffix)
+    BIND("https://os-webdav.lsdf.kit.edu/kit/iar/projects/FOR_5339/" AS ?dataset_download_url_prefix)
+    BIND(IRI(CONCAT(?dataset_download_url_prefix, ?dataset_download_url_suffix)) AS ?dataset_download_url)
+}

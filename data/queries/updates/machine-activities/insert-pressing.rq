@@ -1,0 +1,173 @@
+BASE <http://purl.org/for/>
+
+PREFIX for: <http://purl.org/for/terms#>
+PREFIX ssn: <http://www.w3.org/ns/ssn/>
+PREFIX prov: <http://www.w3.org/ns/prov#>
+PREFIX wild: <http://purl.org/wild/vocab#>
+PREFIX activity: <http://purl.org/for/activity#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+
+INSERT
+{
+    ?activity_instance
+        a wild:ActivityInstance ;
+        wild:inWorkflowInstance ?workflow_instance ;
+        wild:activityInstanceOf activity:pressing ;
+        wild:hasState wild:done ;
+        prov:startedAtTime ?start_time ;
+        prov:endedAtTime ?end_time ;
+        prov:wasAssociatedWith <system/press/1#it> ;
+        prov:qualifiedAssociation [
+            a prov:Association ;
+            prov:agent <system/press/1#it> ;
+            prov:hadPlan ?conducted_plan
+        ] .
+
+    ?conducted_plan
+        a prov:Plan ;
+        press:force [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:Force ;
+            qudt:hasUnit unit:KiloN ;
+            qudt:value ?press_force
+        ] ;
+        press:moldCoolingTime [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:Time ;
+            qudt:hasUnit unit:SEC ;
+            qudt:value ?press_mold_cooling_time
+        ] ;
+        press:remainingPath [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:Distance ;
+            qudt:hasUnit unit:MilliM ;
+            qudt:value ?press_remaining_path
+        ] ;
+        press:moldTemperature [
+            press:temperature [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:Temperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value ?press_upper_mold_temperature
+            ] ;
+            press:mold <system/press/1#upperMold>
+        ] ;
+        press:moldTemperature [
+            press:temperature [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:Temperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value ?press_lower_mold_temperature
+            ] ;
+            press:mold <system/press/1#lowerMold>
+        ] ;
+        press:closingSteps (
+            [
+                press:closingSpeed [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:LinearVelocity ;
+                    qudt:hasUnit unit:MilliM-PER-SEC ;
+                    qudt:value ?press_closing_step_1_speed
+                ] ;
+                press:remainingDistance [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:Distance ;
+                    qudt:hasUnit unit:MilliM ;
+                    qudt:value ?press_closing_step_1_remaining_distance
+                ]
+            ]
+            [
+                press:closingSpeed [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:LinearVelocity ;
+                    qudt:hasUnit unit:MilliM-PER-SEC ;
+                    qudt:value ?press_closing_step_2_speed
+                ] ;
+                press:remainingDistance [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:Distance ;
+                    qudt:hasUnit unit:MilliM ;
+                    qudt:value ?press_closing_step_2_remaining_distance
+                ]
+            ]
+            [
+                press:closingSpeed [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:LinearVelocity ;
+                    qudt:hasUnit unit:MilliM-PER-SEC ;
+                    qudt:value ?press_closing_step_3_speed
+                ] ;
+                press:remainingDistance [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:Distance ;
+                    qudt:hasUnit unit:MilliM ;
+                    qudt:value ?press_closing_step_3_remaining_distance
+                ]
+            ]
+            [
+                press:closingSpeed [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:LinearVelocity ;
+                    qudt:hasUnit unit:MilliM-PER-SEC ;
+                    qudt:value ?press_closing_step_4_speed
+                ] ;
+                press:remainingDistance [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:Distance ;
+                    qudt:hasUnit unit:MilliM ;
+                    qudt:value ?press_closing_step_4_remaining_distance
+                ]
+            ]
+        ) ;
+        oven:heatingDeviceTargetTemperature [
+            oven:deviceTemperature [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:Temperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value ?heater_1_target_temperature
+            ] ;
+            oven:atDevice <system/heater/1#it>
+        ] ;
+        oven:heatingDeviceTargetTemperature [
+            oven:deviceTemperature [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:Temperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value ?heater_2_target_temperature
+            ] ;
+            oven:atDevice <system/heater/2#it>
+        ] .
+}
+WHERE
+{
+    BIND(STRUUID() AS ?activity_instance_uuid)
+    BIND(IRI(CONCAT("http://purl.org/for/activity/instance/", ?activity_instance_uuid, "#it")) AS ?activity_instance)
+
+    # TODO: use the existing workflow instance IRI for this manufacturing run.
+    BIND(IRI("http://purl.org/for/workflow/instance/EXAMPLE_UUID#it") AS ?workflow_instance)
+    # BIND("PLACE_UUID_OF_CONNECTED_WORKFLOW_INSTANCE_HERE" AS ?workflow_instance_uuid)
+    # BIND(IRI(CONCAT("http://purl.org/for/workflow/instance/", ?workflow_instance_uuid, "#it")) AS ?workflow_instance)
+
+    # TODO: use the actual start and end times of this activity execution.
+    BIND("2026-09-24T10:00:00Z"^^xsd:dateTime AS ?start_time)
+    BIND("2026-09-24T10:02:34Z"^^xsd:dateTime AS ?end_time)
+
+    # TODO: replace these example values with the requested plan parameters.    
+    # Press: force in kN, times in seconds, distances in mm, speeds in mm/s, temperatures in degrees Celsius.
+    BIND(1000.0 AS ?press_force)
+    BIND(60.0 AS ?press_mold_cooling_time)
+    BIND(0.0 AS ?press_remaining_path)
+    BIND(110.0 AS ?press_upper_mold_temperature)
+    BIND(110.0 AS ?press_lower_mold_temperature)
+    BIND(80.0 AS ?press_closing_step_1_speed)
+    BIND(60.0 AS ?press_closing_step_1_remaining_distance)
+    BIND(60.0 AS ?press_closing_step_2_speed)
+    BIND(25.0 AS ?press_closing_step_2_remaining_distance)
+    BIND(35.0 AS ?press_closing_step_3_speed)
+    BIND(10.0 AS ?press_closing_step_3_remaining_distance)
+    BIND(10.0 AS ?press_closing_step_4_speed)
+    BIND(0.0 AS ?press_closing_step_4_remaining_distance)
+    BIND(300.0 AS ?heater_1_target_temperature)
+    BIND(300.0 AS ?heater_2_target_temperature)
+}

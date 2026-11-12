@@ -1,0 +1,140 @@
+BASE <http://purl.org/for/>
+
+PREFIX for: <http://purl.org/for/terms#>
+PREFIX ssn: <http://www.w3.org/ns/ssn/>
+PREFIX prov: <http://www.w3.org/ns/prov#>
+PREFIX wild: <http://purl.org/wild/vocab#>
+PREFIX activity: <http://purl.org/for/activity#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+
+INSERT
+{
+    ?activity_instance
+        a wild:ActivityInstance ;
+        wild:inWorkflowInstance ?workflow_instance ;
+        wild:activityInstanceOf activity:heating ;
+        wild:hasState wild:done ;
+        prov:startedAtTime ?start_time ;
+        prov:endedAtTime ?end_time ;
+        prov:wasAssociatedWith <system/oven/1#it> ;
+        prov:qualifiedAssociation [
+            a prov:Association ;
+            prov:agent <system/oven/1#it> ;
+            prov:hadPlan ?conducted_plan
+        ] .
+
+    ?conducted_plan
+        a prov:Plan ;
+        oven:thresholdTemperature [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:AreaTemperature ;
+            qudt:hasUnit unit:DEG_C ;
+            qudt:value ?oven_threshold_temperature
+        ] ;
+        oven:stableHoldingTime [
+            a qudt:Quantity ;
+            qudt:hasQuantityKind quantitykind:Time ;
+            qudt:hasUnit unit:SEC ;
+            qudt:value ?oven_stable_holding_time
+        ] ;
+        oven:fieldTargetTemperature [
+            oven:fieldTarget [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value ?oven_field_1_target_temperature
+            ] ;
+            oven:atField <system/field/1#it>
+        ] ;
+        oven:fieldTargetTemperature [
+            oven:fieldTarget [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value ?oven_field_2_target_temperature
+            ] ;
+            oven:atField <system/field/2#it>
+        ] ;
+        oven:fieldTargetTemperature [
+            oven:fieldTarget [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value ?oven_field_3_target_temperature
+            ] ;
+            oven:atField <system/field/3#it>
+        ] ;
+        oven:fieldTargetTemperature [
+            oven:fieldTarget [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value ?oven_field_4_target_temperature
+            ] ;
+            oven:atField <system/field/4#it>
+        ] ;
+        oven:fieldTargetTemperature [
+            oven:fieldTarget [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value ?oven_field_5_target_temperature
+            ] ;
+            oven:atField <system/field/5#it>
+        ] ;
+        oven:fieldTargetTemperature [
+            oven:fieldTarget [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value ?oven_field_6_target_temperature
+            ] ;
+            oven:atField <system/field/6#it>
+        ] ;
+        oven:fieldTargetTemperature [
+            oven:fieldTarget [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value ?oven_field_7_target_temperature
+            ] ;
+            oven:atField <system/field/7#it>
+        ] ;
+        oven:fieldTargetTemperature [
+            oven:fieldTarget [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value ?oven_field_8_target_temperature
+            ] ;
+            oven:atField <system/field/8#it>
+        ] .
+}
+WHERE
+{
+    BIND(STRUUID() AS ?activity_instance_uuid)
+    BIND(IRI(CONCAT("http://purl.org/for/activity/instance/", ?activity_instance_uuid, "#it")) AS ?activity_instance)
+
+    # TODO: use the existing workflow instance IRI for this manufacturing run.
+    BIND(IRI("http://purl.org/for/workflow/instance/EXAMPLE_UUID#it") AS ?workflow_instance)
+    # BIND("PLACE_UUID_OF_CONNECTED_WORKFLOW_INSTANCE_HERE" AS ?workflow_instance_uuid)
+    # BIND(IRI(CONCAT("http://purl.org/for/workflow/instance/", ?workflow_instance_uuid, "#it")) AS ?workflow_instance)
+
+    # TODO: use the actual start and end times of this activity execution.
+    BIND("2026-09-24T10:00:00Z"^^xsd:dateTime AS ?start_time)
+    BIND("2026-09-24T10:02:34Z"^^xsd:dateTime AS ?end_time)
+
+    # TODO: replace these example values with the requested plan parameters.    
+    # Oven: temperatures in degrees Celsius, holding time in seconds.
+    BIND(260.0 AS ?oven_threshold_temperature)
+    BIND(5.0 AS ?oven_stable_holding_time)
+    BIND(280.0 AS ?oven_field_1_target_temperature)
+    BIND(280.0 AS ?oven_field_2_target_temperature)
+    BIND(280.0 AS ?oven_field_3_target_temperature)
+    BIND(280.0 AS ?oven_field_4_target_temperature)
+    BIND(280.0 AS ?oven_field_5_target_temperature)
+    BIND(280.0 AS ?oven_field_6_target_temperature)
+    BIND(280.0 AS ?oven_field_7_target_temperature)
+    BIND(280.0 AS ?oven_field_8_target_temperature)
+}

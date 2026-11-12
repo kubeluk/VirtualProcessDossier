@@ -1,0 +1,397 @@
+BASE <http://purl.org/for/>
+
+PREFIX for: <http://purl.org/for/terms#>
+PREFIX ssn: <http://www.w3.org/ns/ssn/>
+PREFIX prov: <http://www.w3.org/ns/prov#>
+PREFIX wild: <http://purl.org/wild/vocab#>
+PREFIX activity: <http://purl.org/for/activity#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+
+INSERT
+{
+    ?activity_instance
+        a wild:ActivityInstance ;
+        wild:inWorkflowInstance ?workflow_instance ;
+        wild:activityInstanceOf activity:gripping ;
+        wild:hasState wild:done ;
+        prov:startedAtTime ?start_time ;
+        prov:endedAtTime ?end_time ;
+        prov:wasAssociatedWith <system/frame/1#it> ;
+        prov:qualifiedAssociation [
+            a prov:Association ;
+            prov:agent <system/frame/1#it> ;
+            prov:hadPlan ?conducted_plan
+        ] .
+
+    ?conducted_plan
+        a prov:Plan ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( ?gripper_1_x ?gripper_1_y ) ;
+                prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
+            ] ;
+            frame:ofGripper <system/gripper/1#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_1_gripping_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/1#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_1_heating_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/1#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_1_pressing_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/1#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( ?gripper_2_x ?gripper_2_y ) ;
+                prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
+            ] ;
+            frame:ofGripper <system/gripper/2#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_2_gripping_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/2#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_2_heating_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/2#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_2_pressing_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/2#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( ?gripper_3_x ?gripper_3_y ) ;
+                prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
+            ] ;
+            frame:ofGripper <system/gripper/3#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_3_gripping_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/3#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_3_heating_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/3#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_3_pressing_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/3#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( ?gripper_4_x ?gripper_4_y ) ;
+                prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
+            ] ;
+            frame:ofGripper <system/gripper/4#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_4_gripping_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/4#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_4_heating_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/4#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_4_pressing_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/4#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( ?gripper_5_x ?gripper_5_y ) ;
+                prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
+            ] ;
+            frame:ofGripper <system/gripper/5#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_5_gripping_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/5#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_5_heating_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/5#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_5_pressing_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/5#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( ?gripper_6_x ?gripper_6_y ) ;
+                prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
+            ] ;
+            frame:ofGripper <system/gripper/6#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_6_gripping_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/6#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_6_heating_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/6#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_6_pressing_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/6#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( ?gripper_7_x ?gripper_7_y ) ;
+                prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
+            ] ;
+            frame:ofGripper <system/gripper/7#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_7_gripping_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/7#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_7_heating_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/7#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_7_pressing_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/7#it> ;
+            frame:atActivity activity:pressing
+        ] ;
+        frame:gripperPosition [
+            frame:position [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:PositionVector ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value ( ?gripper_8_x ?gripper_8_y ) ;
+                prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
+            ] ;
+            frame:ofGripper <system/gripper/8#it>
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_8_gripping_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/8#it> ;
+            frame:atActivity activity:gripping
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_8_heating_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/8#it> ;
+            frame:atActivity activity:heating
+        ] ;
+        frame:gripperSetpoint [
+            frame:setpoint [
+                a qudt:Quantity ;
+                qudt:hasUnit unit:UNITLESS ;
+                qudt:value ?gripper_8_pressing_setpoint ;
+            ] ;
+            frame:ofGripper <system/gripper/8#it> ;
+            frame:atActivity activity:pressing
+        ] .
+}
+WHERE
+{
+    BIND(STRUUID() AS ?activity_instance_uuid)
+    BIND(IRI(CONCAT("http://purl.org/for/activity/instance/", ?activity_instance_uuid, "#it")) AS ?activity_instance)
+
+    # TODO: use the existing workflow instance IRI for this manufacturing run.
+    BIND(IRI("http://purl.org/for/workflow/instance/EXAMPLE_UUID#it") AS ?workflow_instance)
+    # BIND("PLACE_UUID_OF_CONNECTED_WORKFLOW_INSTANCE_HERE" AS ?workflow_instance_uuid)
+    # BIND(IRI(CONCAT("http://purl.org/for/workflow/instance/", ?workflow_instance_uuid, "#it")) AS ?workflow_instance)
+
+    # TODO: use the actual start and end times of this activity execution.
+    BIND("2026-09-24T10:00:00Z"^^xsd:dateTime AS ?start_time)
+    BIND("2026-09-24T10:02:34Z"^^xsd:dateTime AS ?end_time)
+
+    # TODO: replace these example values with the requested plan parameters.
+
+    # Gripper 1: position in mm and integer stage setpoints.
+    BIND(210.0 AS ?gripper_1_x)
+    BIND(100.0 AS ?gripper_1_y)
+    BIND(60 AS ?gripper_1_gripping_setpoint)
+    BIND(60 AS ?gripper_1_heating_setpoint)
+    BIND(60 AS ?gripper_1_pressing_setpoint)
+
+    # Gripper 2: position in mm and integer stage setpoints.
+    BIND(210.0 AS ?gripper_2_x)
+    BIND(-100.0 AS ?gripper_2_y)
+    BIND(60 AS ?gripper_2_gripping_setpoint)
+    BIND(60 AS ?gripper_2_heating_setpoint)
+    BIND(60 AS ?gripper_2_pressing_setpoint)
+
+    # Gripper 3: position in mm and integer stage setpoints.
+    BIND(-210.0 AS ?gripper_3_x)
+    BIND(100.0 AS ?gripper_3_y)
+    BIND(60 AS ?gripper_3_gripping_setpoint)
+    BIND(60 AS ?gripper_3_heating_setpoint)
+    BIND(60 AS ?gripper_3_pressing_setpoint)
+
+    # Gripper 4: position in mm and integer stage setpoints.
+    BIND(-210.0 AS ?gripper_4_x)
+    BIND(-100.0 AS ?gripper_4_y)
+    BIND(60 AS ?gripper_4_gripping_setpoint)
+    BIND(60 AS ?gripper_4_heating_setpoint)
+    BIND(60 AS ?gripper_4_pressing_setpoint)
+
+    # Gripper 5: position in mm and integer stage setpoints.
+    BIND(100.0 AS ?gripper_5_x)
+    BIND(210.0 AS ?gripper_5_y)
+    BIND(60 AS ?gripper_5_gripping_setpoint)
+    BIND(60 AS ?gripper_5_heating_setpoint)
+    BIND(60 AS ?gripper_5_pressing_setpoint)
+
+    # Gripper 6: position in mm and integer stage setpoints.
+    BIND(-100.0 AS ?gripper_6_x)
+    BIND(210.0 AS ?gripper_6_y)
+    BIND(60 AS ?gripper_6_gripping_setpoint)
+    BIND(60 AS ?gripper_6_heating_setpoint)
+    BIND(60 AS ?gripper_6_pressing_setpoint)
+
+    # Gripper 7: position in mm and integer stage setpoints.
+    BIND(100.0 AS ?gripper_7_x)
+    BIND(-210.0 AS ?gripper_7_y)
+    BIND(60 AS ?gripper_7_gripping_setpoint)
+    BIND(60 AS ?gripper_7_heating_setpoint)
+    BIND(60 AS ?gripper_7_pressing_setpoint)
+
+    # Gripper 8: position in mm and integer stage setpoints.
+    BIND(-100.0 AS ?gripper_8_x)
+    BIND(-210.0 AS ?gripper_8_y)
+    BIND(60 AS ?gripper_8_gripping_setpoint)
+    BIND(60 AS ?gripper_8_heating_setpoint)
+    BIND(60 AS ?gripper_8_pressing_setpoint)
+}
