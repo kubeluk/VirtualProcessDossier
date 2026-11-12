@@ -279,40 +279,62 @@ export class KnowledgeRepository {
     }`)
     return rows.map((row) => row.laminate!.value)
   }
-  private laminateDeletion(uri: string, preserveMetadata = false) {
+  private laminateOwnership(uri: string, subject = '?s') {
     const root = safeIri(uri)
     const path = LAMINATE_PATH
     // A shared resource and everything below it must survive. Reference points,
     // vocabulary terms and shapes are never traversed by this ownership path.
-    return `${root} ${path}* ?s . ?s ?p ?o .
-      FILTER(?s != rdf:nil)
-      FILTER(?s = ${root} || NOT EXISTS {
-        ${root} ${path}* ?ancestor . ?ancestor ${path}* ?s .
+    return `${root} ${path}* ${subject} .
+      FILTER(${subject} != rdf:nil)
+      FILTER(${subject} = ${root} || NOT EXISTS {
+        ${root} ${path}* ?ancestor . ?ancestor ${path}* ${subject} .
         FILTER(?ancestor != ${root})
         ?outside ?link ?ancestor .
         FILTER NOT EXISTS { ${root} ${path}* ?outside }
-      })
+      })`
+  }
+  private laminateDeletion(uri: string, preserveMetadata = false) {
+    const root = safeIri(uri)
+    return `${this.laminateOwnership(uri)} ?s ?p ?o .
       ${preserveMetadata ? `FILTER(?s != ${root} || (?p = rdf:type && ?o = for:Laminate) || ?p IN (rdfs:label, dct:identifier, geo:hasSize, prov:wasDerivedFrom, param:hasNeedlePoint))` : ''}`
   }
   async saveLaminate(draft: LaminateDraft, references: Store, editing = false): Promise<string> {
     const graph = await validateLaminate(draft, references)
     const root = safeIri(draft.uri)
+    const children = graph
+      .getSubjects(null, null, null)
+      .filter((subject) => subject.value !== draft.uri)
+      .map((subject) => safeIri(subject.value))
+      .join(' ')
+    // Stable child identities may only replace resources exclusively owned by this laminate.
+    const conflicts = `VALUES ?candidate { ${children} }
+      FILTER EXISTS { ?candidate ?existingPredicate ?existingObject }
+      FILTER NOT EXISTS { ${this.laminateOwnership(draft.uri, '?candidate')} }`
+    const noConflicts = `FILTER NOT EXISTS { ${conflicts} }`
     if (!editing && (await this.ask(`ASK { ${root} ?p ?o }`)))
       throw new Error('This laminate identity is already registered. Start a new laminate.')
     if (editing && !(await this.ask(`ASK { ${root} a for:Laminate }`)))
       throw new Error('This laminate no longer exists.')
+    // Evaluate the edit guard once, before expanding the triples to replace.
     await this.update(
       editing
         ? `DELETE { ?s ?p ?o } INSERT { ${serialize(graph)} } WHERE {
+          { SELECT (true AS ?canSaveLaminate) WHERE { ${noConflicts} } }
           ${root} a for:Laminate . ${this.laminateDeletion(draft.uri, true)}
         }`
-        : `INSERT { ${serialize(graph)} } WHERE { FILTER NOT EXISTS { ${root} ?p ?o } }`,
+        : `INSERT { ${serialize(graph)} } WHERE {
+          FILTER NOT EXISTS { ${root} ?p ?o } ${noConflicts}
+        }`,
     )
-    const layup = value(graph, draft.uri, NS.prov + 'wasDerivedFrom')
-    if (!layup || !(await this.ask(`ASK { ${root} prov:wasDerivedFrom ${safeIri(layup)} }`)))
+    if (!(await this.ask(`ASK { ${serialize(graph)} ${noConflicts} }`))) {
+      if (await this.ask(`ASK { ${conflicts} }`))
+        throw new Error(
+          'Some laminate resources are shared with other records and cannot be overwritten. Create a copy of the laminate to save these changes.',
+        )
       throw new Error(
         'The save could not be confirmed. Your inputs are retained; refresh before retrying.',
       )
+    }
     return draft.uri
   }
   async deleteLaminate(uri: string): Promise<void> {

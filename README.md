@@ -65,6 +65,7 @@ Browser end-to-end testing is intentionally left to the user. See [the competenc
 The authoritative model is under [data](data), including the parameter shapes, material shapes, example snapshots, and SPARQL templates. Seeding uses an explicit file list so alternative snapshots and older models are not loaded together.
 
 - A run selects its laminate through `for:workflowInitialization/for:laminate`.
+- UI-created laminates use `laminate/{id}#it`, with stable child fragments such as `#layup`, `#tape-0`, and `#length`. Ordered list cells also have stable fragments, such as `#tape-stack-list-0` and `#position-0-list-0`. Copies receive a fresh laminate ID. Edits replace exclusively owned resources; shared resources that would be overwritten require creating a copy. Existing records are not automatically migrated.
 - Initialization creates one initialized workflow, five initialized composite activity instances, and three fresh parameter plans. The shop-floor system creates atomic activity instances; all 43 activities remain in the process definition.
 - Planned settings belong to the run's `for:workflowInitialization/for:parameterization/prov:hadMember` collection, retaining quantities, units, component references, and ordered RDF lists.
 - The shop-floor system creates atomic executions and independently records their used settings through `prov:qualifiedAssociation/prov:hadPlan`, alongside the association's equipment. Execution plans can be named or anonymous, and can differ from planned settings. No activity initialization links are required.

@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest'
-import { references } from '../helpers'
+import { canonical, references } from '../helpers'
 import { BASE, NS, Store, n, df, objects, typed, value } from '../../src/domain/rdf'
 import {
   newLaminate,
@@ -43,7 +43,7 @@ describe('laminate editing and shapes', () => {
     await expect(validateLaminate(another, refs)).resolves.toBeInstanceOf(Store)
     expect(() => copyLaminate(refs, 'urn:missing')).toThrow('Template laminate not found')
   })
-  it('round trips the supplied example through a separate, SHACL-valid layup', async () => {
+  it('round trips the supplied example through a SHACL-valid graph', async () => {
     const draft = readLaminate(refs, BASE + 'laminate/1#it')
     expect(draft.layers.map((l) => l.angle)).toEqual(['0', '60', '120', '120', '60', '0'])
     expect(draft.needles).toHaveLength(8)
@@ -57,8 +57,42 @@ describe('laminate editing and shapes', () => {
     })
     expect(typed(graph, NS.for + 'Tape')).toHaveLength(6)
     expect([...graph].every((q) => q.subject.termType !== 'BlankNode')).toBe(true)
-    expect(objects(graph, draft.uri, NS.prov + 'wasDerivedFrom')[0]?.value).not.toBe(
+    expect(objects(graph, draft.uri, NS.prov + 'wasDerivedFrom')[0]?.value).toBe(
       BASE + 'laminate/1#layup',
+    )
+  })
+  it('keeps all child and list identities stable across builds and independent in copies', async () => {
+    const draft = copyLaminate(refs, BASE + 'laminate/1#it')
+    const graph = await validateLaminate(draft, refs)
+    const base = draft.uri.split('#')[0] + '#'
+    const subjects = new Set(graph.getSubjects(null, null, null).map((term) => term.value))
+    expect([...subjects].every((uri) => uri.startsWith(base))).toBe(true)
+    for (const fragment of [
+      'it',
+      'layup',
+      'length',
+      'width',
+      'thickness',
+      'tape-0',
+      'derivation-0',
+      'fraction-0',
+      'angle-0',
+      'needle-0',
+      'position-0',
+      'tape-stack-list-0',
+      'position-0-list-0',
+      'position-0-list-1',
+    ])
+      expect(subjects.has(base + fragment)).toBe(true)
+    expect(await canonical(await validateLaminate(draft, refs))).toBe(await canonical(graph))
+
+    const copy = copyLaminate(graph, draft.uri)
+    const copiedGraph = await validateLaminate(copy, refs)
+    expect(
+      copiedGraph.getSubjects(null, null, null).every((term) => !subjects.has(term.value)),
+    ).toBe(true)
+    expect(readLaminate(copiedGraph, copy.uri).layers).toEqual(
+      readLaminate(graph, draft.uri).layers,
     )
   })
   it('supports a minimal laminate without needle points', async () => {

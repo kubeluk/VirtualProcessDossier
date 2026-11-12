@@ -1,4 +1,4 @@
-import { newLaminate, readLaminate } from '../../src/domain/laminate'
+import { buildLaminate, copyLaminate, newLaminate, readLaminate } from '../../src/domain/laminate'
 import { readFile } from 'node:fs/promises'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import {
@@ -14,6 +14,7 @@ import {
   list,
   n,
   df,
+  type Term,
 } from '../../src/domain/rdf'
 import { KnowledgeRepository } from '../../src/services/repository'
 import {
@@ -125,9 +126,7 @@ describe('real Fuseki reads', () => {
     ).toHaveLength(29)
     expect(runLaminate(graph, sourceRun)).toBe(BASE + 'laminate/1#it')
     const temperature = BASE + 'workflow/instance/1#observeLaminateSurfaceTemperature1'
-    expect(datasetsFor(graph, temperature).map((t) => t.value)).toEqual([
-      BASE + 'dataset#3',
-    ])
+    expect(datasetsFor(graph, temperature).map((t) => t.value)).toEqual([BASE + 'dataset#3'])
     expect(value(graph, temperature, NS.sosa + 'madeBySensor')).toBe(BASE + 'sensor/pyrometer/1#it')
     expect(
       value(
@@ -159,8 +158,12 @@ describe('real Fuseki reads', () => {
       <urn:test:standalone-observation> a sosa:Observation .
     }`)
     const standalone = await repo.getDatasetContext('urn:test:standalone-dataset')
-    expect(value(standalone, 'urn:test:standalone-observation', NS.wild + 'inWorkflowInstance')).toBe('')
-    expect(objects(standalone, 'urn:test:standalone-dataset', NS.dcat + 'distribution')).toHaveLength(1)
+    expect(
+      value(standalone, 'urn:test:standalone-observation', NS.wild + 'inWorkflowInstance'),
+    ).toBe('')
+    expect(
+      objects(standalone, 'urn:test:standalone-dataset', NS.dcat + 'distribution'),
+    ).toHaveLength(1)
     expect(typed(standalone, NS.wild + 'WorkflowInstance')).toHaveLength(0)
   })
   it('loads linked quantity metadata and named coordinate lists without the reference cache', async () => {
@@ -526,7 +529,10 @@ describe('laminate CRUD', () => {
     // Unmanaged metadata is retained by edits.
     await repo.update(`INSERT DATA { <${d.uri}> rdfs:comment "Keep me" }`)
     d.name = 'Changed laminate'
+    d.length = '450'
     d.layers.splice(1)
+    d.layers[0]!.angle = '45'
+    d.layers[0]!.fraction = '55'
     d.needles = []
     await repo.saveLaminate(d, created, true)
     const updated = await repo.getReferenceGraph()
@@ -536,16 +542,102 @@ describe('laminate CRUD', () => {
       needles: [],
     })
     const savedLayer = readLaminate(updated, d.uri).layers[0]!
-    expect(Number(savedLayer.angle)).toBe(0)
-    expect(Number(savedLayer.fraction)).toBe(60)
+    expect(Number(readLaminate(updated, d.uri).length)).toBe(450)
+    expect(Number(savedLayer.angle)).toBe(45)
+    expect(Number(savedLayer.fraction)).toBe(55)
     expect(value(updated, d.uri, NS.rdfs + 'comment')).toBe('Keep me')
-    expect(await repo.ask(`ASK { <${oldLayup}> ?p ?o }`)).toBe(false)
+    expect(value(updated, d.uri, NS.prov + 'wasDerivedFrom')).toBe(oldLayup)
+    const base = d.uri.split('#')[0] + '#'
+    expect(await repo.ask(`ASK { <${base}tape-1> ?p ?o }`)).toBe(false)
+    expect(await repo.ask(`ASK { <${base}tape-stack-list-1> ?p ?o }`)).toBe(false)
+    expect(await repo.ask(`ASK { <${base}needle-0> ?p ?o }`)).toBe(false)
+    expect(await repo.ask(`ASK { <${base}position-0-list-0> ?p ?o }`)).toBe(false)
     await repo.deleteLaminate(d.uri)
     expect(await repo.ask(`ASK { <${d.uri}> ?p ?o }`)).toBe(false)
     expect(
       await repo.ask(`ASK { ?s ?p ?o FILTER(STRSTARTS(STR(?s), "${d.uri.split('#')[0]}")) }`),
     ).toBe(false)
     expect(await repo.ask(`ASK { <${BASE}laminate#origin> a for:ReferencePoint }`)).toBe(true)
+  })
+  it.each(['layup', 'fraction-0', 'position-0-list-0'])(
+    'rejects overwriting a shared %s without changing the graph and allows copying',
+    async (fragment) => {
+      const d = copyLaminate(refs, BASE + 'laminate/1#it')
+      await repo.saveLaminate(d, refs)
+      const graph = await repo.getReferenceGraph()
+      const child = d.uri.split('#')[0] + '#' + fragment
+      await repo.update(
+        `INSERT DATA { <urn:test:shared-${fragment}> prov:wasDerivedFrom <${child}> }`,
+      )
+      const before = await canonical(await all())
+      d.length = '450'
+      d.layers[0]!.fraction = '55'
+      d.needles[0]!.x = '100'
+      await expect(repo.saveLaminate(d, graph, true)).rejects.toThrow('Create a copy')
+      expect(await canonical(await all())).toBe(before)
+
+      const copy = copyLaminate(graph, d.uri)
+      copy.layers[0]!.fraction = '55'
+      await expect(repo.saveLaminate(copy, graph)).resolves.toBe(copy.uri)
+      const updated = await repo.getReferenceGraph()
+      expect(Number(readLaminate(updated, d.uri).layers[0]!.fraction)).toBe(60)
+      expect(Number(readLaminate(updated, copy.uri).layers[0]!.fraction)).toBe(55)
+    },
+  )
+  it('edits an older revision graph while retaining shared legacy resources', async () => {
+    const d = copyLaminate(refs, BASE + 'laminate/1#it')
+    const base = d.uri.split('#')[0] + '#'
+    const legacyBase = d.uri.split('#')[0] + '/revision/legacy#'
+    const remap = (term: Term) =>
+      term.termType === 'NamedNode' && term.value.startsWith(base) && term.value !== d.uri
+        ? n(legacyBase + term.value.slice(base.length))
+        : term
+    const legacy = new Store(
+      [...buildLaminate(d, refs)].map((quad) =>
+        df.quad(
+          remap(quad.subject) as typeof quad.subject,
+          quad.predicate,
+          remap(quad.object) as typeof quad.object,
+        ),
+      ),
+    )
+    await repo.update(`INSERT DATA {
+      ${serialize(legacy)}
+      <urn:test:legacy-owner> prov:wasDerivedFrom <${legacyBase}layup> .
+    }`)
+    const graph = await repo.getReferenceGraph()
+    d.layers[0]!.fraction = '55'
+    await repo.saveLaminate(d, graph, true)
+    const updated = await repo.getReferenceGraph()
+    expect(value(updated, d.uri, NS.prov + 'wasDerivedFrom')).toBe(base + 'layup')
+    expect(Number(readLaminate(updated, d.uri).layers[0]!.fraction)).toBe(55)
+    const legacyFraction = await repo.getEntityMetadata(legacyBase + 'fraction-0')
+    expect(Number(value(legacyFraction, legacyBase + 'fraction-0', NS.qudt + 'value'))).toBe(60)
+    expect(await repo.ask(`ASK { <${legacyBase}length> ?p ?o }`)).toBe(false)
+  })
+  it('rejects collisions with existing child identities before creating a laminate', async () => {
+    const d = newLaminate()
+    const layup = d.uri.split('#')[0] + '#layup'
+    await repo.update(`INSERT DATA { <${layup}> rdfs:label "Existing record" }`)
+    const before = await canonical(await all())
+    await expect(repo.saveLaminate(d, refs)).rejects.toThrow('Create a copy')
+    expect(await canonical(await all())).toBe(before)
+  })
+  it('does not confirm an unapplied edit just because the layup URI is unchanged', async () => {
+    const d = newLaminate()
+    await repo.saveLaminate(d, refs)
+    const graph = await repo.getReferenceGraph()
+    const skipUpdate: typeof fetch = (input, init) =>
+      String(input).endsWith('/update')
+        ? Promise.resolve(new Response(null, { status: 204 }))
+        : authorizedFetch(input, init)
+    const skipped = new KnowledgeRepository(repo.queryEndpoint, repo.updateEndpoint, skipUpdate)
+    const before = await canonical(await all())
+    d.length = '450'
+    await expect(skipped.saveLaminate(d, graph, true)).rejects.toThrow(
+      'save could not be confirmed',
+    )
+    expect(await canonical(await all())).toBe(before)
   })
   it('preserves a shared layup and blocks deletion of referenced laminates', async () => {
     const d = readLaminate(refs, BASE + 'laminate/1#it')

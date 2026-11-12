@@ -136,8 +136,8 @@ async function save() {
             >Layup name<input v-model="draft.layupName" placeholder="e.g. [0/60/120]s"
           /></label>
           <p class="small muted">
-            Add at least one tape. Layers are stored in the order shown. Editing creates a separate
-            layup so shared materials retain their original values.
+            Add at least one tape. Layers are stored in the order shown. Copies receive their own
+            layup and tapes.
           </p>
           <div v-for="(layer, index) in draft.layers" :key="index" class="subpanel">
             <h3>Layer {{ index + 1 }}</h3>

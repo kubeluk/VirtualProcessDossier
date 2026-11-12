@@ -1,4 +1,4 @@
-import { BASE, NS, Store, df, n, addList, objects, object, value, list, isType } from './rdf'
+import { BASE, NS, Store, df, n, objects, object, value, list, isType } from './rdf'
 import { validatePlans } from './initialization'
 
 export interface LaminateDraft {
@@ -108,8 +108,8 @@ export function buildLaminate(d: LaminateDraft, refs: Store): Store {
   if (errors.length) throw new Error(errors.join('\n'))
   const g = new Store(),
     root = n(d.uri)
-  // Each revision owns fresh nested resources, so editing never mutates shared tapes or layups.
-  const base = d.uri.split('#')[0] + '/revision/' + crypto.randomUUID() + '#'
+  // All owned resources keep stable fragments under the laminate's identity.
+  const base = d.uri.split('#')[0] + '#'
   const add = (
     s: ReturnType<typeof n>,
     p: string,
@@ -117,6 +117,19 @@ export function buildLaminate(d: LaminateDraft, refs: Store): Store {
   ) => g.addQuad(s, n(p), o)
   const type = (s: ReturnType<typeof n>, t: string) => add(s, NS.rdf + 'type', n(t))
   const number = (v: string) => df.literal(String(Number(v)), n(NS.xsd + 'double'))
+  const orderedList = (
+    id: string,
+    items: (ReturnType<typeof n> | ReturnType<typeof df.literal>)[],
+  ) => {
+    let tail = n(NS.rdf + 'nil')
+    for (let i = items.length - 1; i >= 0; i--) {
+      const cell = n(base + id + '-list-' + i)
+      add(cell, NS.rdf + 'first', items[i]!)
+      add(cell, NS.rdf + 'rest', tail)
+      tail = cell
+    }
+    return tail
+  }
   const quantity = (
     id: string,
     kind: string,
@@ -172,7 +185,7 @@ export function buildLaminate(d: LaminateDraft, refs: Store): Store {
     )
     return tape
   })
-  g.addQuad(layup, n(NS.param + 'tapeStack'), addList(g, tapes) as ReturnType<typeof n>)
+  add(layup, NS.param + 'tapeStack', orderedList('tape-stack', tapes))
   d.needles.forEach((p, i) => {
     const point = n(base + 'needle-' + i),
       q = n(base + 'position-' + i)
@@ -183,23 +196,9 @@ export function buildLaminate(d: LaminateDraft, refs: Store): Store {
     add(point, NS.qudt + 'quantityValue', q)
     type(q, NS.qudt + 'Quantity')
     add(q, NS.qudt + 'hasUnit', n(NS.unit + 'MilliM'))
-    g.addQuad(
-      q,
-      n(NS.qudt + 'value'),
-      addList(g, [number(p.x), number(p.y)]) as ReturnType<typeof n>,
-    )
+    add(q, NS.qudt + 'value', orderedList('position-' + i, [number(p.x), number(p.y)]))
   })
-  const skolem = (t: import('@rdfjs/types').Term) =>
-    t.termType === 'BlankNode' ? n(base + 'list-' + t.value) : t
-  return new Store(
-    [...g].map((q) =>
-      df.quad(
-        skolem(q.subject) as typeof q.subject,
-        q.predicate,
-        skolem(q.object) as typeof q.object,
-      ),
-    ),
-  )
+  return g
 }
 export async function validateLaminate(d: LaminateDraft, refs: Store) {
   const g = buildLaminate(d, refs)
