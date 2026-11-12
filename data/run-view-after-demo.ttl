@@ -18,10 +18,10 @@
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
 # Workflow Run
+
 # Completed-run example with synthetic, sequence-consistent timestamps.
 # These intervals illustrate the model; they are not measured execution times.
 # Do not load this snapshot together with run-view-after-ui.ttl into one graph.
-# Dataset links are added separately by the dataset update queries.
 
 ## Workflow instance
 
@@ -70,9 +70,306 @@
     prov:qualifiedAssociation [
         a prov:Association ;
         prov:agent <http://purl.org/for/system/frame/1#it> ;
-        prov:hadPlan <http://purl.org/for/plan/1#gripping>
-    ] ;
-    for:initialization <plan/1#gripping> .
+        prov:hadPlan [
+            a prov:Plan ;
+            frame:gripperPosition [
+                frame:position [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:PositionVector ;
+                    qudt:hasUnit unit:MilliM ;
+                    qudt:value ( 210.0 100.0 ) ;
+                    prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
+                ] ;
+                frame:ofGripper <system/gripper/1#it>
+            ] ;
+            frame:gripperSetpoint [
+                frame:setpoint [
+                    a qudt:Quantity ;
+                    qudt:hasUnit unit:UNITLESS ;
+                    qudt:value 60.0 ;
+                ] ;
+                frame:ofGripper <system/gripper/1#it> ;
+                frame:atActivity activity:gripping
+            ] ;
+            frame:gripperSetpoint [
+                frame:setpoint [
+                    a qudt:Quantity ;
+                    qudt:hasUnit unit:UNITLESS ;
+                    qudt:value 60.0 ;
+                ] ;
+                frame:ofGripper <system/gripper/1#it> ;
+                frame:atActivity activity:heating
+            ] ;
+            frame:gripperSetpoint [
+                frame:setpoint [
+                    a qudt:Quantity ;
+                    qudt:hasUnit unit:UNITLESS ;
+                    qudt:value 60.0 ;
+                ] ;
+                frame:ofGripper <system/gripper/1#it> ;
+                frame:atActivity activity:pressing
+            ] ;
+            frame:gripperPosition [
+                frame:position [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:PositionVector ;
+                    qudt:hasUnit unit:MilliM ;
+                    qudt:value ( 210.0 -100.0 ) ;
+                    prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
+                ] ;
+                frame:ofGripper <system/gripper/2#it>
+            ] ;
+            frame:gripperSetpoint [
+                frame:setpoint [
+                    a qudt:Quantity ;
+                    qudt:hasUnit unit:UNITLESS ;
+                    qudt:value 60.0 ;
+                ] ;
+                frame:ofGripper <system/gripper/2#it> ;
+                frame:atActivity activity:gripping
+            ] ;
+            frame:gripperSetpoint [
+                frame:setpoint [
+                    a qudt:Quantity ;
+                    qudt:hasUnit unit:UNITLESS ;
+                    qudt:value 60.0 ;
+                ] ;
+                frame:ofGripper <system/gripper/2#it> ;
+                frame:atActivity activity:heating
+            ] ;
+            frame:gripperSetpoint [
+                frame:setpoint [
+                    a qudt:Quantity ;
+                    qudt:hasUnit unit:UNITLESS ;
+                    qudt:value 60.0 ;
+                ] ;
+                frame:ofGripper <system/gripper/2#it> ;
+                frame:atActivity activity:pressing
+            ] ;
+            frame:gripperPosition [
+                frame:position [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:PositionVector ;
+                    qudt:hasUnit unit:MilliM ;
+                    qudt:value ( -210.0 100.0 ) ;
+                    prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
+                ] ;
+                frame:ofGripper <system/gripper/3#it>
+            ] ;
+            frame:gripperSetpoint [
+                frame:setpoint [
+                    a qudt:Quantity ;
+                    qudt:hasUnit unit:UNITLESS ;
+                    qudt:value 60.0 ;
+                ] ;
+                frame:ofGripper <system/gripper/3#it> ;
+                frame:atActivity activity:gripping
+            ] ;
+            frame:gripperSetpoint [
+                frame:setpoint [
+                    a qudt:Quantity ;
+                    qudt:hasUnit unit:UNITLESS ;
+                    qudt:value 60.0 ;
+                ] ;
+                frame:ofGripper <system/gripper/3#it> ;
+                frame:atActivity activity:heating
+            ] ;
+            frame:gripperSetpoint [
+                frame:setpoint [
+                    a qudt:Quantity ;
+                    qudt:hasUnit unit:UNITLESS ;
+                    qudt:value 60.0 ;
+                ] ;
+                frame:ofGripper <system/gripper/3#it> ;
+                frame:atActivity activity:pressing
+            ] ;
+            frame:gripperPosition [
+                frame:position [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:PositionVector ;
+                    qudt:hasUnit unit:MilliM ;
+                    qudt:value ( -210.0 -100.0 ) ;
+                    prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
+                ] ;
+                frame:ofGripper <system/gripper/4#it>
+            ] ;
+            frame:gripperSetpoint [
+                frame:setpoint [
+                    a qudt:Quantity ;
+                    qudt:hasUnit unit:UNITLESS ;
+                    qudt:value 60.0 ;
+                ] ;
+                frame:ofGripper <system/gripper/4#it> ;
+                frame:atActivity activity:gripping
+            ] ;
+            frame:gripperSetpoint [
+                frame:setpoint [
+                    a qudt:Quantity ;
+                    qudt:hasUnit unit:UNITLESS ;
+                    qudt:value 60.0 ;
+                ] ;
+                frame:ofGripper <system/gripper/4#it> ;
+                frame:atActivity activity:heating
+            ] ;
+            frame:gripperSetpoint [
+                frame:setpoint [
+                    a qudt:Quantity ;
+                    qudt:hasUnit unit:UNITLESS ;
+                    qudt:value 60.0 ;
+                ] ;
+                frame:ofGripper <system/gripper/4#it> ;
+                frame:atActivity activity:pressing
+            ] ;
+            frame:gripperPosition [
+                frame:position [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:PositionVector ;
+                    qudt:hasUnit unit:MilliM ;
+                    qudt:value ( 100.0 210.0 ) ;
+                    prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
+                ] ;
+                frame:ofGripper <system/gripper/5#it>
+            ] ;
+            frame:gripperSetpoint [
+                frame:setpoint [
+                    a qudt:Quantity ;
+                    qudt:hasUnit unit:UNITLESS ;
+                    qudt:value 60.0 ;
+                ] ;
+                frame:ofGripper <system/gripper/5#it> ;
+                frame:atActivity activity:gripping
+            ] ;
+            frame:gripperSetpoint [
+                frame:setpoint [
+                    a qudt:Quantity ;
+                    qudt:hasUnit unit:UNITLESS ;
+                    qudt:value 60.0 ;
+                ] ;
+                frame:ofGripper <system/gripper/5#it> ;
+                frame:atActivity activity:heating
+            ] ;
+            frame:gripperSetpoint [
+                frame:setpoint [
+                    a qudt:Quantity ;
+                    qudt:hasUnit unit:UNITLESS ;
+                    qudt:value 60.0 ;
+                ] ;
+                frame:ofGripper <system/gripper/5#it> ;
+                frame:atActivity activity:pressing
+            ] ;
+            frame:gripperPosition [
+                frame:position [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:PositionVector ;
+                    qudt:hasUnit unit:MilliM ;
+                    qudt:value ( -100.0 210.0 ) ;
+                    prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
+                ] ;
+                frame:ofGripper <system/gripper/6#it>
+            ] ;
+            frame:gripperSetpoint [
+                frame:setpoint [
+                    a qudt:Quantity ;
+                    qudt:hasUnit unit:UNITLESS ;
+                    qudt:value 60.0 ;
+                ] ;
+                frame:ofGripper <system/gripper/6#it> ;
+                frame:atActivity activity:gripping
+            ] ;
+            frame:gripperSetpoint [
+                frame:setpoint [
+                    a qudt:Quantity ;
+                    qudt:hasUnit unit:UNITLESS ;
+                    qudt:value 60.0 ;
+                ] ;
+                frame:ofGripper <system/gripper/6#it> ;
+                frame:atActivity activity:heating
+            ] ;
+            frame:gripperSetpoint [
+                frame:setpoint [
+                    a qudt:Quantity ;
+                    qudt:hasUnit unit:UNITLESS ;
+                    qudt:value 60.0 ;
+                ] ;
+                frame:ofGripper <system/gripper/6#it> ;
+                frame:atActivity activity:pressing
+            ] ;
+            frame:gripperPosition [
+                frame:position [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:PositionVector ;
+                    qudt:hasUnit unit:MilliM ;
+                    qudt:value ( 100.0 -210.0 ) ;
+                    prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
+                ] ;
+                frame:ofGripper <system/gripper/7#it>
+            ] ;
+            frame:gripperSetpoint [
+                frame:setpoint [
+                    a qudt:Quantity ;
+                    qudt:hasUnit unit:UNITLESS ;
+                    qudt:value 60.0 ;
+                ] ;
+                frame:ofGripper <system/gripper/7#it> ;
+                frame:atActivity activity:gripping
+            ] ;
+            frame:gripperSetpoint [
+                frame:setpoint [
+                    a qudt:Quantity ;
+                    qudt:hasUnit unit:UNITLESS ;
+                    qudt:value 60.0 ;
+                ] ;
+                frame:ofGripper <system/gripper/7#it> ;
+                frame:atActivity activity:heating
+            ] ;
+            frame:gripperSetpoint [
+                frame:setpoint [
+                    a qudt:Quantity ;
+                    qudt:hasUnit unit:UNITLESS ;
+                    qudt:value 60.0 ;
+                ] ;
+                frame:ofGripper <system/gripper/7#it> ;
+                frame:atActivity activity:pressing
+            ] ;
+            frame:gripperPosition [
+                frame:position [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:PositionVector ;
+                    qudt:hasUnit unit:MilliM ;
+                    qudt:value ( -100.0 -210.0 ) ;
+                    prov:wasDerivedFrom <http://purl.org/for/system/frame#referencePoint>
+                ] ;
+                frame:ofGripper <system/gripper/8#it>
+            ] ;
+            frame:gripperSetpoint [
+                frame:setpoint [
+                    a qudt:Quantity ;
+                    qudt:hasUnit unit:UNITLESS ;
+                    qudt:value 60.0 ;
+                ] ;
+                frame:ofGripper <system/gripper/8#it> ;
+                frame:atActivity activity:gripping
+            ] ;
+            frame:gripperSetpoint [
+                frame:setpoint [
+                    a qudt:Quantity ;
+                    qudt:hasUnit unit:UNITLESS ;
+                    qudt:value 60.0 ;
+                ] ;
+                frame:ofGripper <system/gripper/8#it> ;
+                frame:atActivity activity:heating
+            ] ;
+            frame:gripperSetpoint [
+                frame:setpoint [
+                    a qudt:Quantity ;
+                    qudt:hasUnit unit:UNITLESS ;
+                    qudt:value 60.0 ;
+                ] ;
+                frame:ofGripper <system/gripper/8#it> ;
+                frame:atActivity activity:pressing
+            ]
+        ]
+    ] .
 
 <workflow/instance/1#observeGripperAngle1> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
     wild:inWorkflowInstance <workflow/instance/1#it> ;
@@ -354,9 +651,104 @@
     prov:qualifiedAssociation [
         a prov:Association ;
         prov:agent <http://purl.org/for/system/press/1#it> ;
-        prov:hadPlan <http://purl.org/for/plan/1#pressing>
-    ] ;
-    for:initialization <plan/1#pressing> .
+        prov:hadPlan [
+            a prov:Plan ;
+            press:force [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:Force ;
+                qudt:hasUnit unit:KiloN ;
+                qudt:value 1000.0
+            ] ;
+            press:moldCoolingTime [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:Time ;
+                qudt:hasUnit unit:SEC ;
+                qudt:value 60.0
+            ] ;
+            press:remainingPath [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:Distance ;
+                qudt:hasUnit unit:MilliM ;
+                qudt:value 0.0
+            ] ;
+            press:moldTemperature [
+                press:temperature [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:Temperature ;
+                    qudt:hasUnit unit:DEG_C ;
+                    qudt:value 110.0
+                ] ;
+                press:mold <system/press/1#upperMold>
+            ] ;
+            press:moldTemperature [
+                press:temperature [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:Temperature ;
+                    qudt:hasUnit unit:DEG_C ;
+                    qudt:value 110.0
+                ] ;
+                press:mold <system/press/1#lowerMold>
+            ] ;
+            press:closingSteps (
+                [
+                    press:closingSpeed [
+                        a qudt:Quantity ;
+                        qudt:hasQuantityKind quantitykind:LinearVelocity ;
+                        qudt:hasUnit unit:MilliM-PER-SEC ;
+                        qudt:value 80.0
+                    ] ;
+                    press:remainingDistance [
+                        a qudt:Quantity ;
+                        qudt:hasQuantityKind quantitykind:Distance ;
+                        qudt:hasUnit unit:MilliM ;
+                        qudt:value 60.0
+                    ]
+                ]
+                [
+                    press:closingSpeed [
+                        a qudt:Quantity ;
+                        qudt:hasQuantityKind quantitykind:LinearVelocity ;
+                        qudt:hasUnit unit:MilliM-PER-SEC ;
+                        qudt:value 60.0
+                    ] ;
+                    press:remainingDistance [
+                        a qudt:Quantity ;
+                        qudt:hasQuantityKind quantitykind:Distance ;
+                        qudt:hasUnit unit:MilliM ;
+                        qudt:value 25.0
+                    ]
+                ]
+                [
+                    press:closingSpeed [
+                        a qudt:Quantity ;
+                        qudt:hasQuantityKind quantitykind:LinearVelocity ;
+                        qudt:hasUnit unit:MilliM-PER-SEC ;
+                        qudt:value 35.0
+                    ] ;
+                    press:remainingDistance [
+                        a qudt:Quantity ;
+                        qudt:hasQuantityKind quantitykind:Distance ;
+                        qudt:hasUnit unit:MilliM ;
+                        qudt:value 10.0
+                    ]
+                ]
+                [
+                    press:closingSpeed [
+                        a qudt:Quantity ;
+                        qudt:hasQuantityKind quantitykind:LinearVelocity ;
+                        qudt:hasUnit unit:MilliM-PER-SEC ;
+                        qudt:value 10.0
+                    ] ;
+                    press:remainingDistance [
+                        a qudt:Quantity ;
+                        qudt:hasQuantityKind quantitykind:Distance ;
+                        qudt:hasUnit unit:MilliM ;
+                        qudt:value 0.0
+                    ]
+                ]
+            ) .
+        ]
+    ] .
 
 <workflow/instance/1#moveToInspection> a wild:ActivityInstance ;
     wild:inWorkflowInstance <workflow/instance/1#it> ;
@@ -398,9 +790,94 @@
     prov:qualifiedAssociation [
         a prov:Association ;
         prov:agent <http://purl.org/for/system/oven/1#it> ;
-        prov:hadPlan <http://purl.org/for/plan/1#heating>
-    ] ;
-    for:initialization <plan/1#heating> .
+        prov:hadPlan [
+            a prov:Plan ;
+            oven:thresholdTemperature [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                qudt:hasUnit unit:DEG_C ;
+                qudt:value 260.0
+            ] ;
+            oven:stableHoldingTime [
+                a qudt:Quantity ;
+                qudt:hasQuantityKind quantitykind:Time ;
+                qudt:hasUnit unit:SEC ;
+                qudt:value 5.0
+            ] ;
+            oven:fieldTargetTemperature [
+                oven:fieldTarget [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                    qudt:hasUnit unit:DEG_C ;
+                    qudt:value 280.0
+                ] ;
+                oven:atField <system/field/1#it>
+            ] ;
+            oven:fieldTargetTemperature [
+                oven:fieldTarget [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                    qudt:hasUnit unit:DEG_C ;
+                    qudt:value 280.0
+                ] ;
+                oven:atField <system/field/2#it>
+            ] ;
+            oven:fieldTargetTemperature [
+                oven:fieldTarget [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                    qudt:hasUnit unit:DEG_C ;
+                    qudt:value 280.0
+                ] ;
+                oven:atField <system/field/3#it>
+            ] ;
+            oven:fieldTargetTemperature [
+                oven:fieldTarget [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                    qudt:hasUnit unit:DEG_C ;
+                    qudt:value 280.0
+                ] ;
+                oven:atField <system/field/4#it>
+            ] ;
+            oven:fieldTargetTemperature [
+                oven:fieldTarget [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                    qudt:hasUnit unit:DEG_C ;
+                    qudt:value 280.0
+                ] ;
+                oven:atField <system/field/5#it>
+            ] ;
+            oven:fieldTargetTemperature [
+                oven:fieldTarget [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                    qudt:hasUnit unit:DEG_C ;
+                    qudt:value 280.0
+                ] ;
+                oven:atField <system/field/6#it>
+            ] ;
+            oven:fieldTargetTemperature [
+                oven:fieldTarget [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                    qudt:hasUnit unit:DEG_C ;
+                    qudt:value 280.0
+                ] ;
+                oven:atField <system/field/7#it>
+            ] ;
+            oven:fieldTargetTemperature [
+                oven:fieldTarget [
+                    a qudt:Quantity ;
+                    qudt:hasQuantityKind quantitykind:AreaTemperature ;
+                    qudt:hasUnit unit:DEG_C ;
+                    qudt:value 280.0
+                ] ;
+                oven:atField <system/field/8#it>
+            ]
+        ]
+    ] .
 
 <workflow/instance/1#observeLaminateSurfaceTemperature1> a wild:ActivityInstance, sosa:Observation, prov:Activity ;
     wild:inWorkflowInstance <workflow/instance/1#it> ;
