@@ -56,22 +56,15 @@ describe('purpose-built machine forms', () => {
     expect(read.wrapper.text()).not.toContain('260.0')
     expect(read.wrapper.findAll('svg')).toHaveLength(2)
   })
-  it('edits heater targets under Press and displays them there in read-only settings', async () => {
+  it('edits upper and lower mold targets without redundant heater controls', async () => {
     const { wrapper, draft } = await setup()
-    await wrapper.setProps({ section: 'heating' })
-    expect(wrapper.text()).toContain('Infrared oven')
+    await wrapper.setProps({ section: 'pressing' })
     expect(wrapper.text()).not.toContain('Press heaters')
     expect(wrapper.find('input[aria-label="Heater 1 target"]').exists()).toBe(false)
-    await wrapper.setProps({ section: 'pressing' })
-    expect(wrapper.text()).toContain('Press heaters')
-    expect(wrapper.get<HTMLInputElement>('input[aria-label="Heater 1 target"]').element.value).toBe(
-      '300',
-    )
-    await wrapper.get('input[aria-label="Heater 1 target"]').setValue('305')
-    expect(draft.press.devices.map((device) => device.value)).toEqual(['305', '300.0'])
+    await wrapper.get('input[aria-label="Upper Mold temperature"]').setValue('115')
+    expect(draft.press.molds.map((mold) => mold.value)).toEqual(['115', '110.0'])
     await wrapper.setProps({ readonly: true })
     expect(wrapper.findAll('input')).toHaveLength(0)
-    expect(wrapper.text()).toContain('Heater 1 target')
-    expect(wrapper.text()).toContain('305 °C')
+    expect(wrapper.text()).toContain('115 °C')
   })
 })

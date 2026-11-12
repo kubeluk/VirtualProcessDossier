@@ -20,11 +20,16 @@ import {
   copySettings,
   buildInitialization,
   initializationIris,
-  planStages,
 } from '../../src/domain/initialization'
 import { seed } from '../../scripts/seed'
 import { canonical, expectedInitialization, initializationSource, sourceRun } from '../helpers'
-import { runActivities, runLaminate, datasetsFor, runPlans } from '../../src/domain/model'
+import {
+  runActivities,
+  runLaminate,
+  datasetsFor,
+  runPlans,
+  executionPlans,
+} from '../../src/domain/model'
 import type { InitializationDraft } from '../../src/domain/types'
 const url = process.env.FUSEKI_URL ?? 'http://localhost:3330'
 const dataset = 'vpd_it_' + Date.now()
@@ -51,6 +56,21 @@ afterAll(async () => {
   await fetch(url + '/$/datasets/' + dataset, { method: 'DELETE', headers })
 })
 const all = () => repo.construct('CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }')
+async function expectInsertedGraph(before: Store, expected: Store, run: string, started: number) {
+  const actual = await all()
+  const generated = actual.getQuads(n(run), n(NS.prov + 'generatedAtTime'), null, null)
+  expect(generated).toHaveLength(1)
+  const timestamp = generated[0]!.object
+  expect(timestamp.termType).toBe('Literal')
+  if (timestamp.termType !== 'Literal') throw new Error('Expected a generation timestamp')
+  expect(timestamp.datatype.value).toBe(NS.xsd + 'dateTime')
+  expect(Date.parse(timestamp.value)).toBeGreaterThanOrEqual(started)
+  expect(Date.parse(timestamp.value)).toBeLessThanOrEqual(Date.now())
+  // Generation time is chosen during the real write; compare every other fixture triple exactly.
+  expected.removeQuads(expected.getQuads(n(run), n(NS.prov + 'generatedAtTime'), null, null))
+  expected.addQuads(generated)
+  expect(await canonical(actual)).toBe(await canonical(merge(before, expected)))
+}
 async function useFreshLaminate(draft: InitializationDraft) {
   const laminate = BASE + 'laminate/' + draft.id + '#it'
   const material = new Store(
@@ -147,34 +167,53 @@ describe('real Fuseki reads', () => {
       ),
     ).toEqual([190, -100])
   })
-  it('executes the supplied read-query contracts and preserves list, unit, and reference information', async () => {
+  it('executes every current read template, including ordered steps and generation time', async () => {
     const readQuery = async (name: string) =>
-      readFile(new URL('../../data/queries/reads/' + name, import.meta.url), 'utf8')
-    expect(await repo.select(await readQuery('get-activity-instances.rq'))).toHaveLength(43)
-    expect(await repo.select(await readQuery('get-observation-bindings.rq'))).toHaveLength(29)
-    expect(await repo.select(await readQuery('get-workflow-instance.rq'))).toHaveLength(1)
-    const graph = await repo.construct(
-      await readFile(
-        new URL('../../data/queries/reads/get-initialization-plans.rq', import.meta.url),
-        'utf8',
-      ),
-    )
-    const plan = BASE + 'plan/1#pressing'
-    const steps = list(graph, object(graph, plan, NS.press + 'closingSteps'))
-    expect(
-      steps.map((s) =>
-        value(graph, object(graph, s, NS.press + 'closingSpeed'), NS.qudt + 'value'),
-      ),
-    ).toEqual(['80.0', '60.0', '35.0', '10.0'])
-    const position = object(
-      graph,
-      objects(graph, BASE + 'plan/1#gripping', NS.frame + 'gripperPosition')[0],
-      NS.frame + 'position',
-    )
-    expect(value(graph, position, NS.prov + 'wasDerivedFrom')).toBe(
-      BASE + 'system/frame#referencePoint',
+      (await readFile(new URL('../../data/queries/reads/' + name, import.meta.url), 'utf8'))
+        .replace('PUT_WORKFLOW_INSTANCE_UUID_HERE', '1')
+        .replace('WORKFLOW_INSTANCE_UUID', '1')
+    expect(await repo.select(await readQuery('get-laminate.rq'))).toHaveLength(1)
+    expect(await repo.select(await readQuery('get-global-heating-parameters.rq'))).toHaveLength(1)
+    expect(await repo.select(await readQuery('get-global-pressing-parameters.rq'))).toHaveLength(1)
+    expect(await repo.select(await readQuery('get-gripper-positions.rq'))).toHaveLength(8)
+    expect(await repo.select(await readQuery('get-gripper-setpoints.rq'))).toHaveLength(24)
+    expect(await repo.select(await readQuery('get-mold-temperatures.rq'))).toHaveLength(2)
+    expect(await repo.select(await readQuery('get-oven-field-temperatures.rq'))).toHaveLength(8)
+    const steps = await repo.select(await readQuery('get-pressing-steps.rq'))
+    expect(steps.map((step) => step.speed!.value)).toEqual(['80.0', '60.0', '35.0', '10.0'])
+    const scheduled = await repo.select(await readQuery('get-workflow-instances.rq'))
+    expect(scheduled.map((row) => row.workflow_instance!.value)).toContain(
+      BASE + 'workflow/instance/demo-initialized#it',
     )
   })
+  it.each(['blank', 'named'])(
+    'loads %s execution plans and their association equipment',
+    async (kind) => {
+      const activity = 'urn:test:execution-' + kind
+      const association = kind === 'named' ? '<urn:test:association>' : '_:association'
+      const plan = kind === 'named' ? '<urn:test:used-plan>' : '_:used'
+      await repo.update(`INSERT DATA {
+      <${activity}> a wild:ActivityInstance ; wild:inWorkflowInstance <${sourceRun}> ;
+        wild:activityInstanceOf activity:heating ; prov:qualifiedAssociation ${association} .
+      ${association} a prov:Association ; prov:agent <${BASE}system/oven/1#it> ; prov:hadPlan ${plan} .
+      ${plan} a prov:Plan ; oven:thresholdTemperature [ qudt:value 275.0 ; qudt:hasUnit unit:DEG_C ] .
+    }`)
+      const graph = await repo.getRunContext(sourceRun)
+      const records = executionPlans(graph, activity)
+      expect(records).toHaveLength(1)
+      expect(records[0]!.plan.termType).toBe(kind === 'named' ? 'NamedNode' : 'BlankNode')
+      expect(records[0]!.equipment.map((t) => t.value)).toEqual([BASE + 'system/oven/1#it'])
+      expect(
+        value(
+          graph,
+          object(graph, records[0]!.plan, NS.oven + 'thresholdTemperature'),
+          NS.qudt + 'value',
+        ),
+      ).toBe('275.0')
+      expect(runPlans(graph, sourceRun)).toHaveLength(3)
+      expect(copySettings(merge(refs, graph), sourceRun, refs).oven.threshold).toBe('260.0')
+    },
+  )
 })
 describe('real Fuseki writes', () => {
   it('requires update authentication at the server proxy boundary', async () => {
@@ -223,9 +262,10 @@ describe('real Fuseki writes', () => {
     const before = await all(),
       generated = buildInitialization(draft, refs),
       expected = expectedInitialization(source, generated, draft)
+    const started = Date.now()
     const uri = await repo.initializeRun(draft, refs)
     expect(uri).toBe(initializationIris(draft).run)
-    expect(await canonical(await all())).toBe(await canonical(merge(before, expected)))
+    await expectInsertedGraph(before, expected, uri, started)
     const rows = await repo.select(
       `SELECT ?plan WHERE { <${uri}> for:workflowInitialization/for:parameterization/prov:hadMember ?plan . ?plan a prov:Plan }`,
     )
@@ -237,84 +277,6 @@ describe('real Fuseki writes', () => {
       ),
     ).toBe(false)
     expect(await repo.ask(`ASK { <${uri}> prov:startedAtTime ?time }`)).toBe(false)
-  })
-  it('executes the reference initialization query with complete collection-owned plans', async () => {
-    const draft = copySettings(
-      merge(refs, await initializationSource()),
-      sourceRun,
-      refs,
-      'reference-query',
-    )
-    draft.name = 'Reference query test'
-    draft.notes = 'Example Run Comment'
-    draft.laminateConfirmed = true
-    await useFreshLaminate(draft)
-    const query = (
-      await readFile(
-        new URL('../../data/queries/updates/initialize-stamp-forming-run.ttl', import.meta.url),
-        'utf8',
-      )
-    )
-      .replace('INSERT_CORRECT_UUID_HERE', draft.id)
-      .replace('Example Run Label', draft.name)
-    await repo.update(query)
-    const rows = await repo.select(
-      'SELECT ?run WHERE { ?run a wild:WorkflowInstance ; rdfs:label "Reference query test" }',
-    )
-    expect(rows).toHaveLength(1)
-    const run = rows[0]!.run!.value
-    const context = await repo.getRunContext(run)
-    const actual = new Store()
-    const pending = [n(run), ...runActivities(context, run), ...runPlans(context, run)]
-    const visited = new Set<string>()
-    while (pending.length) {
-      const subject = pending.pop()!
-      if (visited.has(subject.value)) continue
-      visited.add(subject.value)
-      for (const q of context.getQuads(subject, null, null, null)) {
-        actual.addQuad(q)
-        if (q.object.termType === 'BlankNode') pending.push(q.object)
-      }
-    }
-    const expected = buildInitialization(draft, refs),
-      ids = initializationIris(draft)
-    const substitutions = new Map([[run, ids.run]])
-    for (const instance of runActivities(actual, run)) {
-      const model = value(actual, instance, NS.wild + 'activityInstanceOf')
-      const target = runActivities(expected, ids.run).find(
-        (item) => value(expected, item, NS.wild + 'activityInstanceOf') === model,
-      )
-      expect(target).toBeDefined()
-      substitutions.set(instance.value, target!.value)
-    }
-    for (const plan of runPlans(actual, run)) {
-      const stages = planStages(actual, plan)
-      expect(stages).toHaveLength(1)
-      substitutions.set(plan.value, ids.plan(stages[0]!))
-    }
-    const remap = (term: Parameters<typeof df.quad>[2]) =>
-      substitutions.has(term.value) ? n(substitutions.get(term.value)!) : term
-    const mapped = new Store(
-      [...actual].map((q) =>
-        df.quad(
-          remap(q.subject) as typeof q.subject,
-          q.predicate,
-          remap(q.object) as typeof q.object,
-        ),
-      ),
-    )
-    expect(await canonical(mapped)).toBe(await canonical(expected))
-    const planRead = (
-      await readFile(
-        new URL('../../data/queries/reads/get-initialization-plans.rq', import.meta.url),
-        'utf8',
-      )
-    ).replace('<workflow/instance/1#it>', '<' + run + '>')
-    const plans = await repo.construct(planRead)
-    expect(runPlans(plans, run)).toHaveLength(3)
-    expect(copySettings(merge(refs, plans, actual), run, refs).press.steps).toEqual(
-      draft.press.steps,
-    )
   })
   it('rejects invalid input without sending an update or changing any triples', async () => {
     const before = await canonical(await all()),
@@ -366,12 +328,13 @@ describe('real Fuseki writes', () => {
     await useFreshLaminate(draft)
     const before = await all(),
       graph = buildInitialization(draft, refs)
+    const started = Date.now()
     const result = await Promise.all([
       repo.initializeRun(draft, refs),
       repo.initializeRun(draft, refs),
     ])
     expect(result[0]).toBe(result[1])
-    expect(await canonical(await all())).toBe(await canonical(merge(before, graph)))
+    await expectInsertedGraph(before, graph, result[0]!, started)
   })
   it.each(['initialized', 'done'])(
     'rejects reuse of a laminate from an %s run without writing triples',
@@ -409,6 +372,7 @@ describe('real Fuseki writes', () => {
     await useFreshLaminate(first)
     const second = { ...first, id: 'integration-competing-second', name: 'Second workflow' }
     const before = await all()
+    const started = Date.now()
     const results = await Promise.allSettled([
       repo.initializeRun(first, refs),
       repo.initializeRun(second, refs),
@@ -417,13 +381,16 @@ describe('real Fuseki writes', () => {
     const rejected = results.find((result) => result.status === 'rejected')!
     expect(rejected.reason.message).toContain('Choose an unused laminate')
     const winner = results[0]!.status === 'fulfilled' ? first : second
-    expect(await canonical(await all())).toBe(
-      await canonical(merge(before, buildInitialization(winner, refs))),
+    await expectInsertedGraph(
+      before,
+      buildInitialization(winner, refs),
+      initializationIris(winner).run,
+      started,
     )
   })
-  it('accepts demonstrator completion and dataset templates while using shop-floor-created atomic identities', async () => {
+  it('accepts shop-floor executions with independent used plans and observation datasets', async () => {
     const draft = copySettings(
-      merge(refs, await repo.getRunContext(sourceRun)),
+      merge(refs, await initializationSource()),
       sourceRun,
       refs,
       'integration-execution',
@@ -432,78 +399,73 @@ describe('real Fuseki writes', () => {
     draft.laminateConfirmed = true
     await useFreshLaminate(draft)
     const run = await repo.initializeRun(draft, refs)
-    // The shop-floor system owns atomic identities and links plans when creating instances.
-    const heating = n(BASE + 'activity/instance/shop-floor-heating#it')
-    const obs = n(BASE + 'activity/instance/shop-floor-observation#it')
-    const plan = initializationIris(draft).plan('heating')
-    await repo.update(`INSERT DATA {
-      <${heating.value}> a wild:ActivityInstance ; wild:activityInstanceOf activity:heating ;
-        wild:inWorkflowInstance <${run}> ; wild:hasState wild:initialized ; for:initialization <${plan}> .
-      <${plan}> for:initialized <${heating.value}> .
-      <${obs.value}> a wild:ActivityInstance ; wild:activityInstanceOf activity:observeGripperAngle1 ;
-        wild:inWorkflowInstance <${run}> ; wild:hasState wild:initialized .
-    }`)
-    let query = await readFile(
-      new URL(
-        '../../data/queries/updates/machine-activities/demonstrator/insert-heating.rq',
-        import.meta.url,
-      ),
-      'utf8',
+    const plannedBefore = copySettings(
+      merge(refs, await repo.getRunContext(run)),
+      run,
+      refs,
+      draft.id,
     )
-    query = query
-      .replace('<activity/instance/000-heating#it>', '<' + heating.value + '>')
-      .replaceAll('<workflow/instance/000#it>', '<' + run + '>')
-    await repo.update(query)
-    const completed = await repo.getRunContext(run)
-    expect(value(completed, heating, NS.wild + 'hasState')).toBe(NS.wild + 'done')
-    expect(objects(completed, heating, NS.wild + 'hasState')).toHaveLength(1)
-    expect(value(completed, heating, NS.for + 'initialization')).toBe(
-      initializationIris(draft).plan('heating'),
-    )
-    const association = object(completed, heating, NS.prov + 'qualifiedAssociation')
-    expect(value(completed, association, NS.prov + 'hadPlan')).toBe(
-      initializationIris(draft).plan('heating'),
-    )
-    let sensorQuery = await readFile(
-      new URL(
-        '../../data/queries/updates/sensor-activities/demonstrator/template-insert-observation.rq',
-        import.meta.url,
-      ),
-      'utf8',
-    )
-    sensorQuery = sensorQuery
-      .replace('<activity/instance/000-observe-gripper-angle-1#it>', '<' + obs.value + '>')
-      .replace('<activity#XYZ>', '<' + NS.activity + 'observeGripperAngle1>')
-      .replace('<workflow/instance/000#it>', '<' + run + '>')
-      .replace('<http://purl.org/for/sensor/XYZ/1#it>', '<' + BASE + 'sensor/angle/1#it>')
-      .replace(
-        '<http://purl.org/for/system-or-laminate/XYZ/000#it>',
-        '<' + BASE + 'system/gripper/1#it>',
+    const executeTemplate = async (file: string) => {
+      const query = (
+        await readFile(new URL('../../data/queries/updates/' + file, import.meta.url), 'utf8')
       )
-      .replace('<http://purl.org/for/property#XYZ>', '<' + BASE + 'property#angle>')
-    await repo.update(sensorQuery)
-    let datasetQuery = await readFile(
-      new URL(
-        '../../data/queries/updates/sensor-activities/demonstrator/template-insert-dataset.rq',
-        import.meta.url,
-      ),
-      'utf8',
+        .replaceAll('http://purl.org/for/workflow/instance/EXAMPLE_UUID#it', run)
+        .replace(
+          'BIND(260.0 AS ?oven_threshold_temperature)',
+          'BIND(265.0 AS ?oven_threshold_temperature)',
+        )
+        .replace('BIND(1000.0 AS ?press_force)', 'BIND(950.0 AS ?press_force)')
+      await repo.update(query)
+    }
+    for (const stage of ['gripping', 'heating', 'pressing'])
+      await executeTemplate('machine-activities/insert-' + stage + '.rq')
+    const { readdir } = await import('node:fs/promises')
+    const sensorFiles = await readdir(
+      new URL('../../data/queries/updates/sensor-activities/', import.meta.url),
     )
-    datasetQuery = datasetQuery
-      .replace('<vpd/dataset/000#it>', '<' + BASE + 'demo/dataset#integration>')
-      .replace(
-        '<activity/instance/000-observe-laminate-surface-temperature-1#it>',
-        '<' + obs.value + '>',
-      )
-    await repo.update(datasetQuery)
-    expect((await repo.listDatasets({ run })).total).toBe(1)
-    expect((await repo.listDatasets({ sensor: BASE + 'sensor/angle/1#it' })).total).toBe(1)
+    expect(sensorFiles).toHaveLength(29)
+    for (const file of sensorFiles) await executeTemplate('sensor-activities/' + file)
     const recorded = await repo.getRunContext(run)
-    expect(value(recorded, obs, NS.sosa + 'observedProperty')).toBe(BASE + 'property#angle')
-    expect(datasetsFor(recorded, obs).map((t) => t.value)).toContain(
-      BASE + 'demo/dataset#integration',
-    )
+    expect(runActivities(recorded, run)).toHaveLength(37)
+    expect(
+      runActivities(recorded, run).filter((t) =>
+        objects(recorded, t, NS.rdf + 'type').some(
+          (type) => type.value === NS.sosa + 'Observation',
+        ),
+      ),
+    ).toHaveLength(29)
+    for (const stage of ['gripping', 'heating', 'pressing']) {
+      const activity = runActivities(recorded, run).find(
+        (t) => value(recorded, t, NS.wild + 'activityInstanceOf') === NS.activity + stage,
+      )!
+      expect(value(recorded, activity, NS.wild + 'hasState')).toBe(NS.wild + 'done')
+      expect(activity.value).toContain('activity/instance/')
+      const used = executionPlans(recorded, activity)
+      expect(used).toHaveLength(1)
+      expect(used[0]!.plan.termType).toBe('BlankNode')
+      expect(used[0]!.plan.value).not.toBe(initializationIris(draft).plan(stage))
+    }
+    expect(recorded.getQuads(null, n(NS.for + 'initialization'), null, null)).toHaveLength(0)
+    expect(recorded.getQuads(null, n(NS.for + 'initialized'), null, null)).toHaveLength(0)
+    const heating = runActivities(recorded, run).find(
+      (t) => value(recorded, t, NS.wild + 'activityInstanceOf') === NS.activity + 'heating',
+    )!
+    const usedHeating = executionPlans(recorded, heating)[0]!.plan
+    expect(
+      value(
+        recorded,
+        object(recorded, usedHeating, NS.oven + 'thresholdTemperature'),
+        NS.qudt + 'value',
+      ),
+    ).toBe('265.0')
+    const plannedAfter = copySettings(merge(refs, recorded), run, refs, draft.id)
+    expect(plannedAfter).toEqual(plannedBefore)
+    expect(plannedAfter.oven.threshold).toBe('260.0')
+    expect((await repo.listDatasets({ run }, 100)).total).toBe(29)
+    expect((await repo.listDatasets({ run, sensor: BASE + 'sensor/pyrometer/1#it' })).total).toBe(1)
     expect(value(recorded, run, NS.wild + 'hasState')).toBe(NS.wild + 'initialized')
+    await executeTemplate('update-workflow-instance.rq')
+    expect(value(await repo.getRunContext(run), run, NS.wild + 'hasState')).toBe(NS.wild + 'done')
   })
   it('does not double-count a dataset with multiple distributions', async () => {
     const node = df.blankNode(),

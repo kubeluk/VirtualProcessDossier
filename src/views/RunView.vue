@@ -4,17 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useKnowledgeStore } from '../stores/knowledge'
 import { useLoad } from '../composables/useLoad'
 import { repository } from '../services/repository'
-import {
-  NS,
-  Store,
-  merge,
-  label,
-  value,
-  typed,
-  isType,
-  dateTime,
-  interval,
-} from '../domain/rdf'
+import { NS, Store, merge, label, value, typed, isType, dateTime, interval } from '../domain/rdf'
 import {
   workflowTree,
   runLaminate,
@@ -22,8 +12,9 @@ import {
   runPlans,
   datasetsFor,
   flatten,
+  executionPlans,
 } from '../domain/model'
-import { copySettings } from '../domain/initialization'
+import { copySettings, SHAPES } from '../domain/initialization'
 import { observationExpectations } from '../domain/expectations'
 import AsyncState from '../components/AsyncState.vue'
 import EntityLink from '../components/EntityLink.vue'
@@ -31,6 +22,7 @@ import AllMetadata from '../components/AllMetadata.vue'
 import StateBadge from '../components/StateBadge.vue'
 import ActivityTree from '../components/ActivityTree.vue'
 import MachineParameters from '../components/MachineParameters.vue'
+import ExecutionParameters from '../components/ExecutionParameters.vue'
 import LaminateSummary from '../components/LaminateSummary.vue'
 const route = useRoute(),
   router = useRouter(),
@@ -92,6 +84,15 @@ const settings = computed(() => {
     }
   }
 })
+const parameterActivities = computed(() =>
+  runActivities(g.value, uri.value).filter(
+    (activity) =>
+      executionPlans(g.value, activity).length ||
+      Object.keys(SHAPES).some(
+        (stage) => value(g.value, activity, NS.wild + 'activityInstanceOf') === NS.activity + stage,
+      ),
+  ),
+)
 const processSteps = computed(
   () => tree.value?.children.find((c) => c.type === 'sequential')?.children ?? [],
 )
@@ -208,7 +209,7 @@ function selectTab(next: string) {
       </section>
       <section class="panel">
         <div class="section-heading">
-          <h2>Initialization settings</h2>
+          <h2>Planned settings</h2>
           <button class="text-button" @click="selectTab('parameters')">
             View all parameters →
           </button>
@@ -255,8 +256,9 @@ function selectTab(next: string) {
     >
     <template v-else-if="tab === 'parameters'"
       ><p class="section-intro">
-        Initialization settings are preserved as recorded. To reuse them, copy them into a new run.
+        Planned settings are preserved with the run. Copy them to prepare a new run.
       </p>
+      <h2>Planned settings</h2>
       <MachineParameters v-if="settings.draft" :model-value="settings.draft" readonly />
       <div v-else class="notice">
         {{ settings.error }}
@@ -267,8 +269,25 @@ function selectTab(next: string) {
             :uri="plan.value"
             :graph="g"
           />
-        </div></div
-    ></template>
+        </div>
+      </div>
+      <h2>Recorded used settings</h2>
+      <p v-if="!parameterActivities.length" class="notice">No used settings recorded.</p>
+      <section v-for="activity in parameterActivities" :key="activity.value" class="panel">
+        <h3>{{ label(g, value(g, activity, NS.wild + 'activityInstanceOf')) }}</h3>
+        <EntityLink :uri="activity.value" :graph="g" text="Recorded activity" />
+        <p class="small muted">
+          {{ dateTime(value(g, activity, NS.prov + 'startedAtTime')) }} ·
+          {{
+            interval(
+              value(g, activity, NS.prov + 'startedAtTime'),
+              value(g, activity, NS.prov + 'endedAtTime'),
+            )
+          }}
+        </p>
+        <ExecutionParameters :graph="g" :activity="activity" />
+      </section>
+    </template>
     <template v-else-if="tab === 'observations'">
       <div class="section-heading">
         <div>

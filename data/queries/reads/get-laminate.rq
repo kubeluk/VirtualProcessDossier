@@ -3,8 +3,7 @@ BASE <http://purl.org/for/>
 PREFIX for: <http://purl.org/for/terms#>
 PREFIX wild: <http://purl.org/wild/vocab#>
 
-# Input: replace this query's VALUES IRI with the scheduled workflow instance.
-# Read and check the state before execution; completion requires wild:initialized.
+# Read the scheduled workflow instance input before execution.
 SELECT ?laminate
 WHERE
 {

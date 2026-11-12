@@ -68,7 +68,6 @@ export interface InitializationDraft {
     force: string
     cooling: string
     remaining: string
-    devices: ScalarEntry[]
     molds: ScalarEntry[]
     steps: ClosingStep[]
   }

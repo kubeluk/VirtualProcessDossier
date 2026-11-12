@@ -86,7 +86,7 @@
                 frame:setpoint [
                     a qudt:Quantity ;
                     qudt:hasUnit unit:UNITLESS ;
-                    qudt:value 60.0 ;
+                    qudt:value 60 ;
                 ] ;
                 frame:ofGripper <system/gripper/1#it> ;
                 frame:atActivity activity:gripping
@@ -95,7 +95,7 @@
                 frame:setpoint [
                     a qudt:Quantity ;
                     qudt:hasUnit unit:UNITLESS ;
-                    qudt:value 60.0 ;
+                    qudt:value 60 ;
                 ] ;
                 frame:ofGripper <system/gripper/1#it> ;
                 frame:atActivity activity:heating
@@ -104,7 +104,7 @@
                 frame:setpoint [
                     a qudt:Quantity ;
                     qudt:hasUnit unit:UNITLESS ;
-                    qudt:value 60.0 ;
+                    qudt:value 60 ;
                 ] ;
                 frame:ofGripper <system/gripper/1#it> ;
                 frame:atActivity activity:pressing
@@ -123,7 +123,7 @@
                 frame:setpoint [
                     a qudt:Quantity ;
                     qudt:hasUnit unit:UNITLESS ;
-                    qudt:value 60.0 ;
+                    qudt:value 60 ;
                 ] ;
                 frame:ofGripper <system/gripper/2#it> ;
                 frame:atActivity activity:gripping
@@ -132,7 +132,7 @@
                 frame:setpoint [
                     a qudt:Quantity ;
                     qudt:hasUnit unit:UNITLESS ;
-                    qudt:value 60.0 ;
+                    qudt:value 60 ;
                 ] ;
                 frame:ofGripper <system/gripper/2#it> ;
                 frame:atActivity activity:heating
@@ -141,7 +141,7 @@
                 frame:setpoint [
                     a qudt:Quantity ;
                     qudt:hasUnit unit:UNITLESS ;
-                    qudt:value 60.0 ;
+                    qudt:value 60 ;
                 ] ;
                 frame:ofGripper <system/gripper/2#it> ;
                 frame:atActivity activity:pressing
@@ -160,7 +160,7 @@
                 frame:setpoint [
                     a qudt:Quantity ;
                     qudt:hasUnit unit:UNITLESS ;
-                    qudt:value 60.0 ;
+                    qudt:value 60 ;
                 ] ;
                 frame:ofGripper <system/gripper/3#it> ;
                 frame:atActivity activity:gripping
@@ -169,7 +169,7 @@
                 frame:setpoint [
                     a qudt:Quantity ;
                     qudt:hasUnit unit:UNITLESS ;
-                    qudt:value 60.0 ;
+                    qudt:value 60 ;
                 ] ;
                 frame:ofGripper <system/gripper/3#it> ;
                 frame:atActivity activity:heating
@@ -178,7 +178,7 @@
                 frame:setpoint [
                     a qudt:Quantity ;
                     qudt:hasUnit unit:UNITLESS ;
-                    qudt:value 60.0 ;
+                    qudt:value 60 ;
                 ] ;
                 frame:ofGripper <system/gripper/3#it> ;
                 frame:atActivity activity:pressing
@@ -197,7 +197,7 @@
                 frame:setpoint [
                     a qudt:Quantity ;
                     qudt:hasUnit unit:UNITLESS ;
-                    qudt:value 60.0 ;
+                    qudt:value 60 ;
                 ] ;
                 frame:ofGripper <system/gripper/4#it> ;
                 frame:atActivity activity:gripping
@@ -206,7 +206,7 @@
                 frame:setpoint [
                     a qudt:Quantity ;
                     qudt:hasUnit unit:UNITLESS ;
-                    qudt:value 60.0 ;
+                    qudt:value 60 ;
                 ] ;
                 frame:ofGripper <system/gripper/4#it> ;
                 frame:atActivity activity:heating
@@ -215,7 +215,7 @@
                 frame:setpoint [
                     a qudt:Quantity ;
                     qudt:hasUnit unit:UNITLESS ;
-                    qudt:value 60.0 ;
+                    qudt:value 60 ;
                 ] ;
                 frame:ofGripper <system/gripper/4#it> ;
                 frame:atActivity activity:pressing
@@ -234,7 +234,7 @@
                 frame:setpoint [
                     a qudt:Quantity ;
                     qudt:hasUnit unit:UNITLESS ;
-                    qudt:value 60.0 ;
+                    qudt:value 60 ;
                 ] ;
                 frame:ofGripper <system/gripper/5#it> ;
                 frame:atActivity activity:gripping
@@ -243,7 +243,7 @@
                 frame:setpoint [
                     a qudt:Quantity ;
                     qudt:hasUnit unit:UNITLESS ;
-                    qudt:value 60.0 ;
+                    qudt:value 60 ;
                 ] ;
                 frame:ofGripper <system/gripper/5#it> ;
                 frame:atActivity activity:heating
@@ -252,7 +252,7 @@
                 frame:setpoint [
                     a qudt:Quantity ;
                     qudt:hasUnit unit:UNITLESS ;
-                    qudt:value 60.0 ;
+                    qudt:value 60 ;
                 ] ;
                 frame:ofGripper <system/gripper/5#it> ;
                 frame:atActivity activity:pressing
@@ -271,7 +271,7 @@
                 frame:setpoint [
                     a qudt:Quantity ;
                     qudt:hasUnit unit:UNITLESS ;
-                    qudt:value 60.0 ;
+                    qudt:value 60 ;
                 ] ;
                 frame:ofGripper <system/gripper/6#it> ;
                 frame:atActivity activity:gripping
@@ -280,7 +280,7 @@
                 frame:setpoint [
                     a qudt:Quantity ;
                     qudt:hasUnit unit:UNITLESS ;
-                    qudt:value 60.0 ;
+                    qudt:value 60 ;
                 ] ;
                 frame:ofGripper <system/gripper/6#it> ;
                 frame:atActivity activity:heating
@@ -289,7 +289,7 @@
                 frame:setpoint [
                     a qudt:Quantity ;
                     qudt:hasUnit unit:UNITLESS ;
-                    qudt:value 60.0 ;
+                    qudt:value 60 ;
                 ] ;
                 frame:ofGripper <system/gripper/6#it> ;
                 frame:atActivity activity:pressing
@@ -308,7 +308,7 @@
                 frame:setpoint [
                     a qudt:Quantity ;
                     qudt:hasUnit unit:UNITLESS ;
-                    qudt:value 60.0 ;
+                    qudt:value 60 ;
                 ] ;
                 frame:ofGripper <system/gripper/7#it> ;
                 frame:atActivity activity:gripping
@@ -317,7 +317,7 @@
                 frame:setpoint [
                     a qudt:Quantity ;
                     qudt:hasUnit unit:UNITLESS ;
-                    qudt:value 60.0 ;
+                    qudt:value 60 ;
                 ] ;
                 frame:ofGripper <system/gripper/7#it> ;
                 frame:atActivity activity:heating
@@ -326,7 +326,7 @@
                 frame:setpoint [
                     a qudt:Quantity ;
                     qudt:hasUnit unit:UNITLESS ;
-                    qudt:value 60.0 ;
+                    qudt:value 60 ;
                 ] ;
                 frame:ofGripper <system/gripper/7#it> ;
                 frame:atActivity activity:pressing
@@ -345,7 +345,7 @@
                 frame:setpoint [
                     a qudt:Quantity ;
                     qudt:hasUnit unit:UNITLESS ;
-                    qudt:value 60.0 ;
+                    qudt:value 60 ;
                 ] ;
                 frame:ofGripper <system/gripper/8#it> ;
                 frame:atActivity activity:gripping
@@ -354,7 +354,7 @@
                 frame:setpoint [
                     a qudt:Quantity ;
                     qudt:hasUnit unit:UNITLESS ;
-                    qudt:value 60.0 ;
+                    qudt:value 60 ;
                 ] ;
                 frame:ofGripper <system/gripper/8#it> ;
                 frame:atActivity activity:heating
@@ -363,7 +363,7 @@
                 frame:setpoint [
                     a qudt:Quantity ;
                     qudt:hasUnit unit:UNITLESS ;
-                    qudt:value 60.0 ;
+                    qudt:value 60 ;
                 ] ;
                 frame:ofGripper <system/gripper/8#it> ;
                 frame:atActivity activity:pressing
@@ -746,7 +746,7 @@
                         qudt:value 0.0
                     ]
                 ]
-            ) .
+            )
         ]
     ] .
 

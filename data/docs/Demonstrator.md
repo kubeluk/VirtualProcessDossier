@@ -36,10 +36,6 @@
 ### Oven
 - Ofen-Solltemperatur [°C]
     - pro IR field (bei Demonstrator sind alle gleich)
-- Solltemperatur Temperiergerät 1 [°C]
-    - globaler Prozessparameter
-- Solltemperatur Temperiergerät 2 [°C]
-    - globaler Prozessparameter
 - Temperaturtoleranz [°C]
     - ab welcher Temperatur die Haltezeit gemessen wird
     - Delta unterhalb der Solltemperatur, ab der angefangen wird die Haltezeit zu messen
@@ -55,6 +51,8 @@
     - Referenzpunkt egal, kann umgerechnet werden -> also einfach "linke untere Ecke"
 
 ### Press
+- Werkzeugtemperatur oben/unten [°C]
+    - ersetzt die redundanten Solltemperaturen der Temperiergeräte
 - Pressprofil — abstrakte Beschreibung des Pressablaufs, beispielsweise mit Anfahrbewegung, Pressgeschwindigkeit, Kraft- Wegvorgaben, Haltezeit und Rückhub.
     - wie bei Georg
 

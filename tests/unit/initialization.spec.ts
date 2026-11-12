@@ -12,6 +12,7 @@ import {
   value,
   list,
   safeIri,
+  addList,
 } from '../../src/domain/rdf'
 import {
   buildInitialization,
@@ -24,7 +25,14 @@ import {
   validatePlans,
   settingsFingerprint,
 } from '../../src/domain/initialization'
-import { flatten, workflowTree, runActivities, runLaminate, runPlans } from '../../src/domain/model'
+import {
+  flatten,
+  workflowTree,
+  runActivities,
+  runLaminate,
+  runPlans,
+  executionPlans,
+} from '../../src/domain/model'
 import { readLaminate } from '../../src/domain/laminate'
 import { observationExpectations } from '../../src/domain/expectations'
 import {
@@ -181,10 +189,7 @@ describe('initialization contract', () => {
     expect(fresh.oven).toMatchObject({ threshold: '260.0', holding: '5.0' })
     expect(fresh.oven.fields).toHaveLength(8)
     expect(fresh.oven).not.toHaveProperty('devices')
-    expect(fresh.press.devices).toEqual([
-      { iri: BASE + 'system/heater/1#it', value: '300.0' },
-      { iri: BASE + 'system/heater/2#it', value: '300.0' },
-    ])
+    expect(fresh.press).not.toHaveProperty('devices')
     expect(fresh.press.steps).toEqual([
       { speed: '80.0', distance: '60.0' },
       { speed: '60.0', distance: '25.0' },
@@ -237,24 +242,6 @@ describe('initialization contract', () => {
       },
     ],
     [
-      'missing heater',
-      (d: InitializationDraft) => {
-        d.press.devices.pop()
-      },
-    ],
-    [
-      'duplicate heater',
-      (d: InitializationDraft) => {
-        d.press.devices[1]!.iri = d.press.devices[0]!.iri
-      },
-    ],
-    [
-      'missing heater target',
-      (d: InitializationDraft) => {
-        d.press.devices[0]!.value = ''
-      },
-    ],
-    [
       'empty profile',
       (d: InitializationDraft) => {
         d.press.steps = []
@@ -280,14 +267,25 @@ describe('initialization contract', () => {
   })
   it('accepts older stored plan shapes without migrating them', async () => {
     const older = new Store(refs.getQuads(null, null, null, null))
-    const link = objects(older, NS.param + 'planShape', NS.sh + 'property').find(
-      (node) => value(older, node, NS.sh + 'path') === NS.for + 'initialized',
-    )!
+    const link = df.blankNode()
+    older.addQuad(n(NS.param + 'planShape'), n(NS.sh + 'property'), link)
+    older.addQuad(link, n(NS.sh + 'path'), n(NS.for + 'initialized'))
+    older.addQuad(link, n(NS.sh + 'minCount'), df.literal('1', n(NS.xsd + 'integer')))
+    const heater = df.blankNode()
+    const heaterComponents = df.blankNode()
+    older.addQuad(n(SHAPES.pressing), n(NS.sh + 'property'), heater)
+    older.addQuad(heater, n(NS.sh + 'path'), n(NS.oven + 'heatingDeviceTargetTemperature'))
+    older.addQuad(heater, n(NS.sh + 'minCount'), df.literal('2', n(NS.xsd + 'integer')))
+    older.addQuad(n(SHAPES.pressing), n(NS.sh + 'property'), heaterComponents)
     older.addQuad(
-      link as ReturnType<typeof n>,
-      n(NS.sh + 'minCount'),
-      df.literal('1', n(NS.xsd + 'integer')),
+      heaterComponents,
+      n(NS.sh + 'path'),
+      addList(older, [
+        n(NS.oven + 'heatingDeviceTargetTemperature'),
+        n(NS.oven + 'atDevice'),
+      ]) as ReturnType<typeof n>,
     )
+    older.addQuad(heaterComponents, n(NS.sh + 'minCount'), df.literal('2', n(NS.xsd + 'integer')))
     const before = await canonical(older)
     await expect(validateInitialization(draft, older)).resolves.toBeInstanceOf(Store)
     expect(await canonical(older)).toBe(before)
@@ -320,79 +318,58 @@ describe('initialization contract', () => {
     copy.press.steps.reverse()
     expect(settingsFingerprint(copy)).not.toBe(settingsFingerprint(draft))
   })
-  it('writes and copies distinct heater targets on the pressing plan with temperature quantities', async () => {
+  it('preserves mold temperatures without creating redundant heater quantities', async () => {
     const edited = structuredClone(draft)
-    edited.press.devices[0]!.value = '305.0'
-    edited.press.devices[1]!.value = '315.0'
-    expect(settingsFingerprint(edited)).not.toBe(settingsFingerprint(draft))
+    edited.press.molds[0]!.value = '115.0'
+    edited.press.molds[1]!.value = '120.0'
     const graph = await validateInitialization(edited, refs)
-    const ids = initializationIris(edited)
-    expect(objects(graph, ids.plan('heating'), NS.oven + 'heatingDeviceTargetTemperature')).toEqual(
-      [],
-    )
-    const entries = objects(graph, ids.plan('pressing'), NS.oven + 'heatingDeviceTargetTemperature')
-    expect(entries).toHaveLength(2)
-    for (const [index, entry] of entries.entries()) {
-      expect(value(graph, entry, NS.oven + 'atDevice')).toBe(edited.press.devices[index]!.iri)
-      const quantity = object(graph, entry, NS.oven + 'deviceTemperature')!
-      expect(value(graph, quantity, NS.qudt + 'hasQuantityKind')).toBe(NS.kind + 'Temperature')
-      expect(value(graph, quantity, NS.qudt + 'hasUnit')).toBe(NS.unit + 'DEG_C')
-      expect(value(graph, quantity, NS.qudt + 'value')).toBe(edited.press.devices[index]!.value)
-    }
-    const copy = copySettings(merge(refs, graph), ids.run, refs)
-    expect(copy.press.devices).toEqual(edited.press.devices)
-    copy.press.devices[0]!.value = '320.0'
-    expect(edited.press.devices[0]!.value).toBe('305.0')
+    expect(
+      graph.getQuads(null, n(NS.oven + 'heatingDeviceTargetTemperature'), null, null),
+    ).toHaveLength(0)
+    const copy = copySettings(merge(refs, graph), initializationIris(edited).run, refs)
+    expect(copy.press.molds).toEqual(edited.press.molds)
+    expect(copy.press).not.toHaveProperty('devices')
+    copy.press.molds[0]!.value = '125.0'
+    expect(edited.press.molds[0]!.value).toBe('115.0')
   })
   it.each([
-    'missing heater',
-    'duplicate heater',
+    'missing mold',
+    'duplicate mold',
     'wrong quantity kind',
     'wrong unit',
     'wrong datatype',
-    'heater targets on heating',
-  ])('validates press heater constraints explicitly: %s', async (change) => {
+  ])('validates mold temperatures: %s', async (change) => {
     const graph = buildInitialization(draft, refs)
-    const ids = initializationIris(draft)
-    const plan = ids.plan('pressing')
-    const predicate = n(NS.oven + 'heatingDeviceTargetTemperature')
-    const entries = graph.getQuads(n(plan), predicate, null, null)
+    const plan = initializationIris(draft).plan('pressing')
+    const entries = graph.getQuads(n(plan), n(NS.press + 'moldTemperature'), null, null)
     const entry = entries[0]!.object
-    const quantity = object(graph, entry, NS.oven + 'deviceTemperature')! as ReturnType<typeof n>
-    if (change === 'missing heater') graph.removeQuad(entries[0]!)
-    if (change === 'duplicate heater') {
-      graph.removeQuads(graph.getQuads(entry, n(NS.oven + 'atDevice'), null, null))
+    const quantity = object(graph, entry, NS.press + 'temperature')! as ReturnType<typeof n>
+    if (change === 'missing mold') graph.removeQuad(entries[0]!)
+    if (change === 'duplicate mold') {
+      graph.removeQuads(graph.getQuads(entry, n(NS.press + 'mold'), null, null))
       graph.addQuad(
         entry as ReturnType<typeof n>,
-        n(NS.oven + 'atDevice'),
-        object(graph, entries[1]!.object, NS.oven + 'atDevice')! as ReturnType<typeof n>,
+        n(NS.press + 'mold'),
+        object(graph, entries[1]!.object, NS.press + 'mold')! as ReturnType<typeof n>,
       )
     }
-    if (
-      change === 'wrong quantity kind' ||
-      change === 'wrong unit' ||
-      change === 'wrong datatype'
-    ) {
-      const [property, replacement]: [
-        string,
-        ReturnType<typeof n> | ReturnType<typeof df.literal>,
-      ] =
-        change === 'wrong quantity kind'
-          ? ['hasQuantityKind', n(NS.kind + 'AreaTemperature')]
-          : change === 'wrong unit'
-            ? ['hasUnit', n(NS.unit + 'SEC')]
-            : ['value', df.literal('300', n(NS.xsd + 'integer'))]
+    const property =
+      change === 'wrong quantity kind'
+        ? 'hasQuantityKind'
+        : change === 'wrong unit'
+          ? 'hasUnit'
+          : 'value'
+    if (change.startsWith('wrong')) {
       graph.removeQuads(graph.getQuads(quantity, n(NS.qudt + property), null, null))
-      graph.addQuad(quantity, n(NS.qudt + property), replacement!)
-    }
-    if (change === 'heater targets on heating') {
-      for (const triple of entries) {
-        graph.removeQuad(triple)
-        graph.addQuad(n(ids.plan('heating')), predicate, triple.object)
-      }
-      expect(
-        await validatePlans(graph, refs, [{ plan: ids.plan('heating'), shape: SHAPES.heating }]),
-      ).toEqual([])
+      graph.addQuad(
+        quantity,
+        n(NS.qudt + property),
+        change === 'wrong quantity kind'
+          ? n(NS.kind + 'AreaTemperature')
+          : change === 'wrong unit'
+            ? n(NS.unit + 'SEC')
+            : df.literal('110', n(NS.xsd + 'integer')),
+      )
     }
     expect(await validatePlans(graph, refs, [{ plan, shape: SHAPES.pressing }])).not.toEqual([])
   })
@@ -503,5 +480,13 @@ describe('RDF integrity and seed fixtures', () => {
     graph.removeQuads(graph.getQuads(size, n(NS.qudt + 'hasUnit'), null, null))
     graph.addQuad(size as ReturnType<typeof n>, n(NS.qudt + 'hasUnit'), n(NS.unit + 'SEC'))
     await expect(validateSeedGraph(graph)).rejects.toThrow('material')
+  })
+  it('rejects invalid used-plan quantities on anonymous execution plans', async () => {
+    const graph = await buildSeedGraph()
+    const used = executionPlans(graph, BASE + 'workflow/instance/1#pressing')[0]!.plan
+    const force = object(graph, used, NS.press + 'force')! as ReturnType<typeof n>
+    graph.removeQuads(graph.getQuads(force, n(NS.qudt + 'hasUnit'), null, null))
+    graph.addQuad(force, n(NS.qudt + 'hasUnit'), n(NS.unit + 'SEC'))
+    await expect(validateSeedGraph(graph)).rejects.toThrow('equipment shape')
   })
 })

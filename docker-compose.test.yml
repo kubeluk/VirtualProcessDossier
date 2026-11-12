@@ -7,4 +7,4 @@ services:
       ADMIN_PASSWORD: admin
       JVM_ARGS: -Xmx1g
     tmpfs:
-      - /fuseki
+      - /fuseki:uid=100,gid=101

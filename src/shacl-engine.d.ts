@@ -1,5 +1,6 @@
 declare module 'shacl-engine/Validator.js' {
-  import type { Store, DataFactory, Term } from 'n3'
+  import type { Store, DataFactory } from 'n3'
+  import type { Term } from '@rdfjs/types'
   export default class Validator {
     constructor(
       shapes: Store,

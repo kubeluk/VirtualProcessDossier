@@ -67,7 +67,8 @@ const { loading, error, reload } = useLoad(async () => {
   let saved:
     | {
         draft: InitializationDraft & {
-          oven: InitializationDraft['oven'] & { devices?: InitializationDraft['press']['devices'] }
+          press: InitializationDraft['press'] & { devices?: unknown[] }
+          oven: InitializationDraft['oven'] & { devices?: unknown[] }
         }
         step: number
         machine: string
@@ -87,15 +88,15 @@ const { loading, error, reload } = useLoad(async () => {
     (!route.query.runDraft || saved.draft.id === route.query.runDraft) &&
     Array.isArray(saved.draft.grippers) &&
     Array.isArray(saved.draft.press?.steps) &&
-    Array.isArray(saved.draft.oven?.fields) &&
-    Array.isArray(saved.draft.press?.devices ?? saved.draft.oven?.devices)
+    Array.isArray(saved.draft.oven?.fields)
   ) {
-    // Retain heater values from drafts saved before the fields moved to the press.
-    const { devices: legacyDevices, ...oven } = saved.draft.oven
+    // Restore the current draft contract without obsolete heater targets.
+    const { devices: _ovenDevices, ...oven } = saved.draft.oven
+    const { devices: _pressDevices, ...press } = saved.draft.press
     draft.value = {
       ...saved.draft,
       oven,
-      press: { ...saved.draft.press, devices: saved.draft.press.devices ?? legacyDevices! },
+      press,
     }
     step.value = Math.min(4, Math.max(1, Number(saved.step) || 1))
     machine.value = ['gripping', 'heating', 'pressing'].includes(saved.machine)
@@ -432,9 +433,9 @@ async function submit() {
                 </dd>
               </dl>
               <p class="notice small">
-                Initializing saves the input, machine settings, and initialized workflow groups.
-                The shop-floor system creates atomic activity instances and records execution
-                state, timing, observations, and datasets.
+                Initializing saves the input, machine settings, and initialized workflow groups. The
+                shop-floor system creates atomic activity instances and records execution state,
+                timing, observations, and datasets.
               </p>
             </section>
             <details

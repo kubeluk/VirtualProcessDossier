@@ -75,7 +75,7 @@ export function fieldHelp(g: Store, shape: string, path: string[]): string {
 function defaultAt(g: Store, shape: string, path: string[]): string {
   return value(g, propertyAt(g, shape, path), NS.sh + 'defaultValue')
 }
-function allowed(g: Store, shape: string, path: string[]): string[] {
+export function parameterComponents(g: Store, shape: string, path: string[]): string[] {
   const p = propertyAt(g, shape, path)
   const enumList =
     object(g, p, NS.sh + 'in') ?? object(g, object(g, p, NS.sh + 'node'), NS.sh + 'in')
@@ -104,7 +104,7 @@ export function createDraft(g: Store, id: string = crypto.randomUUID()): Initial
     laminate: '',
     laminateConfirmed: false,
     copiedFrom: '',
-    grippers: allowed(g, SHAPES.gripping, [
+    grippers: parameterComponents(g, SHAPES.gripping, [
       NS.frame + 'gripperPosition',
       NS.frame + 'ofGripper',
     ]).map((iri) => ({
@@ -121,7 +121,7 @@ export function createDraft(g: Store, id: string = crypto.randomUUID()): Initial
         NS.qudt + 'value',
       ]),
       holding: defaultAt(g, SHAPES.heating, [NS.oven + 'stableHoldingTime', NS.qudt + 'value']),
-      fields: allowed(g, SHAPES.heating, [
+      fields: parameterComponents(g, SHAPES.heating, [
         NS.oven + 'fieldTargetTemperature',
         NS.oven + 'atField',
       ]).map((iri) => ({
@@ -134,30 +134,20 @@ export function createDraft(g: Store, id: string = crypto.randomUUID()): Initial
       })),
     },
     press: {
-      devices: allowed(g, SHAPES.pressing, [
-        NS.oven + 'heatingDeviceTargetTemperature',
-        NS.oven + 'atDevice',
-      ]).map((iri) => ({
-        iri,
-        value: defaultAt(g, SHAPES.pressing, [
-          NS.oven + 'heatingDeviceTargetTemperature',
-          NS.oven + 'deviceTemperature',
-          NS.qudt + 'value',
-        ]),
-      })),
       force: defaultAt(g, SHAPES.pressing, [NS.press + 'force', NS.qudt + 'value']),
       cooling: defaultAt(g, SHAPES.pressing, [NS.press + 'moldCoolingTime', NS.qudt + 'value']),
       remaining: defaultAt(g, SHAPES.pressing, [NS.press + 'remainingPath', NS.qudt + 'value']),
-      molds: allowed(g, SHAPES.pressing, [NS.press + 'moldTemperature', NS.press + 'mold']).map(
-        (iri) => ({
-          iri,
-          value: defaultAt(g, SHAPES.pressing, [
-            NS.press + 'moldTemperature',
-            NS.press + 'temperature',
-            NS.qudt + 'value',
-          ]),
-        }),
-      ),
+      molds: parameterComponents(g, SHAPES.pressing, [
+        NS.press + 'moldTemperature',
+        NS.press + 'mold',
+      ]).map((iri) => ({
+        iri,
+        value: defaultAt(g, SHAPES.pressing, [
+          NS.press + 'moldTemperature',
+          NS.press + 'temperature',
+          NS.qudt + 'value',
+        ]),
+      })),
       steps: list(g, defaultSteps).map((step) => ({
         speed: q(step, NS.press + 'closingSpeed'),
         distance: q(step, NS.press + 'remainingDistance'),
@@ -214,13 +204,6 @@ export function copySettings(
     ],
     [
       press,
-      draft.press.devices,
-      NS.oven + 'heatingDeviceTargetTemperature',
-      NS.oven + 'atDevice',
-      NS.oven + 'deviceTemperature',
-    ],
-    [
-      press,
       draft.press.molds,
       NS.press + 'moldTemperature',
       NS.press + 'mold',
@@ -268,7 +251,6 @@ export function draftErrors(draft: InitializationDraft, references: Store): stri
   }
   checkComponents(draft.grippers, expected.grippers, 'gripper')
   checkComponents(draft.oven.fields, expected.oven.fields, 'oven field')
-  checkComponents(draft.press.devices, expected.press.devices, 'press heater')
   checkComponents(draft.press.molds, expected.press.molds, 'mold')
   const decimal = (v: string, field: string) => {
     if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(v) || !Number.isFinite(Number(v)))
@@ -283,8 +265,7 @@ export function draftErrors(draft: InitializationDraft, references: Store): stri
   }
   decimal(draft.oven.threshold, 'Threshold temperature')
   decimal(draft.oven.holding, 'Stable holding time')
-  for (const row of [...draft.oven.fields, ...draft.press.devices, ...draft.press.molds])
-    decimal(row.value, row.iri)
+  for (const row of [...draft.oven.fields, ...draft.press.molds]) decimal(row.value, row.iri)
   decimal(draft.press.force, 'Press force')
   decimal(draft.press.cooling, 'Mold cooling time')
   decimal(draft.press.remaining, 'Remaining path')
@@ -319,7 +300,11 @@ export function buildInitialization(draft: InitializationDraft, references: Stor
     return node
   }
   type(run, NS.wild + 'WorkflowInstance')
-  add(run, NS.prov + 'generatedAtTime', df.literal(new Date().toISOString(), n(NS.xsd + 'dateTime')))
+  add(
+    run,
+    NS.prov + 'generatedAtTime',
+    df.literal(new Date().toISOString(), n(NS.xsd + 'dateTime')),
+  )
   add(run, NS.rdfs + 'label', df.literal(draft.name.trim()))
   if (draft.notes.trim()) add(run, NS.rdfs + 'comment', df.literal(draft.notes.trim()))
   add(run, NS.wild + 'workflowInstanceOf', n(draft.model))
@@ -391,14 +376,6 @@ export function buildInitialization(draft: InitializationDraft, references: Stor
       'fieldTarget',
       'AreaTemperature',
     ],
-    [
-      pressing,
-      draft.press.devices,
-      'heatingDeviceTargetTemperature',
-      'atDevice',
-      'deviceTemperature',
-      'Temperature',
-    ],
   ] as const)
     for (const row of rows) {
       const entry = df.blankNode()
@@ -435,26 +412,34 @@ type NamedNode = ReturnType<typeof n>
 export async function validatePlans(
   data: Store,
   shapes: Store,
-  plans: { plan: string; shape: string }[],
+  plans: { plan: Term | string; shape: string }[],
 ): Promise<string[]> {
   const { default: Validator } = await import('shacl-engine/Validator.js')
-  // Nonempty stores may retain the earlier requirement for an atomic instance link.
-  // Apply the current plan contract locally without migrating stored shapes or data.
+  // Apply the current contract to older reference graphs without migrating stored data.
   const planShapes = new Store(shapes.getQuads(null, null, null, null))
-  for (const property of objects(planShapes, NS.param + 'planShape', NS.sh + 'property')) {
-    if (value(planShapes, property, NS.sh + 'path') === NS.for + 'initialized')
-      planShapes.removeQuads(planShapes.getQuads(property, n(NS.sh + 'minCount'), null, null))
+  for (const owner of [NS.param + 'planShape', SHAPES.pressing]) {
+    for (const property of objects(planShapes, owner, NS.sh + 'property')) {
+      const path = object(planShapes, property, NS.sh + 'path')
+      if (
+        path?.value === NS.for + 'initialized' ||
+        path?.value === NS.oven + 'heatingDeviceTargetTemperature' ||
+        (path?.termType === 'BlankNode' &&
+          list(planShapes, path)[0]?.value === NS.oven + 'heatingDeviceTargetTemperature')
+      )
+        planShapes.removeQuads(planShapes.getQuads(n(owner), n(NS.sh + 'property'), property, null))
+    }
   }
   const validator = new Validator(planShapes, { factory: { ...df, dataset: () => new Store() } })
   const errors: string[] = []
   for (const item of plans) {
-    const report = await validator.validate({ dataset: data, terms: [n(item.plan)] }, [
+    const plan = typeof item.plan === 'string' ? n(item.plan) : item.plan
+    const report = await validator.validate({ dataset: data, terms: [plan] }, [
       { terms: [n(item.shape)] },
     ])
     if (!report.conforms)
       errors.push(
         'The ' +
-          item.plan.split('#').pop() +
+          plan.value.split('#').pop() +
           ' plan does not satisfy its equipment shape. Check required values, units, and component assignments.',
       )
   }
@@ -507,7 +492,6 @@ export function settingsFingerprint(draft: InitializationDraft): string {
       normalized(draft.press.force),
       normalized(draft.press.cooling),
       normalized(draft.press.remaining),
-      rows(draft.press.devices),
       rows(draft.press.molds),
       draft.press.steps.map((row) => [normalized(row.speed), normalized(row.distance)]),
     ],

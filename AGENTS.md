@@ -51,7 +51,8 @@ Never automatically clear, migrate, or reseed nonempty application data. Use `.e
 
 - Initialize one workflow instance and only the five composite activity instances with `wild:initialized`. The shop-floor system creates the 38 atomic activity instances, including 29 observation activities. The model retains all 43 nodes.
 - Link the laminate with `for:workflowInitialization/for:laminate`.
-- Link the three parameter plans through the run's parameterization collection. The shop-floor system adds `for:initialization` and reverse `for:initialized` when it creates atomic instances.
+- Link the three planned parameter plans only through the run's `for:workflowInitialization/for:parameterization/prov:hadMember` collection. The shop-floor system creates atomic activity instances and attaches independently recorded used plans through `prov:qualifiedAssociation/prov:hadPlan`; no `for:initialization` or `for:initialized` links are required.
+- Mold temperatures replace redundant heater targets. Keep planned settings distinct from used settings, and copy only the planned settings into new runs. Never fill missing execution values from defaults or planned values.
 - Preserve exact namespaces, quantity types, units, component identities, and ordered RDF lists.
 - Never fabricate execution timestamps, completed states, observation metadata, execution associations, or a separate physical output part.
 - Read dataset context through `prov:wasGeneratedBy` → observation → `wild:inWorkflowInstance`.

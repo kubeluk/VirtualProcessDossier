@@ -90,7 +90,7 @@ export async function validateSeedGraph(graph: Store): Promise<void> {
     if (stages.length !== 1)
       throw new Error('No unique equipment shape found for plan ' + plan.value)
     const model = stages[0]!
-    return { plan: plan.value, shape: SHAPES[model] }
+    return { plan, shape: SHAPES[model] }
   })
   const errors = await validatePlans(graph, graph, plans)
   const { default: Validator } = await import('shacl-engine/Validator.js')

@@ -1,6 +1,7 @@
 BASE <http://purl.org/for/>
 
 PREFIX for: <http://purl.org/for/terms#>
+PREFIX prov: <http://www.w3.org/ns/prov#>
 PREFIX wild: <http://purl.org/wild/vocab#>
 
 
@@ -10,6 +11,6 @@ WHERE
     ?workflow_instance
         a wild:WorkflowInstance ;
         wild:hasState wild:initialized ;
-        prov:wasGeneratedAt ?generation_time .
+        prov:generatedAtTime ?generation_time .
 }
 ORDER BY DESC(?generation_time)

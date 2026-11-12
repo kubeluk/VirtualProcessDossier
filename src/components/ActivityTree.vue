@@ -7,6 +7,8 @@ import { instancesFor, datasetsFor } from '../domain/model'
 import { observationExpectations } from '../domain/expectations'
 import EntityLink from './EntityLink.vue'
 import StateBadge from './StateBadge.vue'
+import ExecutionParameters from './ExecutionParameters.vue'
+import { SHAPES } from '../domain/initialization'
 const props = withDefaults(
   defineProps<{
     node: ActivityNode
@@ -111,14 +113,6 @@ const datasets = (uri: string) => datasetsFor(props.graph, uri)
                 :graph="graph"
               /></dd
           ></template>
-          <template v-if="object(graph, instance, NS.for + 'initialization')"
-            ><dt>Initialization plan</dt>
-            <dd>
-              <EntityLink
-                :uri="value(graph, instance, NS.for + 'initialization')"
-                :graph="graph"
-              /></dd
-          ></template>
           <template v-if="object(graph, instance, NS.sosa + 'madeBySensor')"
             ><dt>Sensor</dt>
             <dd>
@@ -139,6 +133,11 @@ const datasets = (uri: string) => datasetsFor(props.graph, uri)
               /></dd
           ></template>
         </dl>
+        <ExecutionParameters
+          v-if="Object.keys(SHAPES).some((stage) => node.uri === NS.activity + stage)"
+          :graph="graph"
+          :activity="instance"
+        />
         <ul v-if="datasets(instance.value).length" class="related-list">
           <li v-for="dataset in datasets(instance.value)" :key="dataset.value">
             <EntityLink

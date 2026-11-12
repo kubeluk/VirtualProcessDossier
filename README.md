@@ -56,7 +56,7 @@ docker compose -p vpd-tests -f docker-compose.test.yml down
 
 The test Fuseki listens on localhost:3330. Set `FUSEKI_URL` to use another test instance and `ADMIN_PASSWORD` if needed.
 
-Tests compare the UI's generated RDF with the supplied initialization snapshot and plans using RDF dataset canonicalization, independently query the resulting triples, verify retry safety, simulate shop-floor creation of atomic instances before executing the demonstrator completion templates, and check provenance-aware discovery.
+Tests compare the UI's generated RDF with the supplied initialization snapshot and plans using RDF dataset canonicalization, independently query the resulting triples, verify retry safety, execute shop-floor templates that create atomic instances with independent used plans and observation datasets, and check provenance-aware discovery.
 
 Browser end-to-end testing is intentionally left to the user. See [the competency coverage and manual checks](data/docs/ui-verification.md).
 
@@ -66,7 +66,10 @@ The authoritative model is under [data](data), including the parameter shapes, m
 
 - A run selects its laminate through `for:workflowInitialization/for:laminate`.
 - Initialization creates one initialized workflow, five initialized composite activity instances, and three fresh parameter plans. The shop-floor system creates atomic activity instances; all 43 activities remain in the process definition.
-- Plans belong to the run's `for:workflowInitialization/for:parameterization/prov:hadMember` collection, retaining quantities, units, component references, and ordered RDF lists. The shop-floor system adds `for:initialization` and `for:initialized` links when atomic instances are created. Existing completion templates require this shop-floor initialization step.
+- Planned settings belong to the run's `for:workflowInitialization/for:parameterization/prov:hadMember` collection, retaining quantities, units, component references, and ordered RDF lists.
+- The shop-floor system creates atomic executions and independently records their used settings through `prov:qualifiedAssociation/prov:hadPlan`, alongside the association's equipment. Execution plans can be named or anonymous, and can differ from planned settings. No activity initialization links are required.
+- Upper and lower mold temperatures are the press temperature settings; redundant heater targets are omitted from new drafts and writes. Older session drafts retain their other inputs when restored.
+- Run parameters and process details show recorded used settings separately from planned settings. Missing used values remain explicit. Copying a run uses its planned settings only.
 - Datasets link to generating observations through `prov:wasGeneratedBy`; observations supply sensor, measured property, feature of interest, and workflow membership.
 - Specified settings and expected sensor configuration are distinct from recorded execution facts.
 - Initialization writes no execution times, completed states, output-part assumptions, or observations.

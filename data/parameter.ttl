@@ -240,7 +240,7 @@
 <system/press/1#parameters>
     a sh:NodeShape ;
     rdfs:label "Press parameters"@en ;
-    rdfs:comment "Initialization parameters for the press, including force, cooling, mold and heater temperatures, and the closing sequence."@en ;
+    rdfs:comment "Initialization parameters for the press, including force, cooling, mold temperatures, and the closing sequence."@en ;
     sh:node param:planShape ;
     sh:property [
         sh:path press:force ;
@@ -336,50 +336,6 @@
         sh:maxCount 2
     ] ;
     sh:property [
-        sh:path oven:heatingDeviceTargetTemperature ;
-        sh:name "Heating device target temperatures"@en ;
-        sh:description "Target temperature for each of the two heating devices, in degrees Celsius."@en ;
-        sh:minCount 2 ;
-        sh:maxCount 2 ;
-        sh:node [
-            sh:property [
-                sh:path oven:deviceTemperature ;
-                sh:name "Device target temperature"@en ;
-                sh:description "Target temperature of this heating device, in degrees Celsius."@en ;
-                sh:minCount 1 ;
-                sh:maxCount 1 ;
-                sh:node [
-                    sh:node param:temperatureShape ;
-                    sh:property [
-                        sh:path qudt:value ;
-                        sh:name "Device target temperature"@en ;
-                        sh:description "Target temperature of the heating device, in degrees Celsius."@en ;
-                        sh:datatype xsd:decimal ;
-                        sh:defaultValue 300.0
-                    ]
-                ]
-            ] ;
-            sh:property [
-                sh:path oven:atDevice ;
-                sh:name "Heating device"@en ;
-                sh:description "Heating device to which this target temperature applies."@en ;
-                sh:nodeKind sh:IRI ;
-                # The two heater subsystems of the press in system.ttl.
-                sh:in ( <system/heater/1#it> <system/heater/2#it> ) ;
-                sh:minCount 1 ;
-                sh:maxCount 1
-            ]
-        ]
-    ] ;
-    # Two entries must reference both distinct heating devices.
-    sh:property [
-        sh:path ( oven:heatingDeviceTargetTemperature oven:atDevice ) ;
-        sh:name "Devices with target temperatures"@en ;
-        sh:description "Both heating devices must have a target temperature entry, with one entry per device."@en ;
-        sh:minCount 2 ;
-        sh:maxCount 2
-    ] ;
-    sh:property [
         sh:path press:closingSteps ;
         sh:name "Closing sequence"@en ;
         sh:description "Ordered sequence of closing steps, each specifying a closing speed and remaining distance."@en ;
@@ -459,16 +415,9 @@
 
 param:planShape
     a sh:NodeShape ;
-    rdfs:label "Initialization plan"@en ;
-    rdfs:comment "Saved parameter plan; the shop-floor system links its activity instance when execution is initialized."@en ;
-    sh:class prov:Plan ;
-    sh:property [
-        sh:path for:initialized ;
-        sh:name "Initialized activity"@en ;
-        sh:description "Activity instance initialized by this plan."@en ;
-        sh:nodeKind sh:IRI ;
-        sh:maxCount 1
-    ] .
+    rdfs:label "Parameter plan"@en ;
+    rdfs:comment "Planned settings belong to a workflow run; independently recorded used settings belong to an execution association."@en ;
+    sh:class prov:Plan .
 
 param:decimalShape
     a sh:NodeShape ;

@@ -53,15 +53,23 @@ export function describeState(iri: string): string {
   return iri ? (states[iri.replace(NS.wild, '')] ?? iri.replace(NS.wild, '')) : 'Not recorded'
 }
 
-/** Saved parameter plans, including legacy activity-owned plans. */
+/** Planned settings belong only to the run's parameterization collection. */
 export function runPlans(g: Store, run: string): Term[] {
   const members = objects(g, run, NS.for + 'workflowInitialization').flatMap((init) =>
     objects(g, init, NS.for + 'parameterization').flatMap((collection) =>
       objects(g, collection, NS.prov + 'hadMember'),
     ),
   )
-  const legacy = runActivities(g, run).flatMap((activity) =>
-    objects(g, activity, NS.for + 'initialization'),
+  return [...new Map(members.map((plan) => [plan.value, plan])).values()]
+}
+
+/** Keep each execution plan with its association and recorded equipment. */
+export function executionPlans(g: Store, activity: Term | string) {
+  return objects(g, activity, NS.prov + 'qualifiedAssociation').flatMap((association) =>
+    objects(g, association, NS.prov + 'hadPlan').map((plan) => ({
+      association,
+      plan,
+      equipment: objects(g, association, NS.prov + 'agent'),
+    })),
   )
-  return [...new Map([...members, ...legacy].map((plan) => [plan.value, plan])).values()]
 }

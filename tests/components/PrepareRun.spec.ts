@@ -73,29 +73,35 @@ describe('run preparation lifecycle', () => {
     expect(wrapper.text()).not.toContain('Loading context')
     wrapper.unmount()
   })
-  it('retains heater targets in the press when restoring an older session draft', async () => {
-    const draft = restoreDraft(unusedLaminate)
-    draft.press.devices[0]!.value = '305.0'
-    draft.press.devices[1]!.value = '315.0'
-    const { devices, ...press } = draft.press
-    sessionStorage.setItem(
-      'vpd.initialization.v1',
-      JSON.stringify({
-        draft: { ...draft, press, oven: { ...draft.oven, devices } },
-        step: 4,
-        machine: 'heating',
-      }),
-    )
-    const { wrapper } = await setup()
-    expect(wrapper.text()).toContain('Press heaters')
-    expect(wrapper.text()).toContain('305 °C')
-    expect(wrapper.text()).toContain('315 °C')
-    expect(JSON.parse(sessionStorage.getItem('vpd.initialization.v1')!).draft).toEqual(draft)
-    wrapper.unmount()
-    const restored = await setup()
-    expect(JSON.parse(sessionStorage.getItem('vpd.initialization.v1')!).draft).toEqual(draft)
-    restored.wrapper.unmount()
-  })
+  it.each(['oven', 'press'])(
+    'restores an older draft with obsolete heater fields under %s',
+    async (location) => {
+      const draft = restoreDraft(unusedLaminate)
+      draft.press.molds[0]!.value = '115.0'
+      sessionStorage.setItem(
+        'vpd.initialization.v1',
+        JSON.stringify({
+          draft: {
+            ...draft,
+            [location]: {
+              ...draft[location as 'oven' | 'press'],
+              devices: [{ iri: BASE + 'system/heater/1#it', value: '305.0' }],
+            },
+          },
+          step: 4,
+          machine: 'pressing',
+        }),
+      )
+      const { wrapper } = await setup()
+      expect(wrapper.text()).not.toContain('Press heaters')
+      expect(wrapper.text()).toContain('115 °C')
+      expect(JSON.parse(sessionStorage.getItem('vpd.initialization.v1')!).draft).toEqual(draft)
+      wrapper.unmount()
+      const restored = await setup()
+      expect(JSON.parse(sessionStorage.getItem('vpd.initialization.v1')!).draft).toEqual(draft)
+      restored.wrapper.unmount()
+    },
+  )
   it('loads copied values and replaces the one-time copy URL so a reload restores edited values', async () => {
     const { wrapper, router } = await setup('?copy=' + encodeURIComponent(sourceRun))
     expect(repository.getRunContext).toHaveBeenCalledWith(sourceRun)

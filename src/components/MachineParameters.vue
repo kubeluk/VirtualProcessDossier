@@ -203,20 +203,6 @@ function moveStep(index: number, direction: number) {
         :readonly="readonly"
       />
     </div>
-    <h3>Press heaters</h3>
-    <p class="small muted">
-      Heater 1 and Heater 2 heat the press molds. Their targets belong to the pressing plan.
-    </p>
-    <div class="field-grid">
-      <NumberField
-        v-for="(device, index) in model.press.devices"
-        :key="device.iri"
-        v-model="device.value"
-        :label="'Heater ' + (index + 1) + ' target'"
-        unit="°C"
-        :readonly="readonly"
-      />
-    </div>
     <h3>Ordered closing profile</h3>
     <div class="table-scroll">
       <table>

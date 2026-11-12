@@ -106,6 +106,8 @@ export class KnowledgeRepository {
       UNION { ?root wild:inWorkflowInstance ${run} . }
       UNION { ${run} for:workflowInitialization/for:parameterization/prov:hadMember ?root . }
       UNION { ?activity wild:inWorkflowInstance ${run} ; for:initialization ?root . }
+      UNION { ?activity wild:inWorkflowInstance ${run} ; prov:qualifiedAssociation ?root . }
+      UNION { ?activity wild:inWorkflowInstance ${run} ; prov:qualifiedAssociation/prov:hadPlan ?root . }
       UNION { ?observation wild:inWorkflowInstance ${run} . ?root prov:wasGeneratedBy ?observation . }
       ?root (!<urn:vpd:unused>)* ?s .
       FILTER(?s = ?root || isBlank(?s))
