@@ -13,6 +13,7 @@
 @prefix prov: <http://www.w3.org/ns/prov#> .
 @prefix wild: <http://purl.org/wild/vocab#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
 # Workflow Run
 
@@ -31,7 +32,8 @@
             prov:hadMember <plan/1#heating> ;
             prov:hadMember <plan/1#pressing>
         ]
-    ] .
+    ] ;
+    prov:generatedAtTime "2024-06-05T10:00:00Z"^^xsd:dateTime .
 
 ## Behaviour
 
@@ -47,173 +49,11 @@
     wild:activityInstanceOf activity:gripAndObserve ;
     wild:hasState wild:initialized .
 
-<workflow/instance/1#gripping> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:gripping ;
-    wild:hasState wild:initialized ;
-    for:initialization <plan/1#gripping> .
-
-<workflow/instance/1#observeGripperAngle1> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeGripperAngle1 ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeGripperAngle2> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeGripperAngle2 ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeGripperAngle3> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeGripperAngle3 ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeGripperAngle4> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeGripperAngle4 ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeGripperAngle5> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeGripperAngle5 ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeGripperAngle6> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeGripperAngle6 ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeGripperAngle7> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeGripperAngle7 ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeGripperAngle8> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeGripperAngle8 ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeGripperForce1> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeGripperForce1 ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeGripperForce2> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeGripperForce2 ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeGripperForce3> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeGripperForce3 ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeGripperForce4> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeGripperForce4 ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeGripperForce5> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeGripperForce5 ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeGripperForce6> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeGripperForce6 ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeGripperForce7> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeGripperForce7 ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeGripperForce8> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeGripperForce8 ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeGripperExtension1> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeGripperExtension1 ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeGripperExtension2> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeGripperExtension2 ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeGripperExtension3> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeGripperExtension3 ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeGripperExtension4> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeGripperExtension4 ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeGripperExtension5> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeGripperExtension5 ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeGripperExtension6> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeGripperExtension6 ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeGripperExtension7> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeGripperExtension7 ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeGripperExtension8> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeGripperExtension8 ;
-    wild:hasState wild:initialized .
-
 ## manufacturing
 
 <workflow/instance/1#manufactureAndObserve> a wild:ActivityInstance ;
     wild:inWorkflowInstance <workflow/instance/1#it> ;
     wild:activityInstanceOf activity:manufactureAndObserve ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#load> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:load ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#moveToOven> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:moveToOven ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#moveToPress> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:moveToPress ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#pressing> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:pressing ;
-    wild:hasState wild:initialized ;
-    for:initialization <plan/1#pressing> .
-
-<workflow/instance/1#moveToInspection> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:moveToInspection ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#moveToUnload> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:moveToUnload ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#unload> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:unload ;
     wild:hasState wild:initialized .
 
 ### Heating
@@ -223,40 +63,9 @@
     wild:activityInstanceOf activity:heatAndObserve ;
     wild:hasState wild:initialized .
 
-<workflow/instance/1#heating> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:heating ;
-    wild:hasState wild:initialized ;
-    for:initialization <plan/1#heating> .
-
-<workflow/instance/1#observeLaminateSurfaceTemperature1> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeLaminateSurfaceTemperature1 ;
-    wild:hasState wild:initialized .
-
 ### Inspection
 
 <workflow/instance/1#inspection> a wild:ActivityInstance ;
     wild:inWorkflowInstance <workflow/instance/1#it> ;
     wild:activityInstanceOf activity:inspection ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeLaminateShape1> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeLaminateShape1 ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeLaminateShape2> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeLaminateShape2 ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeLaminateShape3> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeLaminateShape3 ;
-    wild:hasState wild:initialized .
-
-<workflow/instance/1#observeLaminateShape4> a wild:ActivityInstance ;
-    wild:inWorkflowInstance <workflow/instance/1#it> ;
-    wild:activityInstanceOf activity:observeLaminateShape4 ;
     wild:hasState wild:initialized .

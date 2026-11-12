@@ -47,6 +47,21 @@ beforeAll(async () => {
   draft.laminateConfirmed = true
 })
 describe('initialization contract', () => {
+  it('records the workflow generation time as a UTC xsd:dateTime', () => {
+    const before = Date.now()
+    const graph = buildInitialization(draft, refs)
+    const after = Date.now()
+    const timestamps = graph.getQuads(null, n(NS.prov + 'generatedAtTime'), null, null)
+    expect(timestamps).toHaveLength(1)
+    expect(timestamps[0]!.subject.value).toBe(initializationIris(draft).run)
+    const timestamp = timestamps[0]!.object
+    expect(timestamp.termType).toBe('Literal')
+    if (timestamp.termType !== 'Literal') throw new Error('Expected a timestamp literal')
+    expect(timestamp.datatype.value).toBe(NS.xsd + 'dateTime')
+    expect(timestamp.value).toBe(new Date(timestamp.value).toISOString())
+    expect(Date.parse(timestamp.value)).toBeGreaterThanOrEqual(before)
+    expect(Date.parse(timestamp.value)).toBeLessThanOrEqual(after)
+  })
   it('matches the supplied initialization and plan graphs modulo named identities and blank nodes', async () => {
     const actual = await validateInitialization(draft, refs)
     const expected = expectedInitialization(source, actual, draft)

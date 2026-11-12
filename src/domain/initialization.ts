@@ -319,6 +319,7 @@ export function buildInitialization(draft: InitializationDraft, references: Stor
     return node
   }
   type(run, NS.wild + 'WorkflowInstance')
+  add(run, NS.prov + 'generatedAtTime', df.literal(new Date().toISOString(), n(NS.xsd + 'dateTime')))
   add(run, NS.rdfs + 'label', df.literal(draft.name.trim()))
   if (draft.notes.trim()) add(run, NS.rdfs + 'comment', df.literal(draft.notes.trim()))
   add(run, NS.wild + 'workflowInstanceOf', n(draft.model))

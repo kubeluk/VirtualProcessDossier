@@ -82,6 +82,8 @@ export function expectedInitialization(
       ),
   )
   const run = n(ids.run)
+  expected.removeQuads(expected.getQuads(run, n(NS.prov + 'generatedAtTime'), null, null))
+  expected.addQuads(actual.getQuads(run, n(NS.prov + 'generatedAtTime'), null, null))
   expected.removeQuads(expected.getQuads(run, n(NS.rdfs + 'label'), null, null))
   expected.removeQuads(expected.getQuads(run, n(NS.rdfs + 'comment'), null, null))
   expected.addQuad(run, n(NS.rdfs + 'label'), df.literal(draft.name.trim()))
