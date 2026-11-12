@@ -1,0 +1,15 @@
+BASE <http://purl.org/for/>
+
+PREFIX for: <http://purl.org/for/terms#>
+PREFIX wild: <http://purl.org/wild/vocab#>
+
+
+SELECT ?workflow_instance
+WHERE
+{
+    ?workflow_instance
+        a wild:WorkflowInstance ;
+        wild:hasState wild:initialized ;
+        prov:wasGeneratedAt ?generation_time .
+}
+ORDER BY DESC(?generation_time)

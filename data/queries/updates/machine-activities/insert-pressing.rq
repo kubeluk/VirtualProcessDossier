@@ -119,25 +119,7 @@ INSERT
                     qudt:value ?press_closing_step_4_remaining_distance
                 ]
             ]
-        ) ;
-        oven:heatingDeviceTargetTemperature [
-            oven:deviceTemperature [
-                a qudt:Quantity ;
-                qudt:hasQuantityKind quantitykind:Temperature ;
-                qudt:hasUnit unit:DEG_C ;
-                qudt:value ?heater_1_target_temperature
-            ] ;
-            oven:atDevice <system/heater/1#it>
-        ] ;
-        oven:heatingDeviceTargetTemperature [
-            oven:deviceTemperature [
-                a qudt:Quantity ;
-                qudt:hasQuantityKind quantitykind:Temperature ;
-                qudt:hasUnit unit:DEG_C ;
-                qudt:value ?heater_2_target_temperature
-            ] ;
-            oven:atDevice <system/heater/2#it>
-        ] .
+        ) .
 }
 WHERE
 {
@@ -168,6 +150,4 @@ WHERE
     BIND(10.0 AS ?press_closing_step_3_remaining_distance)
     BIND(10.0 AS ?press_closing_step_4_speed)
     BIND(0.0 AS ?press_closing_step_4_remaining_distance)
-    BIND(300.0 AS ?heater_1_target_temperature)
-    BIND(300.0 AS ?heater_2_target_temperature)
 }
