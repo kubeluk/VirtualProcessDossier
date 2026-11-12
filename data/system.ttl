@@ -17,7 +17,13 @@
 <system/demonstrator#it> a ssn:System ;
     rdfs:label "FoFa Demonstrator"@en ;
     rdfs:comment "The demonstrator as set up at the Forschungsfabrik"@en ;
-    ssn:hasSubSystem <system/frame/1#it>, <system/oven/1#it>, <system/press/1#it>, <system/inspector/1#it> .
+    ssn:hasSubSystem <system/axis/1#it>, <system/frame/1#it>, <system/oven/1#it>, <system/press/1#it>, <system/inspector/1#it> .
+
+## Linear Axis
+
+<system/axis/1#it> a ssn:System ;
+    rdfs:label "Linear Axis"@en ;
+    rdfs:comment "The linear axis is used for moving the gripper frame."@en .
 
 ## Gripper Frame
 
@@ -151,32 +157,42 @@ frame:referencePoint a for:ReferencePoint ;
     ssn:hasSubSystem <system/field/5#it>, <system/field/6#it>, <system/field/7#it>, <system/field/8#it> ;
     ssn:hasSubSystem <sensor/pyrometer/1#it> .
 
-<system/field/1#it> a ssn:System .
+<system/field/1#it> a ssn:System ;
+    rdfs:label "Heizfeld 1"@de .
 
-<system/field/2#it> a ssn:System .
+<system/field/2#it> a ssn:System ;
+    rdfs:label "Heizfeld 2"@de .
 
-<system/field/3#it> a ssn:System .
+<system/field/3#it> a ssn:System ;
+    rdfs:label "Heizfeld 3"@de .
 
-<system/field/4#it> a ssn:System .
+<system/field/4#it> a ssn:System ;
+    rdfs:label "Heizfeld 4"@de .
 
-<system/field/5#it> a ssn:System .
+<system/field/5#it> a ssn:System ;
+    rdfs:label "Heizfeld 5"@de .
 
-<system/field/6#it> a ssn:System .
+<system/field/6#it> a ssn:System ;
+    rdfs:label "Heizfeld 6"@de .
 
-<system/field/7#it> a ssn:System .
+<system/field/7#it> a ssn:System ;
+    rdfs:label "Heizfeld 7"@de .
 
-<system/field/8#it> a ssn:System .
+<system/field/8#it> a ssn:System ;
+    rdfs:label "Heizfeld 8"@de .
 
 ### Pyrometer
 
-<sensor/pyrometer/1#it> a sosa:Sensor .
+<sensor/pyrometer/1#it> a sosa:Sensor ;
+    rdfs:label "Pyrometer 1"@en ;
+    rdfs:comment "The pyrometer is used for measuring the surface temperature of the laminate during heating."@en .
 
 ## Press
 
 <system/press/1#it> a ssn:System ;
     rdfs:label "Press"@en ;
-    rdfs:comment "The press is used for forming the laminat."@en ;
-    ssn:hasSubSystem <system/press/1#upperMold>, <system/press/1#lowerMold>, <system/heater/1#it>, <system/heater/2#it> ;
+    rdfs:comment "The press is used for forming the laminate."@en ;
+    ssn:hasSubSystem <system/press/1#upperMold>, <system/press/1#lowerMold> ;
     for:takesParameters <system/press/1#parameters> .
 
 <system/press/1#upperMold> a ssn:System ;
@@ -186,14 +202,6 @@ frame:referencePoint a for:ReferencePoint ;
 <system/press/1#lowerMold> a ssn:System ;
     rdfs:label "Lower Mold"@en ;
     rdfs:comment "The lower mold is used for forming the laminate."@en .
-
-<system/heater/1#it> a ssn:System ;
-    rdfs:label "Heater 1"@en ;
-    rdfs:comment "The heater is used for heating the mold in the press."@en .
-
-<system/heater/2#it> a ssn:System ;
-    rdfs:label "Heater 2"@en ;
-    rdfs:comment "The heater is used for heating the mold in the press."@en .
 
 ## Inspection
 
