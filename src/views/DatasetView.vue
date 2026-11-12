@@ -21,15 +21,7 @@ const { loading, error, reload } = useLoad(async () => {
     context.value = new Store()
     return
   }
-  let graph = await repository.getDatasetContext(uri.value)
-  const runs = [
-    ...new Set(
-      objects(graph, uri.value, NS.prov + 'wasGeneratedBy')
-        .map((obs) => value(graph, obs, NS.wild + 'inWorkflowInstance'))
-        .filter(Boolean),
-    ),
-  ]
-  for (const run of runs) graph = merge(graph, await repository.getRunContext(run))
+  const graph = await repository.getDatasetContext(uri.value)
   if (current === serial) context.value = graph
 }, [() => uri.value, () => knowledge.revision])
 const g = computed(() => merge(knowledge.references, context.value))

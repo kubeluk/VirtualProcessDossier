@@ -409,8 +409,10 @@ describe('RDF integrity and seed fixtures', () => {
     expect(typed(graph, NS.wild + 'WorkflowInstance').map((run) => run.value)).toEqual([sourceRun])
     expect(value(graph, sourceRun, NS.wild + 'hasState')).toBe(NS.wild + 'done')
     expect(typed(graph, NS.for + 'Laminate')).toHaveLength(1)
-    expect(typed(graph, NS.dcat + 'Dataset')).toHaveLength(5)
-    expect(value(graph, BASE + 'observation#ex1', NS.wild + 'inWorkflowInstance')).toBe('')
+    const catalog = await readStore('catalog.ttl')
+    expect(typed(graph, NS.dcat + 'Dataset').map((dataset) => dataset.value).sort()).toEqual(
+      typed(catalog, NS.dcat + 'Dataset').map((dataset) => dataset.value).sort(),
+    )
   })
   it('seeds exactly the selected data files without generating or rewriting RDF', async () => {
     const expected = merge(

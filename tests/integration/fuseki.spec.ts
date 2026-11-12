@@ -91,8 +91,8 @@ describe('real Fuseki reads', () => {
     const runs = await repo.listRuns()
     expect(runs.total).toBe(1)
     expect(runs.items.map((r) => r.state)).toEqual([NS.wild + 'done'])
-    expect(runs.items.find((r) => r.uri === sourceRun)?.datasetCount).toBe(3)
-    expect((await repo.stats()).datasets).toBe(5)
+    expect(runs.items.find((r) => r.uri === sourceRun)?.datasetCount).toBe(4)
+    expect((await repo.stats()).datasets).toBe(4)
   })
   it('filters, counts, and paginates on the server without requiring complete provenance', async () => {
     expect((await repo.listRuns({ state: NS.wild + 'done' })).total).toBe(1)
@@ -104,13 +104,13 @@ describe('real Fuseki reads', () => {
     expect((await repo.listDatasets({ page: 1 }, 1)).items[0]?.uri).not.toBe(
       (await repo.listDatasets({}, 1)).items[0]?.uri,
     )
-    expect((await repo.listDatasets()).total).toBe(5)
-    expect((await repo.listDatasets({ run: sourceRun })).total).toBe(3)
+    expect((await repo.listDatasets()).total).toBe(4)
+    expect((await repo.listDatasets({ run: sourceRun })).total).toBe(4)
     expect((await repo.listDatasets({ sensor: BASE + 'sensor/pyrometer/1#it' })).total).toBe(1)
-    expect((await repo.listDatasets({ property: BASE + 'property#force' })).total).toBe(1)
+    expect((await repo.listDatasets({ property: BASE + 'property#force' })).total).toBe(2)
     expect((await repo.listDatasets({ feature: BASE + 'laminate/1#it' })).total).toBe(2)
-    expect((await repo.listDatasets({ model: BASE + 'workflow#stampForming' })).total).toBe(3)
-    expect((await repo.listDatasets({ media: 'model/stl' })).total).toBe(2)
+    expect((await repo.listDatasets({ model: BASE + 'workflow#stampForming' })).total).toBe(4)
+    expect((await repo.listDatasets({ media: 'model/stl' })).total).toBe(1)
     expect(
       (await repo.listDatasets({ search: 'context is not supplied " \\ ?s ?p ?o' })).total,
     ).toBe(0)
@@ -126,7 +126,7 @@ describe('real Fuseki reads', () => {
     expect(runLaminate(graph, sourceRun)).toBe(BASE + 'laminate/1#it')
     const temperature = BASE + 'workflow/instance/1#observeLaminateSurfaceTemperature1'
     expect(datasetsFor(graph, temperature).map((t) => t.value)).toEqual([
-      BASE + 'demo/dataset#temperature',
+      BASE + 'dataset#3',
     ])
     expect(value(graph, temperature, NS.sosa + 'madeBySensor')).toBe(BASE + 'sensor/pyrometer/1#it')
     expect(
@@ -136,9 +136,32 @@ describe('real Fuseki reads', () => {
         NS.sosa + 'hasFeatureOfInterest',
       ),
     ).toBe(BASE + 'system/gripper/1#it')
-    const standalone = await repo.getDatasetContext(BASE + 'dataset#ex1')
-    expect(value(standalone, BASE + 'observation#ex1', NS.wild + 'inWorkflowInstance')).toBe('')
-    expect(objects(standalone, BASE + 'dataset#ex1', NS.dcat + 'distribution')).toHaveLength(1)
+  })
+  it('loads each catalog distribution once together with its recorded production context', async () => {
+    for (const id of [1, 2, 3, 4]) {
+      const uri = BASE + 'dataset#' + id
+      const graph = merge(refs, await repo.getDatasetContext(uri))
+      expect(objects(graph, uri, NS.dcat + 'distribution')).toHaveLength(1)
+      const observation = object(graph, uri, NS.prov + 'wasGeneratedBy')!
+      expect(value(graph, observation, NS.wild + 'inWorkflowInstance')).toBe(sourceRun)
+      expect(value(graph, sourceRun, NS.rdfs + 'label')).toBe('Trial No. 1')
+      expect(value(graph, sourceRun, NS.wild + 'workflowInstanceOf')).toBe(
+        BASE + 'workflow#stampForming',
+      )
+      expect(runLaminate(graph, sourceRun)).toBe(BASE + 'laminate/1#it')
+    }
+  })
+  it('preserves missing execution context for a standalone dataset', async () => {
+    await repo.update(`INSERT DATA {
+      <urn:test:standalone-dataset> a dcat:Dataset ;
+        prov:wasGeneratedBy <urn:test:standalone-observation> ;
+        dcat:distribution [ a dcat:Distribution ; dcat:mediaType "text/plain" ] .
+      <urn:test:standalone-observation> a sosa:Observation .
+    }`)
+    const standalone = await repo.getDatasetContext('urn:test:standalone-dataset')
+    expect(value(standalone, 'urn:test:standalone-observation', NS.wild + 'inWorkflowInstance')).toBe('')
+    expect(objects(standalone, 'urn:test:standalone-dataset', NS.dcat + 'distribution')).toHaveLength(1)
+    expect(typed(standalone, NS.wild + 'WorkflowInstance')).toHaveLength(0)
   })
   it('loads linked quantity metadata and named coordinate lists without the reference cache', async () => {
     await repo.update(`INSERT DATA {
@@ -475,16 +498,16 @@ describe('real Fuseki writes', () => {
   it('does not double-count a dataset with multiple distributions', async () => {
     const node = df.blankNode(),
       graph = new Store()
-    graph.addQuad(n(BASE + 'demo/dataset#geometry'), n(NS.dcat + 'distribution'), node)
+    graph.addQuad(n(BASE + 'dataset#2'), n(NS.dcat + 'distribution'), node)
     graph.addQuad(node, n(NS.rdf + 'type'), n(NS.dcat + 'Distribution'))
     graph.addQuad(node, n(NS.dcat + 'mediaType'), df.literal('application/octet-stream'))
     await repo.update('INSERT DATA { ' + serialize(graph) + ' }')
-    expect((await repo.listDatasets({ run: sourceRun })).total).toBe(3)
-    expect((await repo.listRuns({ state: NS.wild + 'done' })).items[0]?.datasetCount).toBe(3)
+    expect((await repo.listDatasets({ run: sourceRun })).total).toBe(4)
+    expect((await repo.listRuns({ state: NS.wild + 'done' })).items[0]?.datasetCount).toBe(4)
     expect(
       objects(
-        await repo.getDatasetContext(BASE + 'demo/dataset#geometry'),
-        BASE + 'demo/dataset#geometry',
+        await repo.getDatasetContext(BASE + 'dataset#2'),
+        BASE + 'dataset#2',
         NS.dcat + 'distribution',
       ),
     ).toHaveLength(2)

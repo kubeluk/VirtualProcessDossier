@@ -135,9 +135,12 @@ export class KnowledgeRepository {
       }`)
   }
   async getDatasetContext(uri: string): Promise<Store> {
+    const dataset = safeIri(uri)
+    // Load the run in the same response to retain a single identity for each blank node.
     return this.construct(`CONSTRUCT { ?s ?p ?o } WHERE {
-      { BIND(${safeIri(uri)} AS ?root) }
-      UNION { ${safeIri(uri)} prov:wasGeneratedBy ?root }
+      { BIND(${dataset} AS ?root) }
+      UNION { ${dataset} prov:wasGeneratedBy ?root }
+      UNION { ${dataset} prov:wasGeneratedBy/wild:inWorkflowInstance ?root }
       ?root (!<urn:vpd:unused>)* ?s . FILTER(?s = ?root || isBlank(?s)) ?s ?p ?o
     }`)
   }
