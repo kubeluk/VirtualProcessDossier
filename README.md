@@ -13,7 +13,7 @@ docker compose up --build
 - UI: http://localhost:8080
 - Fuseki: http://localhost:3030 (development credentials: admin / admin)
 
-On an empty store, the seed service validates and loads the examples before starting the UI. It creates two **different** run identities: the supplied completed example and a remapped initialized example, each linked to its own laminate. Three additional, explicitly synthetic datasets demonstrate connected provenance, with small downloadable files served by the UI. The original standalone catalog examples retain their missing execution context.
+On an empty store, the seed service validates and loads only the Turtle statements from the `data/` files listed in [`scripts/seed.ts`](scripts/seed.ts), preserving their identities, values, and URLs. The bundle contains the supplied completed run, its laminate and plans, the reference models and shapes, the standalone catalog records, and the three synthetic datasets declared in [`data/catalog.ttl`](data/catalog.ttl). Seeding generates no additional records. The alternative `run-view-after-ui.ttl` snapshot is excluded because it describes the same run identity in an earlier state.
 
 Existing nonempty stores are preserved. The seed does not migrate older models or replace existing records. To explicitly reset this project's development data:
 
@@ -22,7 +22,7 @@ docker compose down -v
 docker compose up --build
 ```
 
-The reset deletes this Compose project's data volume. To use another port/origin, set `UI_PORT`, `FUSEKI_PORT`, and `PUBLIC_BASE_URL` before startup. Set `PUBLIC_BASE_URL` to the public UI origin so synthetic file links resolve correctly. `ADMIN_PASSWORD` configures the development Fuseki administrator.
+The reset deletes this Compose project's data volume. To use another port, set `UI_PORT` and `FUSEKI_PORT` before startup. Synthetic download URLs are loaded exactly as declared in `data/catalog.ttl`; edit that source file before seeding if another public UI origin is needed. `ADMIN_PASSWORD` configures the development Fuseki administrator.
 
 ## Develop locally
 
@@ -62,7 +62,7 @@ Browser end-to-end testing is intentionally left to the user. See [the competenc
 
 ## Model and implementation
 
-The authoritative model is under [data](data), including the parameter shapes, material shapes, example snapshots, and SPARQL templates. Historical snapshots are preserved; the initialized seed example is projected onto the current initialization contract.
+The authoritative model is under [data](data), including the parameter shapes, material shapes, example snapshots, and SPARQL templates. Seeding uses an explicit file list so alternative snapshots and older models are not loaded together.
 
 - A run selects its laminate through `for:workflowInitialization/for:laminate`.
 - Initialization creates one initialized workflow, five initialized composite activity instances, and three fresh parameter plans. The shop-floor system creates atomic activity instances; all 43 activities remain in the process definition.
@@ -84,7 +84,7 @@ Source layout:
 | `src/components`      | Machine forms, context links, recursive metadata and process views     |
 | `src/views`           | Overview, browsing, entity detail, run preparation                     |
 | `scripts/seed.ts`     | Validated, non-destructive startup seeding                             |
-| `data/demo`           | Supplemental synthetic dataset metadata                                |
+| `data/catalog.ttl`    | Standalone and connected dataset metadata                              |
 | `public/example-data` | Synthetic downloadable example files                                   |
 | `tests`               | Unit, component, and real-Fuseki integration tests                     |
 

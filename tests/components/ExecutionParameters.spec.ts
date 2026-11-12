@@ -81,7 +81,10 @@ it('keeps missing execution values and equipment explicit without falling back t
 })
 
 it('does not present planned settings as an execution when no used plan is recorded', async () => {
-  const wrapper = await render(seed, BASE + 'workflow/instance/demo-initialized#heating')
+  const graph = merge(seed)
+  graph.removeQuads(graph.getQuads(n(heating), n(NS.prov + 'qualifiedAssociation'), null, null))
+  expect(runPlans(graph, sourceRun)).toHaveLength(3)
+  const wrapper = await render(graph)
   expect(wrapper.text()).toBe('No used settings recorded.')
   wrapper.unmount()
 })

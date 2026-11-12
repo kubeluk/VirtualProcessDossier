@@ -1,13 +1,12 @@
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
-import { BASE, NS, Store, df, n, parse, serialize, typed, value } from '../src/domain/rdf'
+import { NS, Store, df, n, parse, serialize, typed } from '../src/domain/rdf'
 import { SHAPES, planStages, validatePlans } from '../src/domain/initialization'
-import { buildLaminate, readLaminate } from '../src/domain/laminate'
-import { runLaminate, runActivities } from '../src/domain/model'
+import { runLaminate } from '../src/domain/model'
 
-const readyLaminate = BASE + 'laminate/demo-initialized#it'
-
+// Load these data/ files unchanged. The two run snapshots describe the same identity;
+// use only the completed snapshot rather than merging states or inventing another run.
 export const seedFiles = [
   'workflow.ttl',
   'system.ttl',
@@ -21,67 +20,9 @@ export const seedFiles = [
 const read = async (file: string) =>
   parse(await readFile(new URL('../data/' + file, import.meta.url), 'utf8'))
 
-export function remapReadyGraph(graph: Store): Store {
-  const remap = (term: ReturnType<typeof n>) => {
-    if (term.termType !== 'NamedNode') return term
-    const iri = term.value
-      .replace(BASE + 'workflow/instance/1#', BASE + 'workflow/instance/demo-initialized#')
-      .replace(BASE + 'plan/1#', BASE + 'plan/demo-initialized#')
-      .replace(BASE + 'laminate/1#it', readyLaminate)
-    return n(iri)
-  }
-  const ready = new Store(
-    graph
-      .getQuads(null, null, null, null)
-      .map((q) =>
-        df.quad(
-          remap(q.subject as ReturnType<typeof n>),
-          q.predicate,
-          remap(q.object as ReturnType<typeof n>),
-          q.graph,
-        ),
-      ),
-  )
-  const run = n(BASE + 'workflow/instance/demo-initialized#it')
-  ready.removeQuads(ready.getQuads(run, n(NS.rdfs + 'label'), null, null))
-  ready.addQuad(run, n(NS.rdfs + 'label'), df.literal('Example ready run'))
-  return ready
-}
-export async function buildSeedGraph(publicBaseUrl = 'http://localhost:8080'): Promise<Store> {
+export async function buildSeedGraph(): Promise<Store> {
   const graph = new Store()
   for (const file of seedFiles) graph.addQuads((await read(file)).getQuads(null, null, null, null))
-  graph.addQuads([
-    ...buildLaminate(
-      {
-        ...readLaminate(graph, BASE + 'laminate/1#it'),
-        uri: readyLaminate,
-        name: 'BASF PA6-GF60 (initialized example)',
-        identifier: 'demo-initialized',
-      },
-      graph,
-    ),
-  ])
-  const source = new Store([...(await read('run-view-after-ui.ttl')), ...(await read('plan.ttl'))])
-  for (const activity of runActivities(source, BASE + 'workflow/instance/1#it')) {
-    const model = value(source, activity, NS.wild + 'activityInstanceOf')
-    if (graph.countQuads(n(model), n(NS.rdf + 'type'), n(NS.wild + 'AtomicActivity'), null))
-      source.removeQuads(source.getQuads(activity, null, null, null))
-  }
-  source.removeQuads(source.getQuads(null, n(NS.for + 'initialized'), null, null))
-  graph.addQuads(remapReadyGraph(source).getQuads(null, null, null, null))
-  const supplemental = await read('demo/connected-datasets.ttl')
-  for (const q of supplemental) {
-    const object =
-      q.object.termType === 'NamedNode' &&
-      q.object.value.startsWith('http://localhost:8080/example-data/')
-        ? n(
-            publicBaseUrl.replace(/\/$/, '') +
-              '/example-data/' +
-              q.object.value.split('/example-data/')[1],
-          )
-        : q.object
-    graph.addQuad(q.subject, q.predicate, object)
-  }
   return graph
 }
 export async function validateSeedGraph(graph: Store): Promise<void> {
@@ -120,7 +61,6 @@ export async function seed(
     url?: string
     dataset?: string
     password?: string
-    publicBaseUrl?: string
     fetcher?: typeof fetch
   } = {},
 ) {
@@ -174,7 +114,7 @@ export async function seed(
     console.log('Dataset ' + dataset + ' contains data; preserving it without seeding.')
     return { seeded: false, triples: 0 }
   }
-  const graph = await buildSeedGraph(options.publicBaseUrl ?? process.env.PUBLIC_BASE_URL)
+  const graph = await buildSeedGraph()
   await validateSeedGraph(graph)
   const response = await request(url + '/' + dataset + '/data?default', {
     method: 'POST',
@@ -182,13 +122,7 @@ export async function seed(
     body: serialize(graph),
   })
   if (!response.ok) throw new Error('Seed upload failed: ' + response.status)
-  console.log(
-    'Seeded ' +
-      dataset +
-      ' with ' +
-      graph.size +
-      ' triples, two separate run examples, and connected synthetic datasets.',
-  )
+  console.log('Seeded ' + dataset + ' with ' + graph.size + ' triples from data/.')
   return { seeded: true, triples: graph.size }
 }
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {

@@ -29,11 +29,9 @@ import {
   flatten,
   workflowTree,
   runActivities,
-  runLaminate,
   runPlans,
   executionPlans,
 } from '../../src/domain/model'
-import { readLaminate } from '../../src/domain/laminate'
 import { observationExpectations } from '../../src/domain/expectations'
 import {
   references,
@@ -393,7 +391,7 @@ describe('RDF integrity and seed fixtures', () => {
     ])
       expect(() => safeIri(input)).toThrow()
   })
-  it('parses and validates all supplied examples and distinct seed states', async () => {
+  it('parses the supplied examples and validates the selected seed snapshot', async () => {
     for (const file of [
       'catalog.ttl',
       'laminate.ttl',
@@ -408,68 +406,39 @@ describe('RDF integrity and seed fixtures', () => {
       expect((await readStore(file)).size).toBeGreaterThan(0)
     const graph = await buildSeedGraph()
     await expect(validateSeedGraph(graph)).resolves.toBeUndefined()
-    expect(typed(graph, NS.wild + 'WorkflowInstance')).toHaveLength(2)
+    expect(typed(graph, NS.wild + 'WorkflowInstance').map((run) => run.value)).toEqual([sourceRun])
     expect(value(graph, sourceRun, NS.wild + 'hasState')).toBe(NS.wild + 'done')
-    expect(value(graph, BASE + 'workflow/instance/demo-initialized#it', NS.wild + 'hasState')).toBe(
-      NS.wild + 'initialized',
-    )
+    expect(typed(graph, NS.for + 'Laminate')).toHaveLength(1)
     expect(typed(graph, NS.dcat + 'Dataset')).toHaveLength(5)
     expect(value(graph, BASE + 'observation#ex1', NS.wild + 'inWorkflowInstance')).toBe('')
   })
-  it('seeds an independent laminate for the initialized workflow without execution facts', async () => {
+  it('seeds exactly the selected data files without generating or rewriting RDF', async () => {
+    const expected = merge(
+      ...(await Promise.all(
+        [
+          'workflow.ttl',
+          'system.ttl',
+          'properties.ttl',
+          'laminate.ttl',
+          'parameter.ttl',
+          'plan.ttl',
+          'catalog.ttl',
+          'run-view-after-demo.ttl',
+        ].map(readStore),
+      )),
+    )
     const graph = await buildSeedGraph()
-    const run = BASE + 'workflow/instance/demo-initialized#it'
-    const original = BASE + 'laminate/1#it'
-    const laminate = BASE + 'laminate/demo-initialized#it'
-    expect(typed(graph, NS.for + 'Laminate')).toHaveLength(2)
-    expect(runLaminate(graph, sourceRun)).toBe(original)
-    expect(runLaminate(graph, run)).toBe(laminate)
-    const material = readLaminate(graph, original)
-    expect(readLaminate(graph, laminate)).toMatchObject({
-      uri: laminate,
-      name: 'BASF PA6-GF60 (initialized example)',
-      identifier: 'demo-initialized',
-      length: '400',
-      width: '400',
-      thickness: '1.56',
-      layupName: material.layupName,
-      layers: material.layers,
-      needles: material.needles.map((point) => ({
-        ...point,
-        x: String(Number(point.x)),
-        y: String(Number(point.y)),
-      })),
-    })
-    for (const predicate of [
-      NS.geo + 'hasSize',
-      NS.param + 'hasNeedlePoint',
-      NS.prov + 'wasDerivedFrom',
-    ]) {
-      const originalResources = objects(graph, original, predicate).map((term) => term.value)
-      for (const resource of objects(graph, laminate, predicate))
-        expect(originalResources).not.toContain(resource.value)
-    }
-    expect(runActivities(graph, run)).toHaveLength(5)
-    for (const instance of [n(run), ...runActivities(graph, run)]) {
-      expect(value(graph, instance, NS.wild + 'hasState')).toBe(NS.wild + 'initialized')
-      expect(objects(graph, instance, NS.prov + 'startedAtTime')).toHaveLength(0)
-      expect(objects(graph, instance, NS.prov + 'endedAtTime')).toHaveLength(0)
-      expect(objects(graph, instance, NS.sosa + 'hasFeatureOfInterest')).toHaveLength(0)
-    }
+    expect(graph.size).toBe(expected.size)
+    expect(await canonical(graph)).toBe(await canonical(expected))
   })
   it('rejects seed workflows that share a laminate', async () => {
     const graph = await buildSeedGraph()
-    const initialization = object(
-      graph,
-      BASE + 'workflow/instance/demo-initialized#it',
-      NS.for + 'workflowInitialization',
-    )!
-    graph.removeQuads(graph.getQuads(initialization, n(NS.for + 'laminate'), null, null))
-    graph.addQuad(
-      initialization as ReturnType<typeof n>,
-      n(NS.for + 'laminate'),
-      n(BASE + 'laminate/1#it'),
-    )
+    const run = n('urn:test:conflicting-run')
+    const initialization = df.blankNode()
+    graph.addQuad(run, n(NS.rdf + 'type'), n(NS.wild + 'WorkflowInstance'))
+    graph.addQuad(run, n(NS.wild + 'hasState'), n(NS.wild + 'initialized'))
+    graph.addQuad(run, n(NS.for + 'workflowInitialization'), initialization)
+    graph.addQuad(initialization, n(NS.for + 'laminate'), n(BASE + 'laminate/1#it'))
     await expect(validateSeedGraph(graph)).rejects.toThrow(
       'A seed laminate is assigned to more than one workflow instance.',
     )

@@ -21,7 +21,7 @@ import {
   buildInitialization,
   initializationIris,
 } from '../../src/domain/initialization'
-import { seed } from '../../scripts/seed'
+import { buildSeedGraph, seed } from '../../scripts/seed'
 import { canonical, expectedInitialization, initializationSource, sourceRun } from '../helpers'
 import {
   runActivities,
@@ -83,26 +83,26 @@ async function useFreshLaminate(draft: InitializationDraft) {
   draft.laminate = laminate
 }
 describe('real Fuseki reads', () => {
-  it('seeds two distinct run states and skips repeated startup without duplicating blank nodes', async () => {
+  it('seeds only the selected data files and preserves them on repeated startup', async () => {
     const before = await canonical(await all())
+    expect(before).toBe(await canonical(await buildSeedGraph()))
     expect(await seed({ url, dataset })).toMatchObject({ seeded: false })
     expect(await canonical(await all())).toBe(before)
     const runs = await repo.listRuns()
-    expect(runs.total).toBe(2)
-    expect(runs.items.map((r) => r.state).sort()).toEqual(
-      [NS.wild + 'done', NS.wild + 'initialized'].sort(),
-    )
+    expect(runs.total).toBe(1)
+    expect(runs.items.map((r) => r.state)).toEqual([NS.wild + 'done'])
     expect(runs.items.find((r) => r.uri === sourceRun)?.datasetCount).toBe(3)
     expect((await repo.stats()).datasets).toBe(5)
   })
   it('filters, counts, and paginates on the server without requiring complete provenance', async () => {
     expect((await repo.listRuns({ state: NS.wild + 'done' })).total).toBe(1)
     expect((await repo.listRuns({ laminate: BASE + 'laminate/1#it' })).total).toBe(1)
-    expect((await repo.listRuns({ laminate: BASE + 'laminate/demo-initialized#it' })).total).toBe(1)
+    expect((await repo.listRuns({ state: NS.wild + 'initialized' })).total).toBe(0)
     expect((await repo.listRuns({ from: '2026-09-24', to: '2026-09-24' })).total).toBe(1)
     expect((await repo.listRuns({}, 1)).items).toHaveLength(1)
-    expect((await repo.listRuns({ page: 1 }, 1)).items[0]?.uri).not.toBe(
-      (await repo.listRuns({}, 1)).items[0]?.uri,
+    expect((await repo.listRuns({ page: 1 }, 1)).items).toHaveLength(0)
+    expect((await repo.listDatasets({ page: 1 }, 1)).items[0]?.uri).not.toBe(
+      (await repo.listDatasets({}, 1)).items[0]?.uri,
     )
     expect((await repo.listDatasets()).total).toBe(5)
     expect((await repo.listDatasets({ run: sourceRun })).total).toBe(3)
@@ -182,9 +182,7 @@ describe('real Fuseki reads', () => {
     const steps = await repo.select(await readQuery('get-pressing-steps.rq'))
     expect(steps.map((step) => step.speed!.value)).toEqual(['80.0', '60.0', '35.0', '10.0'])
     const scheduled = await repo.select(await readQuery('get-workflow-instances.rq'))
-    expect(scheduled.map((row) => row.workflow_instance!.value)).toContain(
-      BASE + 'workflow/instance/demo-initialized#it',
-    )
+    expect(scheduled).toEqual([])
   })
   it.each(['blank', 'named'])(
     'loads %s execution plans and their association equipment',
@@ -247,7 +245,7 @@ describe('real Fuseki writes', () => {
       )
       expect(await isolated.ask('ASK { ?s ?p ?o }')).toBe(false)
       await expect(seed({ url, dataset: failedDataset })).resolves.toMatchObject({ seeded: true })
-      expect((await isolated.listRuns()).total).toBe(2)
+      expect((await isolated.listRuns()).total).toBe(1)
     } finally {
       await fetch(url + '/$/datasets/' + failedDataset, { method: 'DELETE', headers })
     }
@@ -277,6 +275,13 @@ describe('real Fuseki writes', () => {
       ),
     ).toBe(false)
     expect(await repo.ask(`ASK { <${uri}> prov:startedAtTime ?time }`)).toBe(false)
+    const scheduled = await repo.select(
+      await readFile(
+        new URL('../../data/queries/reads/get-workflow-instances.rq', import.meta.url),
+        'utf8',
+      ),
+    )
+    expect(scheduled.map((row) => row.workflow_instance!.value)).toContain(uri)
   })
   it('rejects invalid input without sending an update or changing any triples', async () => {
     const before = await canonical(await all()),

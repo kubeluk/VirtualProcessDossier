@@ -39,7 +39,8 @@
 vpd:it a dcat:Catalog ;
     dcterms:title "Virtual Process Dossier (VPD)" ;
     dcterms:description "A FAIR, process-aware data catalog" ;
-    dcat:dataset dataset:ex1, dataset:ex2 .
+    dcat:dataset dataset:ex1, dataset:ex2,
+        <demo/dataset#temperature>, <demo/dataset#force>, <demo/dataset#geometry> .
 
 ## Datasets
 
@@ -67,6 +68,41 @@ dataset:ex2 a dcat:Dataset ;
         dcat:downloadURL <https://os-webdav.lsdf.kit.edu/kit/iar/projects/FOR_5339/T1/Versuchsdaten/Versuchskampagne%202026_1/3D-Scans/2.1.stl> ;
     ] ;
     prov:wasGeneratedBy observation:ex2 .
+
+### Synthetic connected datasets
+
+# These examples are not measured production records.
+<demo/dataset#temperature> a dcat:Dataset ;
+    dcterms:title "Example laminate surface temperature" ;
+    dcterms:description "Synthetic temperature data demonstrating a dataset connected to a laminate observation and production run." ;
+    prov:wasGeneratedBy <workflow/instance/1#observeLaminateSurfaceTemperature1> ;
+    dcat:distribution [
+        a dcat:Distribution ;
+        dcat:downloadURL <http://localhost:8080/example-data/temperature.tsv> ;
+        dcat:mediaType "text/tab-separated-values" ;
+        dcat:temporalResolution "PT1S"^^xsd:duration
+    ] .
+
+<demo/dataset#force> a dcat:Dataset ;
+    dcterms:title "Example gripper 1 force" ;
+    dcterms:description "Synthetic force data. Its feature of interest is a gripper, not the run's input laminate." ;
+    prov:wasGeneratedBy <workflow/instance/1#observeGripperForce1> ;
+    dcat:distribution [
+        a dcat:Distribution ;
+        dcat:downloadURL <http://localhost:8080/example-data/force.tsv> ;
+        dcat:mediaType "text/tab-separated-values" ;
+        dcat:temporalResolution "PT1S"^^xsd:duration
+    ] .
+
+<demo/dataset#geometry> a dcat:Dataset ;
+    dcterms:title "Example inspection geometry" ;
+    dcterms:description "Synthetic triangle mesh demonstrating an inspection dataset; it is not a scan of a manufactured part." ;
+    prov:wasGeneratedBy <workflow/instance/1#observeLaminateShape1> ;
+    dcat:distribution [
+        a dcat:Distribution ;
+        dcat:downloadURL <http://localhost:8080/example-data/geometry.stl> ;
+        dcat:mediaType "model/stl"
+    ] .
 
 ### Standalone example observations
 
