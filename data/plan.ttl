@@ -19,7 +19,6 @@
 
 <plan/1#gripping>
     a prov:Plan ;
-    for:initialized <workflow/instance/1#gripping> ;
     frame:gripperPosition [
         frame:position [
             a qudt:Quantity ;
@@ -321,7 +320,6 @@
 
 <plan/1#heating>
     a prov:Plan ;
-    for:initialized <workflow/instance/1#heating> ;
     oven:thresholdTemperature [
         a qudt:Quantity ;
         qudt:hasQuantityKind quantitykind:AreaTemperature ;
@@ -411,7 +409,6 @@
 
 <plan/1#pressing>
     a prov:Plan ;
-    for:initialized <workflow/instance/1#pressing> ;
     press:force [
         a qudt:Quantity ;
         qudt:hasQuantityKind quantitykind:Force ;
@@ -505,22 +502,4 @@
                 qudt:value 0.0
             ]
         ]
-    ) ;
-    oven:heatingDeviceTargetTemperature [
-        oven:deviceTemperature [
-            a qudt:Quantity ;
-            qudt:hasQuantityKind quantitykind:Temperature ;
-            qudt:hasUnit unit:DEG_C ;
-            qudt:value 300.0
-        ] ;
-        oven:atDevice <system/heater/1#it>
-    ] ;
-    oven:heatingDeviceTargetTemperature [
-        oven:deviceTemperature [
-            a qudt:Quantity ;
-            qudt:hasQuantityKind quantitykind:Temperature ;
-            qudt:hasUnit unit:DEG_C ;
-            qudt:value 300.0
-        ] ;
-        oven:atDevice <system/heater/2#it>
-    ] .
+    ) .
