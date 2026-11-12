@@ -39,14 +39,13 @@
 vpd:it a dcat:Catalog ;
     dcterms:title "Virtual Process Dossier (VPD)" ;
     dcterms:description "A FAIR, process-aware data catalog" ;
-    dcat:dataset dataset:ex1, dataset:ex2,
-        <demo/dataset#temperature>, <demo/dataset#force>, <demo/dataset#geometry> .
+    dcat:dataset dataset:1, dataset:2, dataset:3, dataset:4 .
 
 ## Datasets
 
 ### Activity Observations
 
-dataset:ex1 a dcat:Dataset ;
+dataset:1 a dcat:Dataset ;
     dcterms:title "Sensordaten 1" ;
     dcterms:description "Sensordaten von der Inbetriebnahme des Heizfelds und Greiferrahmens am 30.03.2026" ;
     dcat:distribution [
@@ -55,11 +54,11 @@ dataset:ex1 a dcat:Dataset ;
         dcat:mediaType "text/tab-separated-values" ;
         dcat:temporalResolution "PT0.02S"^^xsd:duration ;
     ] ;
-    prov:wasGeneratedBy observation:ex1 .
+    prov:wasGeneratedBy <workflow/instance/1#observeGripperForce1> .
 
 ### Part 3D Scans
 
-dataset:ex2 a dcat:Dataset ;
+dataset:2 a dcat:Dataset ;
     dcterms:title "Scan-Daten 12" ;
     dcterms:description "3D-Scan des gefertigten Bauteils von Versuch No. 12" ;
     dcat:distribution [
@@ -67,12 +66,9 @@ dataset:ex2 a dcat:Dataset ;
         dcat:mediaType "model/stl" ;
         dcat:downloadURL <https://os-webdav.lsdf.kit.edu/kit/iar/projects/FOR_5339/T1/Versuchsdaten/Versuchskampagne%202026_1/3D-Scans/2.1.stl> ;
     ] ;
-    prov:wasGeneratedBy observation:ex2 .
+    prov:wasGeneratedBy <workflow/instance/1#observeLaminateShape1> .
 
-### Synthetic connected datasets
-
-# These examples are not measured production records.
-<demo/dataset#temperature> a dcat:Dataset ;
+dataset:3 a dcat:Dataset ;
     dcterms:title "Example laminate surface temperature" ;
     dcterms:description "Synthetic temperature data demonstrating a dataset connected to a laminate observation and production run." ;
     prov:wasGeneratedBy <workflow/instance/1#observeLaminateSurfaceTemperature1> ;
@@ -83,35 +79,13 @@ dataset:ex2 a dcat:Dataset ;
         dcat:temporalResolution "PT1S"^^xsd:duration
     ] .
 
-<demo/dataset#force> a dcat:Dataset ;
-    dcterms:title "Example gripper 1 force" ;
+dataset:4 a dcat:Dataset ;
+    dcterms:title "Example gripper 2 force" ;
     dcterms:description "Synthetic force data. Its feature of interest is a gripper, not the run's input laminate." ;
-    prov:wasGeneratedBy <workflow/instance/1#observeGripperForce1> ;
+    prov:wasGeneratedBy <workflow/instance/1#observeGripperForce2> ;
     dcat:distribution [
         a dcat:Distribution ;
         dcat:downloadURL <http://localhost:8080/example-data/force.tsv> ;
         dcat:mediaType "text/tab-separated-values" ;
         dcat:temporalResolution "PT1S"^^xsd:duration
     ] .
-
-<demo/dataset#geometry> a dcat:Dataset ;
-    dcterms:title "Example inspection geometry" ;
-    dcterms:description "Synthetic triangle mesh demonstrating an inspection dataset; it is not a scan of a manufactured part." ;
-    prov:wasGeneratedBy <workflow/instance/1#observeLaminateShape1> ;
-    dcat:distribution [
-        a dcat:Distribution ;
-        dcat:downloadURL <http://localhost:8080/example-data/geometry.stl> ;
-        dcat:mediaType "model/stl"
-    ] .
-
-### Standalone example observations
-
-# These catalog records are separate from the illustrative workflow run.
-# Their equipment, feature of interest, and run context have not been supplied.
-observation:ex1 a sosa:Observation, prov:Activity ;
-    rdfs:label "Observation generating example sensor dataset 1"@en ;
-    rdfs:comment "Standalone catalog example; execution context is not recorded."@en .
-
-observation:ex2 a sosa:Observation, prov:Activity ;
-    rdfs:label "Observation generating example scan dataset 2"@en ;
-    rdfs:comment "Standalone catalog example; execution context is not recorded."@en .
