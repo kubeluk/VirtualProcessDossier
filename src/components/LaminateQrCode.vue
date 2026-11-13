@@ -23,6 +23,11 @@ onScopeDispose(() => {
   generation++
 })
 
+function toggle() {
+  if (open.value) open.value = false
+  else void generate()
+}
+
 async function generate() {
   open.value = true
   if (busy.value || images.value) return
@@ -42,13 +47,11 @@ async function generate() {
 
 <template>
   <div class="laminate-qr">
-    <button
-      class="button secondary"
-      :aria-expanded="open"
-      @click="open ? (open = false) : generate()"
-    >
-      {{ open ? 'Hide QR code' : 'Generate QR code' }}
-    </button>
+    <slot name="actions" :open="open" :toggle="toggle">
+      <button class="button secondary" :aria-expanded="open" @click="toggle">
+        {{ open ? 'Hide QR code' : 'Generate QR code' }}
+      </button>
+    </slot>
     <section v-if="open" class="panel" aria-label="Laminate QR code" :aria-busy="busy">
       <h2>{{ name }}</h2>
       <p>{{ identifier || 'Identifier not recorded' }}</p>
@@ -80,7 +83,10 @@ async function generate() {
 
 <style scoped>
 .laminate-qr {
-  margin-top: 20px;
+  margin-bottom: 22px;
+}
+.laminate-qr > section {
+  margin-top: 16px;
 }
 .qr-uri {
   overflow-wrap: anywhere;

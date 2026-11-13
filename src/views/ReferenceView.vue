@@ -73,24 +73,26 @@ function setSearch() {
 }
 </script>
 <template>
-  <div class="page-heading">
-    <p class="eyebrow">
-      {{ kind === 'laminates' ? 'Material traceability' : 'Systems & sensors' }}
-    </p>
-    <h1>{{ uri ? label(g, uri) : kind === 'laminates' ? 'Laminates' : 'Equipment' }}</h1>
-    <p class="lede">
-      {{
-        uri
-          ? value(g, uri, NS.rdfs + 'comment')
-          : kind === 'laminates'
-            ? 'Understand the material behind a run.'
-            : 'Explore the equipment and sensors that give measurements their meaning.'
-      }}
-    </p>
+  <div class="page-heading heading-with-action">
+    <div>
+      <p class="eyebrow">
+        {{ kind === 'laminates' ? 'Material traceability' : 'Systems & sensors' }}
+      </p>
+      <h1>{{ uri ? label(g, uri) : kind === 'laminates' ? 'Laminates' : 'Equipment' }}</h1>
+      <p class="lede">
+        {{
+          uri
+            ? value(g, uri, NS.rdfs + 'comment')
+            : kind === 'laminates'
+              ? 'Understand the material behind a run.'
+              : 'Explore the equipment and sensors that give measurements their meaning.'
+        }}
+      </p>
+    </div>
+    <RouterLink v-if="kind === 'laminates'" to="/laminates/new" class="button primary"
+      >Create laminate</RouterLink
+    >
   </div>
-  <RouterLink v-if="kind === 'laminates'" to="/laminates/new" class="button primary"
-    >Create laminate</RouterLink
-  >
   <AsyncState :loading="loading" :error="error" @retry="reload">
     <template v-if="!uri">
       <form class="panel search-only" role="search" @submit.prevent="setSearch">

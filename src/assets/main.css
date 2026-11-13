@@ -326,6 +326,15 @@ small,
 .secondary:hover {
   background: #f3f7f3;
 }
+.button.danger {
+  background: #fff;
+  border-color: #d5dfd8;
+  color: #a33434;
+}
+.button.danger:hover:not(:disabled) {
+  background: #fff1f1;
+  border-color: #dbaaaa;
+}
 .ghost {
   background: #edf3ee;
   color: #3d665c;

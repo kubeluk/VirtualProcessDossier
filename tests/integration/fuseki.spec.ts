@@ -518,6 +518,21 @@ describe('real Fuseki writes', () => {
 })
 
 describe('laminate CRUD', () => {
+  it.each(['initialized', 'done'])(
+    'preserves the entire graph when deleting a laminate assigned to a %s workflow instance',
+    async (state) => {
+      const draft = newLaminate()
+      await repo.saveLaminate(draft, refs)
+      await repo.update(`INSERT DATA {
+        <urn:test:laminate-deletion-${state}> a wild:WorkflowInstance ;
+          wild:hasState wild:${state} ;
+          for:workflowInitialization [ for:laminate <${draft.uri}> ] .
+      }`)
+      const before = await canonical(await all())
+      await expect(repo.deleteLaminate(draft.uri)).rejects.toThrow('referenced')
+      expect(await canonical(await all())).toBe(before)
+    },
+  )
   it('creates, updates and deletes the complete unshared graph', async () => {
     const d = readLaminate(refs, BASE + 'laminate/1#it')
     d.uri = newLaminate().uri
