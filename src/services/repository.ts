@@ -382,8 +382,5 @@ export class KnowledgeRepository {
     return run
   }
 }
-export const repository = new KnowledgeRepository(
-  import.meta.env?.VITE_SPARQL_ENDPOINT ?? '/sparql',
-  import.meta.env?.VITE_SPARQL_UPDATE_ENDPOINT ?? '/update',
-)
+export const repository = new KnowledgeRepository()
 export const CATALOG = BASE + 'vpd#it'

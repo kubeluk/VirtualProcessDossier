@@ -1,40 +1,43 @@
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import { backendConfig, backendProxy } from './scripts/proxy-config'
 
-const serverEnv = loadEnv(process.env.NODE_ENV ?? 'development', process.cwd(), '')
-const target =
-  process.env.FUSEKI_PROXY_TARGET ?? serverEnv.FUSEKI_PROXY_TARGET ?? 'http://localhost:3030'
-const dataset = process.env.FUSEKI_DATASET ?? serverEnv.FUSEKI_DATASET ?? 'vpd'
-const authorization =
-  'Basic ' +
-  Buffer.from(
-    'admin:' + (process.env.ADMIN_PASSWORD ?? serverEnv.ADMIN_PASSWORD ?? 'admin'),
-  ).toString('base64')
-
-export default defineConfig({
-  plugins: [vue()],
-  optimizeDeps: {
-    exclude: ['shacl-engine'],
-  },
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
+export default defineConfig(({ mode, command }) => {
+  const common = {
+    plugins: [vue()],
+    optimizeDeps: {
+      // The validator imports CommonJS dependencies such as lodash/once.js.
+      // Prebundle its lazy-loaded entry so those imports work in the browser.
+      include: ['shacl-engine/Validator.js'],
     },
-  },
-  server: {
-    proxy: {
-      '/sparql': {
-        target,
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/sparql/, '/' + dataset + '/sparql'),
-      },
-      '/update': {
-        target,
-        headers: { Authorization: authorization },
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/update/, '/' + dataset + '/update'),
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url)),
       },
     },
-  },
+  }
+  // Building the SPA never needs a backend or its credentials.
+  if (command === 'build') return common
+
+  const backend = backendConfig(mode, loadEnv(mode, process.cwd(), ''))
+  const label = mode === 'remote' ? 'remote' : 'local'
+  return {
+    ...common,
+    plugins: [
+      ...common.plugins,
+      {
+        name: 'vpd-backend',
+        configureServer(server) {
+          server.config.logger.info(`VPD ${label} backend: ${backend.target}/${backend.dataset}`)
+        },
+      },
+    ],
+    server: {
+      host: '127.0.0.1',
+      port: mode === 'remote' ? 5174 : 5173,
+      strictPort: true,
+      proxy: backendProxy(backend),
+    },
+  }
 })

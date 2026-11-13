@@ -34,7 +34,21 @@ docker compose up -d jena seed
 npm run dev
 ```
 
-Vite proxies `/sparql` and `/update` to the `vpd` dataset on localhost:3030. Vite and nginx attach the Fuseki write credentials on the server; credentials are never included in the SPA bundle. Set `ADMIN_PASSWORD` consistently when changing the development administrator password. Copy `.env.example` when overriding endpoints. For another local Fuseki, set `FUSEKI_PROXY_TARGET` and, if needed, `FUSEKI_DATASET` when starting Vite.
+`npm run dev` and `npm run dev:local` start at http://127.0.0.1:5173 and proxy to the local `vpd` dataset on localhost:3030. Copy `.env.example` to `.env` to configure `ADMIN_PASSWORD` consistently for Vite and the local Docker stack. For local-only URL, dataset, or credential overrides, use `.env.development.local`; keep these out of shared `.env` files so they do not affect remote mode.
+
+To develop against the deployed store, copy `.env.remote.example` to `.env.remote.local`, replace its URL and dataset, then run:
+
+```sh
+npm run dev:remote
+```
+
+Remote development starts at http://127.0.0.1:5174. It requires an explicit `FUSEKI_PROXY_TARGET` and `FUSEKI_DATASET`; it has no localhost fallback and does not use `ADMIN_PASSWORD`. The example disables authentication. To use Basic authentication, set both `FUSEKI_USERNAME` and `FUSEKI_PASSWORD`; leave both empty for no authentication. Explicit credentials replace incoming browser credentials on both query and update requests. Without configured credentials, the proxy strips incoming Authorization headers. Local mode defaults to `admin` and `ADMIN_PASSWORD` (or `admin`).
+
+Vite loads mode-specific environment files using the selected mode, and shell variables take priority. Restart Vite after changing settings. Startup reports the backend URL without credentials. Both development servers use strict ports; stop the process occupying the selected port instead of accepting a different origin. Separate ports keep browser session drafts separate between the local and remote stores.
+
+Both modes support the normal read and write flows. Changes made through remote development are saved to the deployed dataset. Joining the VPN may be necessary to reach the backend.
+
+The browser always calls `/sparql` and `/update` on the UI origin. Backend selection and credentials stay in Vite or nginx, outside the SPA bundle. The former `VITE_SPARQL_ENDPOINT` and `VITE_SPARQL_UPDATE_ENDPOINT` overrides are no longer used. `FUSEKI_PROXY_TARGET` is an HTTP(S) base URL, optionally including a proxy prefix, without a dataset suffix, embedded credentials, query string, or fragment. For example, a target of `https://store.example.org/fuseki` and dataset `vpd` produces upstream paths `/fuseki/vpd/sparql` and `/fuseki/vpd/update`. Dataset names may contain letters, digits, underscores, and hyphens. HTTPS certificates are verified; Vite uses Node's trusted CAs (`NODE_EXTRA_CA_CERTS` can supply an institutional CA).
 
 ```sh
 npm run build
@@ -43,6 +57,31 @@ npm test
 ```
 
 Lint is read-only. Unit and Vue component tests cover RDF serialization, shape validation, list handling, defaults, copying, and machine forms.
+
+## Deploy the UI against an existing Fuseki
+
+The standalone deployment runs only nginx and the built UI. It does not start Fuseki, create a dataset, seed, migrate, or clear data. It assumes an unauthenticated Fuseki dataset and HTTP UI access over a private network or VPN. The dataset's default graph must already contain the current reference models, equipment, SHACL shapes, and application records. The UI supports writes; restrict access to both the UI and Fuseki through the private network and firewall.
+
+On the server, check out the desired revision, install Docker with Compose, and copy `.env.deploy.example` to `.env.deploy.local`. Set the existing Fuseki base URL, dataset name, and the server's private/VPN interface IP. The UI container must be able to resolve and reach that URL; `localhost` inside a container refers to that container. Open only the selected UI port to the intended private network or VPN clients. Do not bind this deployment to `0.0.0.0` or a public interface.
+
+```sh
+docker compose -p vpd-deploy --env-file .env.deploy.local -f docker-compose.deploy.yml config --quiet
+docker compose -p vpd-deploy --env-file .env.deploy.local -f docker-compose.deploy.yml up -d --build
+docker compose -p vpd-deploy --env-file .env.deploy.local -f docker-compose.deploy.yml logs --tail 50 ui
+```
+
+The Compose file requires all three connection/binding settings and passes no backend credentials. Missing or invalid backend settings fail startup. Open `http://<private-server-ip>:8080` (or the configured `UI_PORT`). To update, check out the new revision and repeat the `up -d --build` command. To change only the backend settings, edit `.env.deploy.local` and run the same command without `--build`; the existing image is reused. The frontend never needs a backend URL at build time.
+
+For a read-only connectivity check, substitute the private UI origin below:
+
+```sh
+curl --fail-with-body -H 'Accept: application/sparql-results+json' \
+  --data-urlencode 'query=ASK { ?s ?p ?o }' http://10.0.0.10:8080/sparql
+```
+
+A `true` result confirms a nonempty default graph. Then open the UI and verify that equipment, process definitions, and SHACL-backed preparation load correctly using the [manual verification guide](data/docs/ui-verification.md). Do not test writes or run the integration suite against production data. Inspect any synthetic `dcat:downloadURL` values pointing to `localhost:8080`; arrange an explicit metadata correction to the deployed UI origin if those downloads are needed. Deployment does not rewrite stored URLs.
+
+For troubleshooting, inspect the UI container logs and test DNS/routing from its Docker network. A 502 generally points to upstream connectivity, a wrong URL, or TLS trust; 401/403 points to backend access rules; an empty overview can indicate the wrong dataset/default graph or missing reference data. HTTPS upstreams use SNI and verify certificates against `/etc/ssl/certs/ca-certificates.crt`. For an institutional CA, mount a complete trusted CA bundle including that CA at this path. Do not disable certificate verification. The UI itself uses HTTP on its private interface; an existing HTTPS reverse proxy can be added separately if required.
 
 ## Verify the triple-store contract
 

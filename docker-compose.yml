@@ -2,7 +2,10 @@ services:
   ui:
     build: .
     environment:
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      FUSEKI_PROXY_TARGET: http://jena:3030
+      FUSEKI_DATASET: vpd
+      FUSEKI_USERNAME: admin
+      FUSEKI_PASSWORD: ${ADMIN_PASSWORD:-admin}
     ports:
       - '${UI_PORT:-8080}:80'
     depends_on:

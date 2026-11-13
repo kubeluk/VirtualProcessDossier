@@ -1,0 +1,12 @@
+services:
+  ui:
+    image: vpd-ui:latest
+    build: .
+    environment:
+      FUSEKI_PROXY_TARGET: ${FUSEKI_PROXY_TARGET:?Set the deployed Fuseki base URL}
+      FUSEKI_DATASET: ${FUSEKI_DATASET:?Set the deployed dataset name}
+      FUSEKI_USERNAME: ''
+      FUSEKI_PASSWORD: ''
+    ports:
+      - '${UI_BIND_ADDRESS:?Set the server private interface IP}:${UI_PORT:-8080}:80'
+    restart: unless-stopped

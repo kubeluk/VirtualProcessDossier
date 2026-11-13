@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:local": "vite --mode development",
+    "dev:remote": "vite --mode remote",
     "build": "vue-tsc --build && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
