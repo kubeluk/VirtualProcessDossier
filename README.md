@@ -83,6 +83,41 @@ A `true` result confirms a nonempty default graph. Then open the UI and verify t
 
 For troubleshooting, inspect the UI container logs and test DNS/routing from its Docker network. A 502 generally points to upstream connectivity, a wrong URL, or TLS trust; 401/403 points to backend access rules; an empty overview can indicate the wrong dataset/default graph or missing reference data. HTTPS upstreams use SNI and verify certificates against `/etc/ssl/certs/ca-certificates.crt`. For an institutional CA, mount a complete trusted CA bundle including that CA at this path. Do not disable certificate verification. The UI itself uses HTTP on its private interface; an existing HTTPS reverse proxy can be added separately if required.
 
+## Laminate QR labels
+
+Open a saved laminate and choose **Generate QR code**, then **Download SVG** (scalable for printing) or **Download PNG** (at least 1024 pixels). Both encode the exact RDF identity, including `#it`, for example `http://purl.org/for/laminate/1#it`. Generation is local to the browser and does not change the record.
+
+Before attaching labels, configure and verify a single partial redirect in [PURL administration](https://purl.archive.org/). Under the `for` domain, use:
+
+| Setting | Value |
+| --- | --- |
+| Name / source prefix | `/for/laminate/` |
+| Type | `partial` |
+| Target | `<deployed UI base URL>/id/laminate/` |
+
+Replace the target placeholder with the actual deployed UI address, including its port if necessary, and preserve the trailing slash. For example, a UI at `http://10.0.0.10:8080` needs target `http://10.0.0.10:8080/id/laminate/`. Do not include an individual ID, `#it`, or a query string in this prefix rule. [PURL help](https://purl.archive.org/help) describes partial prefix matching. Check for existing exact or longer-prefix rules that could override this mapping. Newly generated UUID identities then work without individual PURL registrations. This configuration is performed separately by the namespace owner; the application does not create or update PURL rules.
+
+For example, `http://purl.org/for/laminate/1#it` redirects to `https://ui.example.org/id/laminate/1#it`, which opens `/laminate?uri=http%3A%2F%2Fpurl.org%2Ffor%2Flaminate%2F1%23it`. The fragment is not sent in HTTP requests; the UI entry route reconstructs the complete identity. The existing nginx SPA fallback supports direct entry and refresh.
+
+Verify both an example laminate and a newly created laminate from the scanning device before printing labels. If the UI moves, update this one PURL target; keep the printed RDF identities unchanged. The destination UI must be available and accessible to scanners, including VPN access where required. QR generation does not check whether the PURL redirect is configured. It also works in local development, but scanning still uses the configured PURL destination, not localhost.
+
+This version resolves to the UI only. A future server endpoint behind the same PURL redirect can negotiate on `Accept`, directing browsers to the UI and serving `text/turtle` to RDF clients without changing labels. No RDF publishing endpoint or content negotiation is added here.
+
+### Test the UI route without configuring PURL
+
+1. Start the UI with a backend containing the laminate you want to test. For the supplied example, the RDF URI is `http://purl.org/for/laminate/1#it`.
+2. Open `http://127.0.0.1:5173/id/laminate/1` in a browser for local development. Use port `5174` for remote development, `http://localhost:8080/id/laminate/1` for the default Docker stack, or the deployed UI's address.
+3. Confirm the address changes to `/laminate?uri=http%3A%2F%2Fpurl.org%2Ffor%2Flaminate%2F1%23it` on that same UI host, and the expected laminate properties and production runs appear. The browser may display some query characters unescaped; the decoded `uri` must be exactly `http://purl.org/for/laminate/1#it`.
+4. Repeat with `/id/laminate/1#it`, then refresh the resulting page. Both entry URLs must open the same laminate.
+5. For a newly created laminate, replace `1` with the URI's path ID (typically a UUID), not its editable identifier or display name. Compare the destination with the detail page reached from the Laminates list.
+6. Open `/id/laminate/unknown-test-id`. It must route to that identity and show “Laminate not found.” It must not substitute another laminate.
+
+This is a client-side Vue Router redirect after the SPA loads, not an HTTP redirect from nginx. A `curl` request to the UI entry route returns the SPA HTML and does not exercise this navigation. These checks require no PURL changes and do not write application data.
+
+### Test the complete PURL redirect
+
+After configuring the prefix rule, open `http://purl.org/for/laminate/1#it` in a browser that can reach the deployed UI. Confirm it reaches the same record as the direct UI route above. Repeat with a newly created laminate, then scan both downloaded QR formats. The PURL target must point to a UI using the dataset containing those identities. If direct UI entry works but the PURL URL does not, inspect the PURL rule and its target address; if the UI opens but shows a missing record, check the ID and selected backend dataset.
+
 ## Verify the triple-store contract
 
 The integration suite creates a uniquely named dataset on an isolated Fuseki instance and removes that dataset afterwards. It does not use the application's `vpd` dataset.

@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { BASE } from '../domain/rdf'
 export default createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   scrollBehavior(to, from, saved) {
@@ -7,6 +8,15 @@ export default createRouter({
     return { top: 0 }
   },
   routes: [
+    {
+      path: '/id/laminate/:id',
+      redirect: (to) => ({
+        name: 'laminate',
+        params: {},
+        query: { uri: BASE + 'laminate/' + String(to.params.id) + '#it' },
+        hash: '',
+      }),
+    },
     {
       path: '/',
       name: 'overview',

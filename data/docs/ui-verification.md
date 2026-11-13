@@ -32,6 +32,15 @@ The user performs browser testing; no automated end-to-end suite is included.
 11. Explore All metadata, nested quantities, ordered lists, and referring records. Compare the supplied laminate with one created in step 4: dimensions should use the same plain number formatting and expand inline, with an Open record link for quantities that have a URI. Expand Value type to inspect the recorded numeric literal. Check direct links, missing resources, and empty results.
 12. Repeat the main navigation and preparation flow on a narrow screen and with a keyboard.
 
+## Laminate QR labels
+
+First follow the README's [direct UI route test](../../README.md#test-the-ui-route-without-configuring-purl), which needs no PURL configuration. Then follow the [complete PURL redirect test](../../README.md#test-the-complete-purl-redirect) before using physical labels. The entry path uses the ID from the RDF URI, not the laminate's editable identifier.
+
+1. Configure the PURL partial redirect described in the README. Open an existing laminate and a newly created laminate, then generate each QR. Confirm the displayed name, identifier, and full RDF URI, including `#it`.
+2. Download SVG and PNG; open both and scan them with a phone on the required network/VPN. Print a label and scan it too. Each scan must open the correct laminate properties and associated production runs. Keep the white border intact when printing.
+3. Open `/id/laminate/1` directly with and without `#it`, refresh, and confirm the same detail page. An unknown ID must show “Laminate not found.”
+4. Check keyboard controls and narrow screens. Hide and reopen the preview, switch laminates, and confirm no previous laminate's QR remains. Loading, failed, and missing records must offer no QR action.
+
 ## Startup behavior
 
 - Empty dataset: validate the seed graph, then load the bundle in one Graph Store request before starting the UI.

@@ -9,6 +9,7 @@ import type { RunSummary } from '../domain/types'
 import AsyncState from '../components/AsyncState.vue'
 import EntityLink from '../components/EntityLink.vue'
 import LaminateSummary from '../components/LaminateSummary.vue'
+import LaminateQrCode from '../components/LaminateQrCode.vue'
 import AllMetadata from '../components/AllMetadata.vue'
 import StateBadge from '../components/StateBadge.vue'
 const router = useRouter()
@@ -79,6 +80,12 @@ const { loading, error, reload } = useLoad(async () => {
         Delete laminate
       </button>
     </div>
+    <LaminateQrCode
+      :key="uri"
+      :uri="uri"
+      :name="label(knowledge.references, uri)"
+      :identifier="value(knowledge.references, uri, NS.dct + 'identifier')"
+    />
     <section v-if="confirmDelete" class="panel" aria-label="Confirm deletion">
       <h2>Delete this laminate?</h2>
       <p>
