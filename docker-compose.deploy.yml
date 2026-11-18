@@ -8,5 +8,5 @@ services:
       FUSEKI_USERNAME: ''
       FUSEKI_PASSWORD: ''
     ports:
-      - '${UI_BIND_ADDRESS:?Set the server private interface IP}:${UI_PORT:-8080}:80'
+      - '${UI_BIND_ADDRESS:?Set the server loopback or private interface IP}:${UI_PORT:-8080}:80'
     restart: unless-stopped

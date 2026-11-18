@@ -60,9 +60,9 @@ Lint is read-only. Unit and Vue component tests cover RDF serialization, shape v
 
 ## Deploy the UI against an existing Fuseki
 
-The standalone deployment runs only nginx and the built UI. It does not start Fuseki, create a dataset, seed, migrate, or clear data. It assumes an unauthenticated Fuseki dataset and HTTP UI access over a private network or VPN. The dataset's default graph must already contain the current reference models, equipment, SHACL shapes, and application records. The UI supports writes; restrict access to both the UI and Fuseki through the private network and firewall.
+The standalone deployment runs only nginx and the built UI. It does not start Fuseki, create a dataset, seed, migrate, or clear data. It assumes an unauthenticated Fuseki dataset, with HTTP between nginx and the UI container. Users can connect through an outer HTTPS reverse proxy or directly over a private network or VPN. The dataset's default graph must already contain the current reference models, equipment, SHACL shapes, and application records. The UI supports writes; restrict access to both the UI and Fuseki through the private network and firewall, and retain the outer proxy's access controls when using HTTPS.
 
-On the server, check out the desired revision, install Docker with Compose, and copy `.env.deploy.example` to `.env.deploy.local`. Set the existing Fuseki base URL, dataset name, and the server's private/VPN interface IP. The UI container must be able to resolve and reach that URL; `localhost` inside a container refers to that container. Open only the selected UI port to the intended private network or VPN clients. Do not bind this deployment to `0.0.0.0` or a public interface.
+On the server, check out the desired revision, install Docker with Compose, and copy `.env.deploy.example` to `.env.deploy.local`. Set the existing Fuseki base URL and dataset name. Keep `UI_BIND_ADDRESS=127.0.0.1` for a host-installed outer nginx, or set the server's private/VPN interface IP for direct access. The UI container must be able to resolve and reach the Fuseki URL; `localhost` inside a container refers to that container. For direct access, open only the selected UI port to the intended private network or VPN clients. Do not bind this deployment to `0.0.0.0` or a public interface.
 
 ```sh
 docker compose -p vpd-deploy --env-file .env.deploy.local -f docker-compose.deploy.yml config --quiet
@@ -70,7 +70,7 @@ docker compose -p vpd-deploy --env-file .env.deploy.local -f docker-compose.depl
 docker compose -p vpd-deploy --env-file .env.deploy.local -f docker-compose.deploy.yml logs --tail 50 ui
 ```
 
-The Compose file requires all three connection/binding settings and passes no backend credentials. Missing or invalid backend settings fail startup. Open `http://<private-server-ip>:8080` (or the configured `UI_PORT`). To update, check out the new revision and repeat the `up -d --build` command. To change only the backend settings, edit `.env.deploy.local` and run the same command without `--build`; the existing image is reused. The frontend never needs a backend URL at build time.
+The Compose file requires all three connection/binding settings and passes no backend credentials. Missing or invalid backend settings fail startup. Open the outer proxy's HTTPS origin, or `http://<private-server-ip>:8080` for direct access (using the configured `UI_PORT`). To update, check out the new revision and repeat the `up -d --build` command. To change only the backend settings, edit `.env.deploy.local` and run the same command without `--build`; the existing image is reused. The frontend never needs a backend URL at build time.
 
 For a read-only connectivity check, substitute the private UI origin below:
 
@@ -81,7 +81,63 @@ curl --fail-with-body -H 'Accept: application/sparql-results+json' \
 
 A `true` result confirms a nonempty default graph. Then open the UI and verify that equipment, process definitions, and SHACL-backed preparation load correctly using the [manual verification guide](data/docs/ui-verification.md). Do not test writes or run the integration suite against production data. Inspect any synthetic `dcat:downloadURL` values pointing to `localhost:8080`; arrange an explicit metadata correction to the deployed UI origin if those downloads are needed. Deployment does not rewrite stored URLs.
 
-For troubleshooting, inspect the UI container logs and test DNS/routing from its Docker network. A 502 generally points to upstream connectivity, a wrong URL, or TLS trust; 401/403 points to backend access rules; an empty overview can indicate the wrong dataset/default graph or missing reference data. HTTPS upstreams use SNI and verify certificates against `/etc/ssl/certs/ca-certificates.crt`. For an institutional CA, mount a complete trusted CA bundle including that CA at this path. Do not disable certificate verification. The UI itself uses HTTP on its private interface; an existing HTTPS reverse proxy can be added separately if required.
+For troubleshooting, inspect the UI container logs and test DNS/routing from its Docker network. A 502 generally points to upstream connectivity, a wrong URL, or TLS trust; 401/403 points to backend access rules; an empty overview can indicate the wrong dataset/default graph or missing reference data. HTTPS upstreams use SNI and verify certificates against `/etc/ssl/certs/ca-certificates.crt`. For an institutional CA, mount a complete trusted CA bundle including that CA at this path. Do not disable certificate verification.
+
+### Outer nginx reverse proxy
+
+Serve the app at the root of `https://vpd.wiwi.kit.edu`. The request chain is browser → outer nginx (HTTPS) → UI container nginx (HTTP) → Fuseki. For nginx installed on the Docker host, use `UI_BIND_ADDRESS=127.0.0.1` and `UI_PORT=8080`, and add the following server blocks to the outer nginx's HTTP configuration. Replace the certificate paths with the server's actual paths and retain any required VPN/network or authentication restrictions on the HTTPS server.
+
+```nginx
+server {
+    listen 80;
+    server_name vpd.wiwi.kit.edu;
+
+    return 308 https://vpd.wiwi.kit.edu$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name vpd.wiwi.kit.edu;
+
+    ssl_certificate     /path/to/fullchain.pem;
+    ssl_certificate_key /path/to/privkey.pem;
+
+    location / {
+        # Match UI_PORT. No URI suffix: preserve the original path and query.
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        # This example assumes the outer nginx directly receives client traffic.
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Port $server_port;
+        proxy_set_header Connection "";
+    }
+}
+```
+
+If the outer nginx also runs in Docker, attach it and the UI to a shared Docker network and use `proxy_pass http://ui:80;` instead. Loopback inside the outer container refers to itself. A published UI port is unnecessary for that arrangement. If another trusted proxy precedes the outer nginx, configure client IP handling for that trusted hop rather than trusting arbitrary incoming forwarded headers.
+
+Forward all paths to the UI container, including `/sparql`, `/update`, assets, and `/id/laminate/...`. The inner nginx retains the SPA fallback and maps the two API endpoints to Fuseki. It intentionally uses the Fuseki upstream hostname for `Host`, while the outer nginx preserves the public UI hostname. Backend credentials remain server-side.
+
+The inner nginx uses `absolute_redirect off;` so its directory redirects remain relative and preserve the browser's public HTTPS origin. It does not enforce HTTPS itself; the outer proxy does. Forwarded headers alone do not change nginx's own redirect scheme. See nginx's [redirect documentation](https://nginx.org/en/docs/http/ngx_http_core_module.html#absolute_redirect) and [proxy documentation](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_pass).
+
+Keep the default `merge_slashes on`. RDF identities appear in encoded query parameters, for example `/laminate?uri=http%3A%2F%2Fpurl.org%2Ffor%2Flaminate%2F1%23it`; path slash normalization does not change query parameters. `/laminate=http://...` is not an application route. Hosting under a prefix such as `/vpd/` needs application changes to the Vite base, API URLs, and other root-relative links; stripping a prefix at the proxy alone is insufficient.
+
+After rebuilding the UI image, validate the inner configuration with `docker compose -p vpd-deploy --env-file .env.deploy.local -f docker-compose.deploy.yml exec ui nginx -t`. Validate and reload the host proxy with `sudo nginx -t` and, on systemd installations, `sudo systemctl reload nginx`. Then perform these read-only checks:
+
+```sh
+curl -I http://vpd.wiwi.kit.edu/runs
+curl -I https://vpd.wiwi.kit.edu/runs
+curl -I https://vpd.wiwi.kit.edu/example-data
+curl --fail-with-body -H 'Accept: application/sparql-results+json' \
+  --data-urlencode 'query=ASK { ?s ?p ?o }' https://vpd.wiwi.kit.edu/sparql
+```
+
+Expect an HTTPS redirect preserving `/runs`, successful SPA HTML, a relative `Location: /example-data/` directory redirect, and a SPARQL response respectively. In the browser, refresh `/runs` and open `/id/laminate/1` directly; the latter performs its Vue Router redirect after loading the SPA. Set the PURL prefix target to `https://vpd.wiwi.kit.edu/id/laminate/`. Stored download URLs must also use their intended deployed origin; proxies do not rewrite RDF data.
 
 ## Laminate QR labels
 
